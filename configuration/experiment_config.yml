@@ -1,0 +1,203 @@
+random_state: 4200
+retrain: True
+# List of models to include in the experiment
+include_models:
+  - XGB  # Extreme Gradient Boosting
+  #- MLP  # Multi-Layer Perceptron
+  - TabNet  # TabNet Classifier 
+  - GATE 
+  #- resnet18
+  #- S1DCNN
+  - CategoryEmbedding
+  - FTTransformer
+  - GANDALF
+  - Node
+  - TabTransformer
+  - AutoInt
+  ###- squeezenet
+
+# List of datasets to include in the experiment
+include_datasets:
+  #- creditcard  # Credit card fraud dataset
+  #- iris        # Iris flower dataset
+  - titanic
+  #- bufix
+  - breastcancer 
+  #- housing
+  - ageconditions
+  #- adult
+  #- heloc
+  #- covertype
+
+model_configs:
+
+  node:
+    execution_mode: hyperopt
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+
+  gandalf:
+    execution_mode: hyperopt
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+
+  fttransformer:
+    execution_mode: hyperopt
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+
+  categoryembedding:
+    execution_mode: hyperopt
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+
+  squeezenet:
+    execution_mode: hyperopt
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+
+  gate:
+    execution_mode: hyperopt
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+  
+  xgb:
+    execution_mode: hyperopt
+    normalize_features: mean_std
+    encode_categorical: True
+    return_extra_info: False
+
+  tabnet:
+    execution_mode: hyperopt
+    normalize_features: mean_std
+    encode_categorical: False
+    return_extra_info: True
+
+  mlp:
+    execution_mode: cv
+    normalize_features: mean_std
+    encode_categorical: True
+    return_extra_info: False
+
+  resnet18:
+    execution_mode: hyperopt
+    normalize_features: mean_std
+    encode_categorical: True
+    return_extra_info: True
+  
+  s1dcnn:
+    execution_mode: hyperopt
+    normalize_features: mean_std
+    encode_categorical: True
+    return_extra_info: True
+
+dataset_configs:
+
+  bufix: 
+    test_size: 0.2
+    problem_type: binary_classification
+    eval_metrics:
+      - roc_auc
+      - f1
+      - area_under_pr
+      - accuracy
+      - precision
+      - recall
+    
+  ageconditions: 
+    test_size: 0.25
+    num_classes: 1
+    problem_type: binary_classification
+    eval_metrics:
+      - roc_auc
+      - f1
+      - area_under_pr
+      - accuracy
+      - precision
+      - recall
+
+  creditcard: 
+    test_size: 0.25
+    problem_type: binary_classification
+    eval_metrics:
+      - accuracy
+      - roc_auc
+      - f1
+      - area_under_pr
+      - precision
+      - recall
+      
+  iris: 
+    num_targets: 3
+    test_size: 0.25
+    problem_type: multiclass_classification
+    eval_metrics:
+      - accuracy
+      - f1
+      
+  covertype: 
+    num_targets: 3
+    test_size: 0.25
+    problem_type: multiclass_classification
+    eval_metrics:
+      - accuracy
+      - f1
+      
+
+  titanic: 
+    test_size: 0.25
+    problem_type: binary_classification
+    eval_metrics:
+      - accuracy
+      - roc_auc
+      - f1
+      - area_under_pr
+      - precision
+      - recall
+
+  heloc: 
+    test_size: 0.25
+    problem_type: binary_classification
+    eval_metrics:
+      - roc_auc
+      - f1
+      - area_under_pr
+      - accuracy
+      - precision
+      - recall
+
+  housing: 
+    test_size: 0.25
+    problem_type: regression
+    eval_metrics:
+      - mse
+      - rmse
+      - r2_score
+
+  breastcancer: 
+    test_size: 0.25
+    problem_type: binary_classification
+    eval_metrics:
+      - roc_auc
+      - f1
+      - area_under_pr
+      - accuracy
+      - precision
+      - recall
+
+  adult: 
+    test_size: 0.25
+    problem_type: binary_classification
+    eval_metrics:
+      - roc_auc
+      - f1
+      - area_under_pr
+      - accuracy
+      - precision
+      - recall

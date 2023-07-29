@@ -1,0 +1,344 @@
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import numpy as np
+import pandas as pd
+from typing import Dict
+from torch.utils.data import TensorDataset, DataLoader, random_split
+from sklearn.utils.class_weight import compute_class_weight
+
+
+class SoftOrdering1DCNN:
+    def __init__(
+        self,
+        num_features,
+        num_targets,
+        hidden_size,
+        problem_type="binary_classification",
+        **params,
+    ):
+        self.num_features = num_features
+        self.hidden_size = hidden_size
+        self.problem_type = problem_type
+        self.num_targets = num_targets
+        self.learning_rate = 0.001
+        self.batch_size = 512
+        self.save_path = None
+        self.device = params.get(
+            "device", torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        )
+        self.model = self.build_model()
+        self.transformation = None
+
+    def build_model(self):
+        model = Model(self.num_features, self.num_targets, self.hidden_size)
+        return model
+
+    def train(self, X_train, y_train, params: Dict, extra_info: Dict):
+        validation_fraction = params.get("validation_fraction", 0.2)
+        num_epochs = params.get("num_epochs", 3)
+        batch_size = params.get("batch_size", 32)
+        shuffle = params.get("shuffle", True)
+        validation_split = params.get("validation_split", 0.2)
+        early_stopping = params.get("early_stopping", False)
+        patience = params.get("early_stopping_patience", 5)
+
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.learning_rate)
+        self.scheduler = ReduceLROnPlateau(
+            self.optimizer, mode="min", factor=0.1, patience=7, verbose=True
+        )
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        if self.problem_type == "binary_classification":
+            self.loss_fn = nn.BCEWithLogitsLoss()
+        elif self.problem_type == "multiclass_classification":
+            # Convert y_train to a tensor and calculate class weights for multiclass classification
+            y_train_tensor = torch.tensor(y_train.values, dtype=torch.long).flatten()
+            classes = torch.unique(y_train_tensor)  # Get the unique class labels
+            class_weights = compute_class_weight(
+                "balanced", classes=np.array(classes), y=y_train.values
+            )
+            class_weights = torch.tensor(class_weights, dtype=torch.float32).to(
+                self.device
+            )
+            self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, reduction="mean")
+        elif self.problem_type == "regression":
+            self.loss_fn = params.get("loss_fn", nn.MSELoss())
+        else:
+            raise ValueError(
+                "Invalid problem_type. Supported values are 'binary', 'multiclass', and 'regression'."
+            )
+
+        X_train_tensor = torch.tensor(X_train.values, dtype=torch.float)
+        y_train_tensor = torch.tensor(
+            y_train.values,
+            dtype=torch.float if self.problem_type == "regression" else torch.long,
+        )
+        dataset = TensorDataset(X_train_tensor, y_train_tensor)
+
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+        num_samples = len(dataset)
+        num_train_samples = int((1 - validation_split) * num_samples)
+        num_val_samples = num_samples - num_train_samples
+
+        train_dataset, val_dataset = random_split(
+            dataset, [num_train_samples, num_val_samples]
+        )
+
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+        best_val_loss = float("inf")
+        best_epoch = 0
+        current_patience = 0
+
+        self.model.to(self.device)
+        self.model.train()
+
+        with tqdm(total=num_epochs, desc="Training", unit="epoch", ncols=80) as pbar:
+            for epoch in range(num_epochs):
+                running_loss = 0.0
+                for i, (inputs, labels) in enumerate(train_loader):
+                    inputs, labels = inputs.to(self.device), labels.to(self.device)
+
+                    if (
+                        self.problem_type == "binary_classification"
+                        or self.problem_type == "regression"
+                    ):
+                        outputs = torch.sigmoid(self.model(inputs)).reshape(-1)
+                        labels = labels.float()
+                        print(outputs.shape, labels.shape)
+                        print(outputs, labels)
+                    elif self.problem_type == "multiclass_classification":
+                        labels = (
+                            labels.long()
+                        )  # For multiclass classification, convert to long
+                        outputs = self.model(inputs)
+                    else:
+                        raise ValueError(
+                            "Invalid problem_type. Supported options: binary_classification, multiclass_classification"
+                        )
+
+                    self.optimizer.zero_grad()
+
+                    loss = self.loss_fn(outputs, labels)
+
+                    loss.backward()
+                    self.optimizer.step()
+
+                    running_loss += loss.item()
+
+                epoch_loss = running_loss / len(train_loader)
+
+                if early_stopping and validation_fraction > 0:
+                    self.model.eval()
+
+                    val_loss = 0.0
+                    with torch.no_grad():
+                        for inputs, labels in val_loader:
+                            inputs, labels = inputs.to(self.device), labels.to(
+                                self.device
+                            )
+
+                            if (
+                                self.problem_type == "binary_classification"
+                                or self.problem_type == "regression"
+                            ):
+                                outputs = torch.sigmoid(self.model(inputs)).reshape(-1)
+                                labels = labels.float()
+
+                            elif self.problem_type == "multiclass_classification":
+                                labels = (
+                                    labels.long()
+                                )  # For multiclass classification, convert to long
+                                outputs = self.model(inputs)
+                            else:
+                                raise ValueError(
+                                    "Invalid problem_type. Supported options: binary_classification, multiclass_classification"
+                                )
+
+                            loss = self.loss_fn(outputs, labels)
+                            val_loss += loss.item() * inputs.size(0)
+
+                    val_loss /= len(val_dataset)
+
+                    self.scheduler.step(val_loss)
+
+                    if val_loss < best_val_loss:
+                        best_val_loss = val_loss
+                        best_epoch = epoch
+                        current_patience = 0
+
+                        if self.save_path is not None:
+                            torch.save(
+                                self.model.state_dict(), self.save_path + "_checkpt"
+                            )
+                    else:
+                        current_patience += 1
+
+                    print(
+                        f"Epoch [{epoch+1}/{num_epochs}], Train Loss: {epoch_loss:.4f}, Val Loss: {val_loss:.4f}"
+                    )
+
+                    if current_patience >= patience:
+                        print(f"Early stopping triggered at epoch {epoch+1}")
+                        break
+
+            if self.save_path is not None:
+                print(f"Best model weights saved at epoch {best_epoch+1}")
+                self.model.load_state_dict(torch.load(self.save_path + "_checkpt"))
+
+    def predict(self, X_test, batch_size=4096):
+        self.model.to(self.device)
+        self.model.eval()
+
+        test_dataset = CustomDataset(
+            data=X_test,
+            transform=None,
+        )
+
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+        predictions = []
+
+        with torch.no_grad():
+            for inputs in test_loader:
+                inputs = inputs.to(self.device)
+                outputs = self.model(inputs)
+
+                if self.problem_type == "binary_classification":
+                    preds = (
+                        (torch.sigmoid(outputs) >= 0.5)
+                        .squeeze()
+                        .int()
+                        .to("cpu")
+                        .numpy()
+                    )
+                elif self.problem_type == "multiclass_classification":
+                    _, preds = torch.max(outputs, 1)
+                    preds = preds.numpy()
+                elif self.problem_type == "regression":
+                    preds = outputs.to("cpu").tolist()
+                else:
+                    raise ValueError(
+                        "Invalid problem_type. Supported options: binary_classification, multiclass_classification, regression."
+                    )
+
+                predictions.extend(preds)
+
+        return np.array(predictions)
+
+
+class Model(nn.Module):
+    def __init__(self, num_features, num_targets, hidden_size=4196):
+        super(Model, self).__init__()
+        cha_1 = 256
+        cha_2 = 512
+        cha_3 = 512
+        self.num_targets = num_targets
+        cha_1_reshape = int(hidden_size / cha_1)
+        cha_po_1 = int(hidden_size / cha_1 / 2)
+        cha_po_2 = int(hidden_size / cha_1 / 2 / 2) * cha_3
+
+        self.cha_1 = cha_1
+        self.cha_2 = cha_2
+        self.cha_3 = cha_3
+        self.cha_1_reshape = cha_1_reshape
+        self.cha_po_1 = cha_po_1
+        self.cha_po_2 = cha_po_2
+
+        self.batch_norm1 = nn.BatchNorm1d(num_features)
+        self.dropout1 = nn.Dropout(0.1)
+        self.dense1 = nn.utils.weight_norm(nn.Linear(num_features, hidden_size))
+
+        self.batch_norm_c1 = nn.BatchNorm1d(cha_1)
+        self.dropout_c1 = nn.Dropout(0.1)
+        self.conv1 = nn.utils.weight_norm(
+            nn.Conv1d(cha_1, cha_2, kernel_size=5, stride=1, padding=2, bias=False),
+            dim=None,
+        )
+
+        self.ave_po_c1 = nn.AdaptiveAvgPool1d(output_size=cha_po_1)
+
+        self.batch_norm_c2 = nn.BatchNorm1d(cha_2)
+        self.dropout_c2 = nn.Dropout(0.1)
+        self.conv2 = nn.utils.weight_norm(
+            nn.Conv1d(cha_2, cha_2, kernel_size=3, stride=1, padding=1, bias=True),
+            dim=None,
+        )
+
+        self.batch_norm_c2_1 = nn.BatchNorm1d(cha_2)
+        self.dropout_c2_1 = nn.Dropout(0.3)
+        self.conv2_1 = nn.utils.weight_norm(
+            nn.Conv1d(cha_2, cha_2, kernel_size=3, stride=1, padding=1, bias=True),
+            dim=None,
+        )
+
+        self.batch_norm_c2_2 = nn.BatchNorm1d(cha_2)
+        self.dropout_c2_2 = nn.Dropout(0.2)
+        self.conv2_2 = nn.utils.weight_norm(
+            nn.Conv1d(cha_2, cha_3, kernel_size=5, stride=1, padding=2, bias=True),
+            dim=None,
+        )
+
+        self.max_po_c2 = nn.MaxPool1d(kernel_size=4, stride=2, padding=1)
+
+        self.flt = nn.Flatten()
+
+        self.batch_norm3 = nn.BatchNorm1d(cha_po_2)
+        self.dropout3 = nn.Dropout(0.2)
+        self.dense3 = nn.utils.weight_norm(nn.Linear(cha_po_2, num_targets))
+
+    def forward(self, x):
+        x = self.batch_norm1(x)
+        x = self.dropout1(x)
+        x = F.celu(self.dense1(x), alpha=0.06)
+
+        x = x.reshape(x.shape[0], self.cha_1, self.cha_1_reshape)
+
+        x = self.batch_norm_c1(x)
+        x = self.dropout_c1(x)
+        x = F.relu(self.conv1(x))
+
+        x = self.ave_po_c1(x)
+
+        x = self.batch_norm_c2(x)
+        x = self.dropout_c2(x)
+        x = F.relu(self.conv2(x))
+        x_s = x
+
+        x = self.batch_norm_c2_1(x)
+        x = self.dropout_c2_1(x)
+        x = F.relu(self.conv2_1(x))
+
+        x = self.batch_norm_c2_2(x)
+        x = self.dropout_c2_2(x)
+        x = F.relu(self.conv2_2(x))
+        x = x * x_s
+
+        x = self.max_po_c2(x)
+
+        x = self.flt(x)
+
+        x = self.batch_norm3(x)
+        x = self.dropout3(x)
+        x = self.dense3(x)
+
+        return x
+
+
+class CustomDataset(Dataset):
+    def __init__(self, data, transform=None):
+        self.data = data
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        x = self.data.iloc[index].values.astype(np.float32)  # Convert to float32
+        if self.transform:
+            x = self.transform(x)
+        return x

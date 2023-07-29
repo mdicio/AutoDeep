@@ -1,3 +1,13 @@
+#custom
+data/
+output/
+modelsdefinition/IGTD/results/
+# saved models
+saved_models/
+*.ckpt
+.pt_tmp/
+.pt_tmp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
