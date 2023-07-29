@@ -39,7 +39,7 @@ save_image_size = (
 fea_dist_method = "Euclidean"
 image_dist_method = "Euclidean"
 error = "abs"
-result_dir = f"/Users/mdicio/Documents/GitHub/RealWTab/modelsdefinition/IGTD/results/{dataset_name}_igtd_{fea_dist_method}_{image_dist_method}"
+result_dir = f"./modelsdefinition/IGTD/results/{dataset_name}_igtd_{fea_dist_method}_{image_dist_method}"
 
 max_step = 1000000  # The maximum number of iterations to run the IGTD algorithm, if it does not converge.
 val_step = 1000  # The number of iterations for determining algorithm convergence. If the error reduction rate
@@ -69,7 +69,7 @@ table_to_image(
 fea_dist_method = "Pearson"
 image_dist_method = "Manhattan"
 error = "squared"
-result_dir = f"/Users/mdicio/Documents/GitHub/RealWTab/modelsdefinition/IGTD/results/{dataset_name}_igtd_{fea_dist_method}_{image_dist_method}"
+result_dir = f"./modelsdefinition/IGTD/results/{dataset_name}_igtd_{fea_dist_method}_{image_dist_method}"
 os.makedirs(name=result_dir, exist_ok=True)
 table_to_image(
     X_train,

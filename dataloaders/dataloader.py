@@ -180,7 +180,7 @@ class KaggleAgeConditionsLoader(DataLoader):
         # Load the Iris dataset from scikit-learn
 
         df = pd.read_csv(
-            "/Users/mdicio/Documents/GitHub/RealWTab/data/kaggle/icr-identify-age-related-conditions/train.csv"
+            "./data/kaggle/icr-identify-age-related-conditions/train.csv"
         ).drop(columns=["Id"])
         df = df.rename(columns={"Class": "target"})
         # map the values to 0 and 1
@@ -226,7 +226,7 @@ class KaggleAgeConditionsLoader(DataLoader):
                 X_train,
                 img_rows=8,
                 img_columns=7,
-                igtd_path="/Users/mdicio/Documents/GitHub/RealWTab/modelsdefinition/IGTD/results/ageconditions_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path="./modelsdefinition/IGTD/results/ageconditions_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
             extra_info["num_targets"] = self.num_targets
 
@@ -258,7 +258,7 @@ class BufixDataLoader(DataLoader):
         # Load the Iris dataset from scikit-learn
 
         df = pd.read_csv(
-            "/Users/mdicio/Documents/GitHub/RealWTab/data/buf/sortedbulk_data-1.csv"
+            "./data/buf/sortedbulk_data-1.csv"
         )
         df = df.drop(["num_telefono", "target_event_date", "target_date"], axis=1)
         df_train = df.loc[df["partition_date"] < "2022-04-30"].drop(
@@ -295,7 +295,7 @@ class BufixDataLoader(DataLoader):
                 X_train,
                 img_rows=10,
                 img_columns=11,
-                igtd_path="/Users/mdicio/Documents/GitHub/RealWTab/modelsdefinition/IGTD/results/bufix_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path="./modelsdefinition/IGTD/results/bufix_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, X_test, y_train, y_test, extra_info
@@ -381,7 +381,7 @@ class TitanicDataLoader(DataLoader):
                 X_train,
                 img_rows=4,
                 img_columns=7,
-                igtd_path="/Users/mdicio/Documents/GitHub/RealWTab/modelsdefinition/IGTD/results/titanic_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path="./modelsdefinition/IGTD/results/titanic_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
         return X_train, X_test, y_train, y_test, extra_info
 
@@ -447,7 +447,7 @@ class BreastCancerDataLoader(DataLoader):
                 X_train,
                 img_rows=6,
                 img_columns=5,
-                igtd_path="/Users/mdicio/Documents/GitHub/RealWTab/modelsdefinition/IGTD/results/breastcancer_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path="./modelsdefinition/IGTD/results/breastcancer_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
         return X_train, X_test, y_train, y_test, extra_info
 
@@ -513,7 +513,7 @@ class CreditDataLoader(DataLoader):
                 X_train,
                 img_rows=5,
                 img_columns=6,
-                igtd_path="/Users/mdicio/Documents/GitHub/RealWTab/modelsdefinition/IGTD/results/creditcard_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path="./modelsdefinition/IGTD/results/creditcard_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, X_test, y_train, y_test, extra_info
@@ -580,7 +580,7 @@ class IrisDataLoader(DataLoader):
                 X_train,
                 img_rows=2,
                 img_columns=2,
-                igtd_path="/Users/mdicio/Documents/GitHub/RealWTab/modelsdefinition/IGTD/results/iris_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path="./modelsdefinition/IGTD/results/iris_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, X_test, y_train, y_test, extra_info
@@ -646,7 +646,7 @@ class CaliforniaHousingDataLoader(DataLoader):
                 X_train,
                 img_rows=3,
                 img_columns=3,
-                igtd_path="/Users/mdicio/Documents/GitHub/RealWTab/modelsdefinition/IGTD/results/housing_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path="./modelsdefinition/IGTD/results/housing_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, X_test, y_train, y_test, extra_info
@@ -761,7 +761,7 @@ class AdultDataLoader(DataLoader):
                 X_train,
                 img_rows=3,
                 img_columns=3,
-                igtd_path="/Users/mdicio/Documents/GitHub/RealWTab/modelsdefinition/IGTD/results/adult_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path="./modelsdefinition/IGTD/results/adult_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, X_test, y_train, y_test, extra_info
@@ -791,7 +791,7 @@ class CoverTypeDataLoader(DataLoader):
     def load_data(self):
         # Load the Adult dataset from UCI Machine Learning Repository
         df = pd.read_csv(
-            "/Users/mdicio/Documents/GitHub/RealWTab/data/covertype/covtype.data.gz"
+            "./data/covertype/covtype.data.gz"
         )
 
         df = df.rename(columns={"5": self.target_column})
@@ -829,7 +829,7 @@ class CoverTypeDataLoader(DataLoader):
                 X_train,
                 img_rows=3,
                 img_columns=3,
-                igtd_path="/Users/mdicio/Documents/GitHub/RealWTab/modelsdefinition/IGTD/results/adult_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path="./modelsdefinition/IGTD/results/adult_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, X_test, y_train, y_test, extra_info
@@ -859,7 +859,7 @@ class HelocDataLoader(DataLoader):
     def load_data(self):
         # Load the Adult dataset from UCI Machine Learning Repository
         df = pd.read_csv(
-            "/Users/mdicio/Documents/GitHub/RealWTab/data/heloc/heloc_dataset_v1.csv"
+            "./data/heloc/heloc_dataset_v1.csv"
         )
 
         df = df.rename(columns={"RiskPerformance": self.target_column})
@@ -898,7 +898,7 @@ class HelocDataLoader(DataLoader):
                 X_train,
                 img_rows=3,
                 img_columns=3,
-                igtd_path="/Users/mdicio/Documents/GitHub/RealWTab/modelsdefinition/IGTD/results/adult_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path="./modelsdefinition/IGTD/results/adult_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, X_test, y_train, y_test, extra_info
