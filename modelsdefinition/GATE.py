@@ -198,9 +198,6 @@ class GATE(BaseModel):
             learning_rate=params['learning_rate'],
         )
 
-        # DEBUG USE DEFAULT
-        model_config = GatedAdditiveTreeEnsembleConfig(task=self.task)
-
         tabular_model = TabularModel(
             data_config=data_config,
             model_config=model_config,

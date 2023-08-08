@@ -203,8 +203,6 @@ class TabNetTrainer(BaseModel):
             # loss=self.loss_fn,
         )
 
-        # DEBUG DEFAULTS
-        model_config = TabNetModelConfig(task=self.task)
 
         tabular_model = TabularModel(
             data_config=data_config,
