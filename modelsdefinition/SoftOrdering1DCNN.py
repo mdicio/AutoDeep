@@ -140,7 +140,11 @@ class SoftOrdering1DCNN:
         self.transformation = None
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
-        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        # Get the filename of the current Python script
+        self.script_filename = os.path.basename(__file__)
+        formatter = logging.Formatter(
+            f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
+        )
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.DEBUG)
         console_handler.setFormatter(formatter)

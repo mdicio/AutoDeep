@@ -40,7 +40,11 @@ class GATE(BaseModel):
         self.cv_size = None
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
-        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        # Get the filename of the current Python script
+        self.script_filename = os.path.basename(__file__)
+        formatter = logging.Formatter(
+            f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
+        )
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(formatter)
@@ -128,6 +132,7 @@ class GATE(BaseModel):
 
     # Define the data configuration
     def prepare_tabular_model(self, params, outer_params):
+        self.logger.debug(f"TRAINING ON {self.device}")
         data_config = DataConfig(
             target=["target"],
             continuous_cols=[
@@ -187,7 +192,7 @@ class GATE(BaseModel):
             lr_scheduler_monitor_metric="valid_loss",
         )
 
-        self.model_config = GatedAdditiveTreeEnsembleConfig(
+        model_config = GatedAdditiveTreeEnsembleConfig(
             task=self.task,
             tree_depth=params["tree_depth"],
             num_trees=params["num_trees"],

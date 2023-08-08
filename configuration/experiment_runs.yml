@@ -237,22 +237,21 @@
     - 10
     - 20
     batch_size: &id062
+    - 16
+    - 32
+    - 64
     - 128
-    - 256
-    - 512
-    - 1024
     tree_depth: &id063
     - 4
-    - 12
+    - 7
     num_trees: &id064
     - 4
-    - 20
+    - 22
     chain_trees: &id065
-    - true
     - false
     gflu_stages: &id066
     - 2
-    - 4
+    - 8
     optimizer_fn: &id067
       Adam:
         weight_decay:

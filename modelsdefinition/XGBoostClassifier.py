@@ -19,9 +19,13 @@ class XGBoostClassifier(BaseModel):
         self.cv_size = None
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
+        # Get the filename of the current Python script
+        self.script_filename = os.path.basename(__file__)
         self.problem_type = problem_type
         self.num_classes = num_classes
-        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
+        )
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.DEBUG)
         console_handler.setFormatter(formatter)
