@@ -188,7 +188,32 @@ class AutoIntTrainer(BaseModel):
         )
 
         # DEBUG USE DEFAULT
-        model_config = AutoIntConfig(task=self.task)
+        # Pass parameters to the class using kwargs
+        model_config = AutoIntConfig(
+            task=self.task,
+            #attn_embed_dim=params['attn_embed_dim'],
+            #num_heads=params['num_heads'],
+            num_attn_blocks=params['num_attn_blocks'],
+            attn_dropouts=params['attn_dropouts'],
+            has_residuals=params['has_residuals'],
+            #embedding_dim=params['embedding_dim'],
+            embedding_initialization=params['embedding_initialization'],
+            embedding_bias=params['embedding_bias'],
+            share_embedding=params['share_embedding'],
+            share_embedding_strategy=params['share_embedding_strategy'],
+            shared_embedding_fraction=params['shared_embedding_fraction'],
+            deep_layers=params['deep_layers'],
+            layers=params['layers'],
+            activation=params['activation'],
+            use_batch_norm=params['use_batch_norm'],
+            initialization=params['initialization'],
+            dropout=params['dropout'],
+            attention_pooling=params['attention_pooling'],
+            #head=params['head'],
+            embedding_dropout=params['embedding_dropout'],
+            batch_norm_continuous_input=params['batch_norm_continuous_input'],
+            learning_rate=params['learning_rate'],
+        )
 
         tabular_model = TabularModel(
             data_config=data_config,

@@ -1,6 +1,7 @@
 #custom
 data/
 output/
+notebooks/
 modelsdefinition/IGTD/results/
 # saved models
 saved_models/

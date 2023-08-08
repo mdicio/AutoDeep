@@ -180,7 +180,7 @@ class KaggleAgeConditionsLoader(DataLoader):
         # Load the Iris dataset from scikit-learn
 
         df = pd.read_csv(
-            "./data/kaggle/icr-identify-age-related-conditions/train.csv"
+            "../data/kaggle/icr-identify-age-related-conditions/train.csv"
         ).drop(columns=["Id"])
         df = df.rename(columns={"Class": "target"})
         # map the values to 0 and 1
@@ -258,7 +258,7 @@ class BufixDataLoader(DataLoader):
         # Load the Iris dataset from scikit-learn
 
         df = pd.read_csv(
-            "./data/buf/sortedbulk_data-1.csv"
+            "../data/buf/sortedbulk_data-1.csv"
         )
         df = df.drop(["num_telefono", "target_event_date", "target_date"], axis=1)
         df_train = df.loc[df["partition_date"] < "2022-04-30"].drop(
@@ -791,7 +791,7 @@ class CoverTypeDataLoader(DataLoader):
     def load_data(self):
         # Load the Adult dataset from UCI Machine Learning Repository
         df = pd.read_csv(
-            "./data/covertype/covtype.data.gz"
+            "../data/covertype/covtype.data.gz"
         )
 
         df = df.rename(columns={"5": self.target_column})
@@ -859,7 +859,7 @@ class HelocDataLoader(DataLoader):
     def load_data(self):
         # Load the Adult dataset from UCI Machine Learning Repository
         df = pd.read_csv(
-            "./data/heloc/heloc_dataset_v1.csv"
+            "../data/heloc/heloc_dataset_v1.csv"
         )
 
         df = df.rename(columns={"RiskPerformance": self.target_column})

@@ -13,7 +13,7 @@ import os
 import time
 
 
-output_results_filename = "DEFAULT_PARAMS_ALL"
+output_results_filename = "debug_newmodels"
 with open("./configuration/experiment_config.yml", "r") as f:
     config = yaml.safe_load(f)
 

@@ -195,6 +195,7 @@ class GATE(BaseModel):
                 "chain_trees"
             ],  # akin to bagging, True is akin to boosting
             gflu_stages=params["gflu_stages"],
+            learning_rate=params['learning_rate'],
         )
 
         # DEBUG USE DEFAULT
