@@ -115,7 +115,10 @@ class XGBoostClassifier(BaseModel):
 
         self.logger.debug("Computed predictions successfully")
 
-        return predictions, probabilities
+        if predict_proba:
+            return predictions, probabilities
+        else:
+            return predictions
 
     def hyperopt_search(
         self,

@@ -82,12 +82,12 @@ class MLP(BaseModel):
 
         # Create the MLP model based on problem_type
         if self.problem_type == "regression":
-            model = MLPRegressor(verbose=True, early_stopping=True, **params)
+            model = MLPRegressor(verbose=False, early_stopping=True, **params)
         elif self.problem_type in [
             "binary_classification",
             "multiclass_classification",
         ]:
-            model = MLPClassifier(verbose=True, early_stopping=True, **params)
+            model = MLPClassifier(verbose=False, early_stopping=True, **params)
         else:
             raise ValueError("Wrong problem type")
 
@@ -121,7 +121,10 @@ class MLP(BaseModel):
 
         self.logger.debug(f"{predictions[:10]}")
         self.logger.debug("Computed predictions successfully")
-        return predictions, probabilities
+        if predict_proba:
+            return predictions, probabilities
+        else:
+            return predictions
 
     def cross_validate(
         self,
@@ -167,12 +170,12 @@ class MLP(BaseModel):
         scoring_metric = self.metric_mapping[metric]
         # Create the MLP model based on problem_type
         if self.problem_type == "regression":
-            model = MLPRegressor(verbose=True, early_stopping=True)
+            model = MLPRegressor(verbose=False, early_stopping=True)
         elif self.problem_type in [
             "binary_classification",
             "multiclass_classification",
         ]:
-            model = MLPClassifier(verbose=True, early_stopping=True)
+            model = MLPClassifier(verbose=False, early_stopping=True)
             if self.problem_type == "multiclass_classification":
                 if scoring_metric == "f1":
                     metric += "_weighted"

@@ -485,7 +485,7 @@
   best_params: {}
   param_grid:
     outer_params: &id092
-      hyperopt_evals: 100
+      hyperopt_evals: 2
     n_estimators: &id093
     - 100
     - 1100

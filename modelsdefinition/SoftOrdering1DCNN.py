@@ -543,7 +543,10 @@ class SoftOrdering1DCNN:
         probabilities = np.array(probabilities)
 
         self.logger.debug("Model predicting success")
-        return predictions, probabilities
+        if predict_proba:
+            return predictions, probabilities
+        else:
+            return predictions
 
 
 class CustomDataset(Dataset):

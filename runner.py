@@ -136,7 +136,8 @@ for run in runs:
             if dataset_task == "binary_classification":
                 y_pred, y_prob = model.predict(X_test, predict_proba=True)
             else:
-                y_pred, y_prob = model.predict(X_test)
+                y_pred = model.predict(X_test)
+                y_prob = None
             print("MODEL COULD PREDICT YEAAAAAH BUDDYY")
 
             evaluator = Evaluator(
@@ -198,7 +199,8 @@ for run in runs:
         if dataset_task == "binary_classification":
             y_pred, y_prob = model.predict(X_test, predict_proba=True)
         else:
-            y_pred, y_prob = model.predict(X_test)
+            y_pred = model.predict(X_test)
+            y_prob = None
 
         print(f"y_true.shape, y_pred.shape {y_test.shape, y_pred.shape}")
         print(y_test[:10])

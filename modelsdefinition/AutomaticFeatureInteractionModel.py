@@ -573,4 +573,7 @@ class AutoIntTrainer(BaseModel):
         self.logger.debug(f"{predictions[:10]}")
         self.logger.debug("Computed predictions successfully")
 
-        return predictions, probabilities
+        if predict_proba:
+            return predictions, probabilities
+        else:
+            return predictions
