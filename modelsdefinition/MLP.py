@@ -1,6 +1,7 @@
 from modelsdefinition.CommonStructure import BaseModel
 from sklearn.neural_network import MLPClassifier, MLPRegressor
 from sklearn.model_selection import RandomizedSearchCV
+import os
 import logging
 import joblib
 import numpy as np
