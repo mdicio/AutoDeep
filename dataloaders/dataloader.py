@@ -6,8 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.datasets import (
     load_iris,
     fetch_california_housing,
-    load_breast_cancer,
-    fetch_covtype,
+    load_breast_cancer
 )
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import torch

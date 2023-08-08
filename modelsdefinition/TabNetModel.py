@@ -159,11 +159,11 @@ class TabNetTrainer(BaseModel):
         params["virtual_batch_size"] = vbs
         if params["optimizer_fn"] == torch.optim.Adam:
             params["optimizer_params"] = dict(
-                lr=params["Adam_lr"], weight_decay=params["Adam_weight_decay"]
+                weight_decay=params["Adam_weight_decay"]
             )
         elif params["optimizer_fn"] == torch.optim.SGD:
             params["optimizer_params"] = dict(
-                lr=params["SGD_lr"], momentum=params["SGD_momentum"]
+                 momentum=params["SGD_momentum"]
             )
         if params["scheduler_fn"] == torch.optim.lr_scheduler.StepLR:
             params["scheduler_params"] = dict(
