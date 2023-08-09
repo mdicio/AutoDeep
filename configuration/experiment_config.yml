@@ -4,15 +4,15 @@ retrain: True
 include_models:
   #- XGB  # Extreme Gradient Boosting
   #- MLP  # Multi-Layer Perceptron
-  #- TabNet  # TabNet Classifier 
+  - TabNet  # TabNet Classifier 
   #- GATE 
   #- resnet18
   #- S1DCNN
-  - CategoryEmbedding
-  #- FTTransformer
-  #- GANDALF
-  #- Node
-  #- TabTransformer
+  #- CategoryEmbedding
+  - FTTransformer
+  - GANDALF
+  - Node
+  - TabTransformer
   #- AutoInt
   ###- squeezenet
 
@@ -22,9 +22,9 @@ include_datasets:
   #- iris        # Iris flower dataset
   #- titanic
   #- bufix
-  - breastcancer 
+  #- breastcancer 
   - housing
-  - ageconditions
+  #- ageconditions
   - adult
   #- heloc
   #- covertype

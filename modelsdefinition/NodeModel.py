@@ -210,7 +210,7 @@ class NodeTrainer(BaseModel):
 
         valid_params = {param: value for param, value in params.items()
         if param in inspect.signature(NodeConfig).parameters}
-        print("valid parameters", valid_params)
+        self.logger.debug("valid parameters", valid_params)
         model_config = NodeConfig(
             task=self.task,
             **valid_params
