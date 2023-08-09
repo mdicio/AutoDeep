@@ -94,8 +94,8 @@
   best_params: {}
   param_grid:
     outer_params: &id026
-      hyperopt_evals: 2
-      num_epochs: 2
+      hyperopt_evals: 10
+      num_epochs: 1000
       early_stopping: true
     learning_rate: &id027
     - 0.0001
@@ -159,7 +159,7 @@
     outer_params: &id041
       max_epochs: 1000
       early_stopping_tolerance: 1.0e-06
-      hyperopt_evals: 2
+      hyperopt_evals: 10
       val_size: 0.2
       auto_lr_find: false
     learning_rate: &id042
@@ -226,7 +226,7 @@
   best_params: {}
   param_grid:
     outer_params: &id059
-      hyperopt_evals: 2
+      hyperopt_evals: 10
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
@@ -270,9 +270,9 @@
   best_params: {}
   param_grid:
     outer_params: &id069
-      max_epochs: 2
+      max_epochs: 1000
       early_stopping_tolerance: 1.0e-06
-      hyperopt_evals: 2
+      hyperopt_evals: 10
       val_size: 0.2
       auto_lr_find: false
     learning_rate: &id070
@@ -403,7 +403,7 @@
   best_params: {}
   param_grid:
     outer_params:
-      max_epochs: 300
+      max_epochs: 1000
       early_stopping_tolerance: 1.0e-06
       hyperopt_evals: 10
       val_size: 0.2
@@ -436,7 +436,7 @@
   best_params: {}
   param_grid:
     outer_params: &id092
-      max_epochs: 100
+      max_epochs: 1000
       early_stopping_tolerance: 1.0e-06
       hyperopt_evals: 10
       val_size: 0.2

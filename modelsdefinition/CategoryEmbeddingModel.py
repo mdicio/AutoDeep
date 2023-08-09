@@ -261,7 +261,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
         validation = pd.concat([X_val, y_val], axis=1)
 
         self._set_loss_function(y_train)
-        self.model = self.prepare_tabular_model(params, params["outer_params"])
+        self.model = self.prepare_tabular_model(params, params["outer_params"], default = self.default)
         
 
         self.model.fit(
@@ -327,7 +327,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
         # Define the objective function for hyperopt search
         def objective(params):
             self.logger.debug(f"Training with hyperparameters: {params}")
-            model = self.prepare_tabular_model(params, outer_params)
+            model = self.prepare_tabular_model(params, outer_params, default = self.default)
 
             # Opened issue on pytorch tabular for this DEBUG
             params["optimizer_params"].pop("lr", None)
@@ -443,7 +443,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
         # Define the objective function for hyperopt search
         def objective(params):
             self.logger.debug(f"Training with hyperparameters: {params}")
-            model = self.prepare_tabular_model(params, outer_params)
+            model = self.prepare_tabular_model(params, outer_params, default = self.default)
 
             kf = KFold(n_splits=k_value, shuffle=True, random_state=42)
 
@@ -467,7 +467,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
                 self.logger.debug(f"Train fold shape : {train_fold.shape}")
                 self.logger.debug(f"Val fold shape : {val_fold.shape}")
                 # Initialize the tabular model
-                model = self.prepare_tabular_model(params, outer_params)
+                model = self.prepare_tabular_model(params, outer_params, default = self.default)
                 # Fit the model
                 # Opened issue on pytorch tabular for this DEBUG
                 params["optimizer_params"].pop("lr", None)

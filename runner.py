@@ -14,6 +14,7 @@ import time
 
 
 output_results_filename = "default_pytorch_tabular_benchmark"
+DEFAULT = True
 with open("./configuration/experiment_config.yml", "r") as f:
     config = yaml.safe_load(f)
 
@@ -76,6 +77,7 @@ for run in runs:
             num_classes=dataset_num_classes,
         )
         model.save_path = f"./output/modelsaves/{dataset_name}/{model_name}/{run_id}/"
+        model.default = DEFAULT
         # check if the directory already exists
         if not os.path.exists(model.save_path):
             os.makedirs(model.save_path)
