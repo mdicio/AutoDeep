@@ -485,7 +485,7 @@
   best_params: {}
   param_grid:
     outer_params: &id092
-      hyperopt_evals: 2
+      hyperopt_evals: 100
     n_estimators: &id093
     - 100
     - 1100
@@ -498,7 +498,7 @@
     - auto
     max_depth: &id097
     - 4
-    - 12
+    - 10
     learning_rate: &id098
     - 0.1
     - 0.33
@@ -510,7 +510,7 @@
     - 1.0
     min_child_weight: &id101
     - 1
-    - 10
+    - 50
     alpha: &id102
     - 0.0
     - 5.0
@@ -845,6 +845,105 @@
         patience:
         - 4
         - 7
+- dataset: housing
+  model: node
+  best_params: {}
+  param_grid:
+    outer_params: &id183
+      max_epochs: 3
+      early_stopping_tolerance: 1.0e-06
+      hyperopt_evals: 2
+      val_size: 0.2
+      auto_lr_find: false
+    num_layers: &id184
+    - 1
+    - 2
+    - 3
+    num_trees: &id185
+    - 1024
+    - 2048
+    - 4096
+    additional_tree_output_dim: &id186
+    - 2
+    - 3
+    - 4
+    depth: &id187
+    - 4
+    - 6
+    - 8
+    choice_function: &id188
+    - entmax15
+    - sparsemax
+    bin_function: &id189
+    - entmoid15
+    - sparsemoid
+    max_features: &id190
+    - null
+    - 50
+    - 100
+    input_dropout: &id191
+    - 0.0
+    - 0.2
+    - 0.4
+    initialize_response: &id192
+    - normal
+    - uniform
+    initialize_selection_logits: &id193
+    - uniform
+    - normal
+    threshold_init_beta: &id194
+    - 0.1
+    - 1.0
+    - 10.0
+    threshold_init_cutoff: &id195
+    - 0.5
+    - 0.9
+    - 1.5
+    cat_embedding_dropout: &id196
+    - 0.0
+    - 0.1
+    - 0.2
+    embed_categorical: &id197
+    - true
+    - false
+    task: &id198
+    - regression
+    - classification
+    - backbone
+    head: &id199
+    - LinearHead
+    - MixtureDensityHead
+    embedding_dropout: &id200
+    - 0.0
+    - 0.1
+    - 0.2
+    batch_norm_continuous_input: &id201
+    - true
+    - false
+    learning_rate: &id202
+    - 0.001
+    - 0.0001
+    early_stopping_patience: &id203
+    - 3
+    - 5
+    batch_size: &id204
+    - 128
+    - 256
+    - 512
+    - 1024
+    optimizer_fn: &id205
+      Adam:
+        weight_decay:
+        - 0.0001
+        - 0.3
+    scheduler_fn: &id206
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        - 0.9
+        patience:
+        - 4
+        - 9
 - dataset: adult
   model: xgb
   best_params: {}
@@ -964,3 +1063,31 @@
     batch_norm_continuous_input: *id180
     optimizer_fn: *id181
     scheduler_fn: *id182
+- dataset: adult
+  model: node
+  best_params: {}
+  param_grid:
+    outer_params: *id183
+    num_layers: *id184
+    num_trees: *id185
+    additional_tree_output_dim: *id186
+    depth: *id187
+    choice_function: *id188
+    bin_function: *id189
+    max_features: *id190
+    input_dropout: *id191
+    initialize_response: *id192
+    initialize_selection_logits: *id193
+    threshold_init_beta: *id194
+    threshold_init_cutoff: *id195
+    cat_embedding_dropout: *id196
+    embed_categorical: *id197
+    task: *id198
+    head: *id199
+    embedding_dropout: *id200
+    batch_norm_continuous_input: *id201
+    learning_rate: *id202
+    early_stopping_patience: *id203
+    batch_size: *id204
+    optimizer_fn: *id205
+    scheduler_fn: *id206

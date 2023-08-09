@@ -27,7 +27,7 @@ from sklearn.utils.class_weight import compute_class_weight
 from evaluation.generalevaluator import Evaluator
 from modelsdefinition.CommonStructure import BaseModel
 from modelutils.trainingutilities import (
-    infer_hyperopt_space_tabnet,
+    infer_hyperopt_space_pytorch_tabular,
     stop_on_perfect_lossCondition,
     calculate_possible_fold_sizes,
 )
@@ -63,6 +63,11 @@ class CategoryEmbeddingtTrainer(BaseModel):
             isinstance(handler, logging.FileHandler) for handler in self.logger.handlers
         ):
             self.logger.addHandler(file_handler)
+
+        
+        # configure logging at the root level of Lightning
+        logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
+        os.environ['PT_LOGLEVEL'] = "CRITICAL" 
 
         self.problem_type = problem_type
         self.num_classes = num_classes
@@ -155,6 +160,9 @@ class CategoryEmbeddingtTrainer(BaseModel):
             checkpoints="valid_loss",
             checkpoints_path=self.save_path,  # Save best checkpoint monitoring val_loss
             load_best=True,  # After training, load the best checkpoint
+            progress_bar = outer_params.get("progress_bar", "rich"),#none, simple, rich
+            precision = outer_params.get("precision",32) #16, 32, 64
+        
         )
 
         if params["optimizer_fn"] == torch.optim.Adam:
@@ -194,7 +202,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
 
         model_config = CategoryEmbeddingModelConfig(
             task=self.task,
-            layers="1024-512-512",  # Number of nodes in each layer
+            layers="128-64-32",  # Number of nodes in each layer
             activation="LeakyReLU",  # Activation between each layers
             learning_rate=params["learning_rate"],
         )
@@ -244,8 +252,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
 
         self._set_loss_function(y_train)
         self.model = self.prepare_tabular_model(params, params["outer_params"])
-        # Opened issue on pytorch tabular for this DEBUG
-        params["optimizer_params"].pop("lr", None)
+        
 
         self.model.fit(
             train=train,
@@ -292,7 +299,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
         self.logger.info(f"Starting hyperopt search maximising {metric} metric")
         self.extra_info = extra_info
         outer_params = param_grid["outer_params"]
-        space = infer_hyperopt_space_tabnet(param_grid)
+        space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
 
         # Split the train data into training and validation sets
@@ -414,7 +421,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
         self.logger.info(f"Starting hyperopt search maximising {metric} metric")
         self.extra_info = extra_info
         outer_params = param_grid["outer_params"]
-        space = infer_hyperopt_space_tabnet(param_grid)
+        space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
 
         # Merge X_train and y_train

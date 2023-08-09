@@ -1,0 +1,13 @@
+wheel
+PyYAML
+numpy
+scikit-learn
+pandas
+seaborn
+torch==1.13.1
+hyperopt
+xgboost
+pytorch_tabular
+torchmetrics==0.11.4
+torchvision==0.14.1
+wandb

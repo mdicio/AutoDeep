@@ -2,16 +2,16 @@ random_state: 4200
 retrain: True
 # List of models to include in the experiment
 include_models:
-  - XGB  # Extreme Gradient Boosting
-  - MLP  # Multi-Layer Perceptron
-  - TabNet  # TabNet Classifier 
-  - GATE 
-  - resnet18
-  - S1DCNN
+  #- XGB  # Extreme Gradient Boosting
+  #- MLP  # Multi-Layer Perceptron
+  #- TabNet  # TabNet Classifier 
+  #- GATE 
+  #- resnet18
+  #- S1DCNN
   #- CategoryEmbedding
-  - FTTransformer
+  #- FTTransformer
   #- GANDALF
-  #- Node
+  - Node
   #- TabTransformer
   #- AutoInt
   ###- squeezenet
@@ -25,7 +25,7 @@ include_datasets:
   #- breastcancer 
   - housing
   #- ageconditions
-  - adult
+  #- adult
   #- heloc
   #- covertype
 

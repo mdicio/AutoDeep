@@ -54,7 +54,7 @@ def calculate_possible_fold_sizes(n_samples, k):
     return list(possible_train_sizes)
 
 
-def infer_hyperopt_space_tabnet(param_grid: Dict):
+def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
     # Define the hyperparameter search space
     space = {}
     param_grid.pop("outer_params", None)
@@ -96,25 +96,30 @@ def infer_hyperopt_space_tabnet(param_grid: Dict):
                         if min_value == max_value:
                             space[newname] = min_value
                         else:
-                            space[newname] = scope.float(
-                                hp.loguniform(
-                                    newname, np.log(min_value), np.log(max_value)
+    
+                            if min_value == 0.0:
+                                space[newname] = scope.float(
+                                    hp.uniform(newname, min_value, max_value)
                                 )
-                            )
+                            else:
+                                space[newname] = scope.float(
+                                    hp.loguniform(newname, np.log(min_value), np.log(max_value))
+                                )
         elif (isinstance(param_values[0], (str, bool))) or (
             param_name in ["virtual_batch_size_ratio", "batch_size", "weights"]
-        ):
+        ) or any(value is None for value in param_values):
+            
             if param_name in ["batch_size", "weights"]:
                 space[param_name] = scope.int(hp.choice(param_name, param_values))
 
-            # If the parameter values are strings, use hp.choice
-            space[param_name] = hp.choice(param_name, param_values)
+            else:# If the parameter values are strings, use hp.choice
+                space[param_name] = hp.choice(param_name, param_values)
 
         elif isinstance(param_values[0], int):
             min_value = min(param_values)
             max_value = max(param_values)
             # If the parameter values are integers, use hp.quniform or scope.int
-            if min_value == max_value:
+            if (min_value == max_value):
                 space[param_name] = min_value
             else:
                 space[param_name] = scope.int(
@@ -127,9 +132,14 @@ def infer_hyperopt_space_tabnet(param_grid: Dict):
             if min_value == max_value:
                 space[param_name] = min_value
             else:
-                space[param_name] = scope.float(
-                    hp.loguniform(param_name, np.log(min_value), np.log(max_value))
-                )
+                if min_value == 0.0:
+                    space[param_name] = scope.float(
+                        hp.uniform(param_name, min_value, max_value)
+                    )
+                else:
+                    space[param_name] = scope.float(
+                        hp.loguniform(param_name, np.log(min_value), np.log(max_value))
+                    )
 
     return space
 
@@ -157,43 +167,14 @@ def infer_hyperopt_space_s1dcnn(param_grid: Dict):
             if min_value == max_value:
                 space[param_name] = min_value
             else:
-                space[param_name] = scope.float(
-                    hp.loguniform(param_name, np.log(min_value), np.log(max_value))
-                )
-    return space
-
-
-def infer_hyperopt_space_gate(param_grid: Dict):
-    # Define the hyperparameter search space
-    space = {}
-    param_grid.pop("outer_params", None)
-
-    for param_name, param_values in param_grid.items():
-        min_value = min(param_values)
-        max_value = max(param_values)
-
-        if (isinstance(param_values[0], (str, bool))) or (
-            param_name in ["batch_size", "virtual_batch_size_ratio"]
-        ):
-            # If the parameter values are strings, use hp.choice
-            space[param_name] = hp.choice(param_name, param_values)
-
-        elif isinstance(param_values[0], int):
-            # If the parameter values are integers, use hp.quniform or scope.int
-            if min_value == max_value:
-                space[param_name] = min_value
-            else:
-                space[param_name] = scope.int(
-                    hp.quniform(param_name, min_value, max_value, 1)
-                )
-        else:
-            # If the parameter values are floats, use hp.loguniform or scope.float
-            if min_value == max_value:
-                space[param_name] = min_value
-            else:
-                space[param_name] = scope.float(
-                    hp.loguniform(param_name, np.log(min_value), np.log(max_value))
-                )
+                if min_value == 0.0:
+                                space[param_name] = scope.float(
+                                    hp.uniform(param_name, min_value, max_value)
+                                )
+                else:
+                    space[param_name] = scope.float(
+                        hp.loguniform(param_name, np.log(min_value), np.log(max_value))
+                    )
     return space
 
 
@@ -221,9 +202,14 @@ def infer_hyperopt_space(param_grid: Dict):
             if min_value == max_value:
                 space[param_name] = min_value
             else:
-                space[param_name] = scope.float(
-                    hp.uniform(param_name, min_value, max_value)
-                )
+                if min_value == 0.0:
+                    space[param_name] = scope.float(
+                        hp.uniform(param_name, min_value, max_value)
+                    )
+                else:
+                    space[param_name] = scope.float(
+                        hp.loguniform(param_name, np.log(min_value), np.log(max_value))
+                    )
         else:
             raise ValueError(
                 f"Param grid uses not supported type, {type(param_values[0])}"
