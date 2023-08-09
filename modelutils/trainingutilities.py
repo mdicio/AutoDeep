@@ -106,7 +106,7 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
                                     hp.loguniform(newname, np.log(min_value), np.log(max_value))
                                 )
         elif (isinstance(param_values[0], (str, bool))) or (
-            param_name in ["virtual_batch_size_ratio", "batch_size", "weights"]
+            param_name in ["virtual_batch_size_ratio", "batch_size", "weights", "num_trees"]
         ) or any(value is None for value in param_values):
             
             if param_name in ["batch_size", "weights"]:

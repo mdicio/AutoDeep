@@ -1,5 +1,6 @@
 import os
-import logging
+import logging 
+import inspect
 
 import numpy as np
 import pandas as pd
@@ -136,7 +137,7 @@ class AutoIntTrainer(BaseModel):
             )
 
     # Define the data configuration
-    def prepare_tabular_model(self, params, outer_params):
+    def prepare_tabular_model(self, params, outer_params, default = False):
         data_config = DataConfig(
             target=["target"],
             continuous_cols=[
@@ -199,33 +200,19 @@ class AutoIntTrainer(BaseModel):
             lr_scheduler_monitor_metric="valid_loss",
         )
 
-        # DEBUG USE DEFAULT
-        # Pass parameters to the class using kwargs
+        valid_params = {param: value for param, value in params.items()
+        if param in inspect.signature(AutoIntConfig).parameters}
+        print("valid parameters", valid_params)
         model_config = AutoIntConfig(
             task=self.task,
-            #attn_embed_dim=params['attn_embed_dim'],
-            #num_heads=params['num_heads'],
-            num_attn_blocks=params['num_attn_blocks'],
-            attn_dropouts=params['attn_dropouts'],
-            has_residuals=params['has_residuals'],
-            #embedding_dim=params['embedding_dim'],
-            embedding_initialization=params['embedding_initialization'],
-            embedding_bias=params['embedding_bias'],
-            share_embedding=params['share_embedding'],
-            share_embedding_strategy=params['share_embedding_strategy'],
-            shared_embedding_fraction=params['shared_embedding_fraction'],
-            deep_layers=params['deep_layers'],
-            layers=params['layers'],
-            activation=params['activation'],
-            use_batch_norm=params['use_batch_norm'],
-            initialization=params['initialization'],
-            dropout=params['dropout'],
-            attention_pooling=params['attention_pooling'],
-            #head=params['head'],
-            embedding_dropout=params['embedding_dropout'],
-            batch_norm_continuous_input=params['batch_norm_continuous_input'],
-            learning_rate=params['learning_rate'],
-        )
+            **valid_params
+    )
+        #override if we want to use default parameters
+        if default:
+            model_config = AutoIntConfig(
+            task=self.task)
+            optimizer_config = OptimizerConfig()
+        
 
         tabular_model = TabularModel(
             data_config=data_config,

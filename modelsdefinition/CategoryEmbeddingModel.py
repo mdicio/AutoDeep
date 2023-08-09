@@ -1,5 +1,6 @@
 import os
-import logging
+import logging 
+import inspect
 
 import numpy as np
 import pandas as pd
@@ -137,7 +138,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
             )
 
     # Define the data configuration
-    def prepare_tabular_model(self, params, outer_params):
+    def prepare_tabular_model(self, params, outer_params, default = False):
         data_config = DataConfig(
             target=["target"],
             continuous_cols=[
@@ -200,12 +201,21 @@ class CategoryEmbeddingtTrainer(BaseModel):
             lr_scheduler_monitor_metric="valid_loss",
         )
 
+        
+        valid_params = {param: value for param, value in params.items()
+        if param in inspect.signature(CategoryEmbeddingModelConfig).parameters}
+        print("valid parameters", valid_params)
         model_config = CategoryEmbeddingModelConfig(
             task=self.task,
-            layers="128-64-32",  # Number of nodes in each layer
-            activation="LeakyReLU",  # Activation between each layers
-            learning_rate=params["learning_rate"],
-        )
+            **valid_params
+    )
+
+        #override if we want to use default parameters
+        if default:
+            model_config = CategoryEmbeddingModelConfig(
+            task=self.task)
+            optimizer_config = OptimizerConfig()
+            
         tabular_model = TabularModel(
             data_config=data_config,
             model_config=model_config,

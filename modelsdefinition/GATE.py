@@ -1,5 +1,6 @@
 import os
-import logging
+import logging 
+import inspect
 
 import numpy as np
 import pandas as pd
@@ -138,7 +139,7 @@ class GATE(BaseModel):
             )
 
     # Define the data configuration
-    def prepare_tabular_model(self, params, outer_params):
+    def prepare_tabular_model(self, params, outer_params, default = False):
         self.logger.debug(f"TRAINING ON {self.device}")
         data_config = DataConfig(
             target=["target"],
@@ -202,17 +203,20 @@ class GATE(BaseModel):
             lr_scheduler_monitor_metric="valid_loss",
         )
 
+        valid_params = {param: value for param, value in params.items()
+        if param in inspect.signature(GatedAdditiveTreeEnsembleConfig).parameters}
+        print("valid parameters", valid_params)
         model_config = GatedAdditiveTreeEnsembleConfig(
             task=self.task,
-            tree_depth=params["tree_depth"],
-            num_trees=params["num_trees"],
-            chain_trees=params[
-                "chain_trees"
-            ],  # akin to bagging, True is akin to boosting
-            gflu_stages=params["gflu_stages"],
-            learning_rate=params['learning_rate'],
-        )
+            **valid_params
+    )
 
+        #override if we want to use default parameters
+        if default:
+            model_config = GatedAdditiveTreeEnsembleConfig(
+            task=self.task)
+            optimizer_config = OptimizerConfig()
+            
         tabular_model = TabularModel(
             data_config=data_config,
             model_config=model_config,

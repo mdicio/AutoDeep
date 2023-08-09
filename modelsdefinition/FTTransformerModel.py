@@ -1,5 +1,6 @@
 import os
-import logging
+import logging 
+import inspect
 
 import numpy as np
 import pandas as pd
@@ -138,7 +139,7 @@ class FTTransformerTrainer(BaseModel):
             )
 
     # Define the data configuration
-    def prepare_tabular_model(self, params, outer_params):
+    def prepare_tabular_model(self, params, outer_params, default = False):
         data_config = DataConfig(
             target=["target"],
             continuous_cols=[
@@ -201,30 +202,21 @@ class FTTransformerTrainer(BaseModel):
             lr_scheduler_monitor_metric="valid_loss",
         )
 
+        valid_params = {param: value for param, value in params.items()
+        if param in inspect.signature(FTTransformerConfig).parameters}
+        print("valid parameters", valid_params)
         model_config = FTTransformerConfig(
             task=self.task,
-            input_embed_dim=params["input_embed_dim"],
-            embedding_initialization=params["embedding_initialization"],
-            embedding_bias=params["embedding_bias"],
-            share_embedding=params["share_embedding"],
-            share_embedding_strategy=params["share_embedding_strategy"],
-            shared_embedding_fraction=params["shared_embedding_fraction"],
-            attn_feature_importance=params["attn_feature_importance"],
-            num_heads=params["num_heads"],
-            num_attn_blocks=params["num_attn_blocks"],
-            transformer_head_dim=params["transformer_head_dim"],
-            attn_dropout=params["attn_dropout"],
-            add_norm_dropout=params["add_norm_dropout"],
-            ff_dropout=params["ff_dropout"],
-            ff_hidden_multiplier=params["ff_hidden_multiplier"],
-            transformer_activation=params["transformer_activation"],
-            embedding_dropout=params["embedding_dropout"],
-            batch_norm_continuous_input=params["batch_norm_continuous_input"],
-            learning_rate=params["learning_rate"],
-        )
-        # DEBUG USE DEFAULT
-        model_config = FTTransformerConfig(task=self.task)
+            **valid_params
+    )
+        
 
+        #override if we want to use default parameters
+        if default:
+            model_config = FTTransformerConfig(
+            task=self.task)
+            optimizer_config = OptimizerConfig()
+            
         tabular_model = TabularModel(
             data_config=data_config,
             model_config=model_config,

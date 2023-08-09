@@ -1,5 +1,6 @@
 import os
-import logging
+import logging 
+import inspect
 
 import numpy as np
 import pandas as pd
@@ -138,7 +139,7 @@ class GandalfTrainer(BaseModel):
             )
 
     # Define the data configuration
-    def prepare_tabular_model(self, params, outer_params):
+    def prepare_tabular_model(self, params, outer_params, default = False):
         data_config = DataConfig(
             target=["target"],
             continuous_cols=[
@@ -201,10 +202,20 @@ class GandalfTrainer(BaseModel):
             lr_scheduler_monitor_metric="valid_loss",
         )
 
-   
-        # DEBUG USE DEFAULT
-        model_config = GANDALFConfig(task=self.task)
 
+        valid_params = {param: value for param, value in params.items()
+        if param in inspect.signature(GANDALFConfig).parameters}
+        print("valid parameters", valid_params)
+        model_config = GANDALFConfig(
+            task=self.task,
+            **valid_params
+    )
+        #override if we want to use default parameters
+        if default:
+            model_config = GANDALFConfig(
+            task=self.task)
+            optimizer_config = OptimizerConfig()
+    
         tabular_model = TabularModel(
             data_config=data_config,
             model_config=model_config,

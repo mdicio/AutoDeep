@@ -13,7 +13,7 @@ import os
 import time
 
 
-output_results_filename = "debug_newmodels"
+output_results_filename = "default_pytorch_tabular_benchmark"
 with open("./configuration/experiment_config.yml", "r") as f:
     config = yaml.safe_load(f)
 

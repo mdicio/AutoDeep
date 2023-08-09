@@ -12,7 +12,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from tqdm import tqdm
 import os
-import logging
+import logging 
+import inspect
 from evaluation.generalevaluator import *
 from modelutils.trainingutilities import (
     infer_hyperopt_space_s1dcnn,

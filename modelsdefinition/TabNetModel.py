@@ -1,5 +1,6 @@
 import os
-import logging
+import logging 
+import inspect
 
 import numpy as np
 import pandas as pd
@@ -137,7 +138,7 @@ class TabNetTrainer(BaseModel):
             )
 
     # Define the data configuration
-    def prepare_tabular_model(self, params, outer_params):
+    def prepare_tabular_model(self, params, outer_params, default = False):
         data_config = DataConfig(
             target=["target"],
             continuous_cols=[
@@ -205,18 +206,22 @@ class TabNetTrainer(BaseModel):
             lr_scheduler_monitor_metric="valid_loss",
         )
 
+        
+        valid_params = {param: value for param, value in params.items()
+        if param in inspect.signature(TabNetModelConfig).parameters}
+        print("valid parameters", valid_params)
         model_config = TabNetModelConfig(
             task=self.task,
-            n_a=params["n_a"],
-            n_d=params["n_d"],
-            n_steps=params["n_steps"],
-            n_shared=params["n_shared"],
-            virtual_batch_size=vbs,
-            mask_type=params["mask_type"],
-            # loss=self.loss_fn,
-        )
+            **valid_params
+    )
 
 
+        #override if we want to use default parameters
+        if default:
+            model_config = TabNetModelConfig(
+            task=self.task)
+            optimizer_config = OptimizerConfig()
+        
         tabular_model = TabularModel(
             data_config=data_config,
             model_config=model_config,

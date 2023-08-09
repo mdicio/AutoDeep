@@ -1,6 +1,6 @@
 import os
-import logging
-
+import logging 
+import inspect
 import numpy as np
 import pandas as pd
 from typing import Dict
@@ -137,7 +137,7 @@ class NodeTrainer(BaseModel):
             )
 
     # Define the data configuration
-    def prepare_tabular_model(self, params, outer_params):
+    def prepare_tabular_model(self, params, outer_params, default = False):
         data_config = DataConfig(
             target=["target"],
             continuous_cols=[
@@ -201,29 +201,20 @@ class NodeTrainer(BaseModel):
         )
 
 
-        # Create a NodeConfig using the parameters from the params dictionary
+        valid_params = {param: value for param, value in params.items()
+        if param in inspect.signature(NodeConfig).parameters}
+        print("valid parameters", valid_params)
         model_config = NodeConfig(
-            task= self.task,
-            num_layers=params["num_layers"],
-            num_trees=params["num_trees"],
-            additional_tree_output_dim=params["additional_tree_output_dim"],
-            depth=params["depth"],
-            choice_function=params["choice_function"],
-            bin_function=params["bin_function"],
-            max_features=params["max_features"],
-            input_dropout=params["input_dropout"],
-            initialize_response=params["initialize_response"],
-            initialize_selection_logits=params["initialize_selection_logits"],
-            threshold_init_beta=params["threshold_init_beta"],
-            threshold_init_cutoff=params["threshold_init_cutoff"],
-            cat_embedding_dropout=params["cat_embedding_dropout"],
-            embed_categorical=params["embed_categorical"],
-            head=params["head"],
-            embedding_dropout=params["embedding_dropout"],
-            batch_norm_continuous_input=params["batch_norm_continuous_input"],
-            learning_rate=params["learning_rate"]
-        )
+            task=self.task,
+            **valid_params
+    )
 
+        #override if we want to use default parameters
+        if default:
+            model_config = NodeConfig(
+            task=self.task)
+            optimizer_config = OptimizerConfig()
+            
         # Now you can use the created NodeConfig for further processing
 
         tabular_model = TabularModel(
