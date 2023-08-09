@@ -154,8 +154,8 @@ class XGBoostClassifier(BaseModel):
             Tuple containing the best hyperparameters and the corresponding best score.
         """
         # Split the data into training and validation sets
-        outer_params = param_grid["outer_params"]
-        validation_fraction = outer_params["validation_fraction"]
+        self.outer_params = param_grid["outer_params"]
+        validation_fraction = self.outer_params["validation_fraction"]
         param_grid.pop("outer_params")
         # Define the hyperparameter search space
         space = infer_hyperopt_space(param_grid)

@@ -31,6 +31,7 @@ from modelutils.trainingutilities import (
     infer_hyperopt_space_pytorch_tabular,
     stop_on_perfect_lossCondition,
     calculate_possible_fold_sizes,
+    handle_rogue_batch_size
 )
 
 
@@ -149,14 +150,14 @@ class FTTransformerTrainer(BaseModel):
         )
 
         trainer_config = TrainerConfig(
-            auto_lr_find=outer_params[
+            auto_lr_find=self.outer_params[
                 "auto_lr_find"
             ],  # Runs the LRFinder to automatically derive a learning rate
             batch_size=params["batch_size"],
-            max_epochs=outer_params["max_epochs"],
+            max_epochs=self.outer_params["max_epochs"],
             early_stopping="valid_loss",  # Monitor valid_loss for early stopping
             early_stopping_mode="min",  # Set the mode as min because for val_loss, lower is better
-            early_stopping_patience=outer_params[
+            early_stopping_patience=self.outer_params[
                 "early_stopping_patience"
             ],  # No. of epochs of degradation training will wait before terminating
             checkpoints="valid_loss",
@@ -180,10 +181,12 @@ class FTTransformerTrainer(BaseModel):
                  weight_decay=params["AdamW_weight_decay"]
             )
         if params["scheduler_fn"] == torch.optim.lr_scheduler.StepLR:
+            params["scheduler_fn"] = "StepLR"
             params["scheduler_params"] = dict(
                 step_size=params["StepLR_step_size"], gamma=params["StepLR_gamma"]
             )
         elif params["scheduler_fn"] == torch.optim.lr_scheduler.ExponentialLR:
+            params["scheduler_fn"] = "ExponentialLR"
             params["scheduler_params"] = dict(gamma=params["ExponentialLR_gamma"])
 
         elif params["scheduler_fn"] == torch.optim.lr_scheduler.ReduceLROnPlateau:
@@ -260,18 +263,22 @@ class FTTransformerTrainer(BaseModel):
             test_size=params["outer_params"]["val_size"],
             random_state=self.random_state,
         )
+        
+        
         # Merge X_train and y_train
-        train = pd.concat([X_train, y_train], axis=1)
+        self.train = pd.concat([X_train, y_train], axis=1)
+        
         # Merge X_val and y_val
-        validation = pd.concat([X_val, y_val], axis=1)
+        self.validation = pd.concat([X_val, y_val], axis=1)
 
         self._set_loss_function(y_train)
         self.model = self.prepare_tabular_model(params, params["outer_params"], default = self.default)
-        
+        self.logger.debug("WARNING ROGUE BATCH SIZE, REMOVING ONE OBSERVATION FROM TRAIN DATASET TO AVOID ERROR OF BATCH SIZE == 1")
+        train = handle_rogue_batch_size(train, params["batch_size"])
 
         self.model.fit(
-            train=train,
-            validation=validation,
+            train=self.train,
+            validation=self.validation,
             loss=self.loss_fn,
             optimizer=params["optimizer_fn"],
             optimizer_params=params["optimizer_params"]
@@ -313,7 +320,7 @@ class FTTransformerTrainer(BaseModel):
         """
         self.logger.info(f"Starting hyperopt search maximising {metric} metric")
         self.extra_info = extra_info
-        outer_params = param_grid["outer_params"]
+        self.outer_params = param_grid["outer_params"]
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
 
@@ -321,24 +328,27 @@ class FTTransformerTrainer(BaseModel):
         X_train, X_val, y_train, y_val = train_test_split(
             X,
             y,
-            test_size=outer_params["val_size"],
+            test_size=self.outer_params["val_size"],
             random_state=self.random_state,
         )
         # Merge X_train and y_train
-        train = pd.concat([X_train, y_train], axis=1)
+        self.train = pd.concat([X_train, y_train], axis=1)
+        
         # Merge X_val and y_val
-        validation = pd.concat([X_val, y_val], axis=1)
+        self.validation = pd.concat([X_val, y_val], axis=1)
 
         # Define the objective function for hyperopt search
         def objective(params):
-            self.logger.debug(f"Training with hyperparameters: {params}")
-            model = self.prepare_tabular_model(params, outer_params, default = self.default)
+            self.logger.info(f"Training with hyperparameters: {params}")
+            model = self.prepare_tabular_model(params, self.outer_params, default = self.default)
 
             # Opened issue on pytorch tabular for this DEBUG
             params["optimizer_params"].pop("lr", None)
+            
+            train = handle_rogue_batch_size(train, params["batch_size"])
             model.fit(
-                train=train,
-                validation=validation,
+                train=self.train,
+                validation=self.validation,
                 loss=self.loss_fn,
                 optimizer=params["optimizer_fn"],
                 optimizer_params=params["optimizer_params"]
@@ -347,7 +357,7 @@ class FTTransformerTrainer(BaseModel):
             )
 
             # Predict the labels of the validation data
-            pred_df = model.predict(validation)
+            pred_df = model.predict(self.validation)
             predictions = pred_df[self.prediction_col].values
             if self.problem_type == "binary_classification":
                 probabilities = pred_df["1_probability"].values
@@ -388,7 +398,7 @@ class FTTransformerTrainer(BaseModel):
 
         # Get the best hyperparameters and corresponding score
         best_params = space_eval(space, best)
-        best_params["outer_params"] = outer_params
+        best_params["outer_params"] = self.outer_params
 
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]
@@ -435,7 +445,7 @@ class FTTransformerTrainer(BaseModel):
         """
         self.logger.info(f"Starting hyperopt search maximising {metric} metric")
         self.extra_info = extra_info
-        outer_params = param_grid["outer_params"]
+        self.outer_params = param_grid["outer_params"]
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
 
@@ -447,8 +457,8 @@ class FTTransformerTrainer(BaseModel):
 
         # Define the objective function for hyperopt search
         def objective(params):
-            self.logger.debug(f"Training with hyperparameters: {params}")
-            model = self.prepare_tabular_model(params, outer_params, default = self.default)
+            self.logger.info(f"Training with hyperparameters: {params}")
+            model = self.prepare_tabular_model(params, self.outer_params, default = self.default)
 
             kf = KFold(n_splits=k_value, shuffle=True, random_state=42)
 
@@ -472,7 +482,7 @@ class FTTransformerTrainer(BaseModel):
                 self.logger.debug(f"Train fold shape : {train_fold.shape}")
                 self.logger.debug(f"Val fold shape : {val_fold.shape}")
                 # Initialize the tabular model
-                model = self.prepare_tabular_model(params, outer_params, default = self.default)
+                model = self.prepare_tabular_model(params, self.outer_params, default = self.default)
                 # Fit the model
                 # Opened issue on pytorch tabular for this DEBUG
                 params["optimizer_params"].pop("lr", None)
@@ -500,7 +510,7 @@ class FTTransformerTrainer(BaseModel):
                 print(f"Kfold {fold} score {metric} = {current_score}")
                 aggregate_score += current_score
 
-                self.logger.debug(f"Training with hyperparameters: {params}")
+                self.logger.info(f"Training with hyperparameters: {params}")
             # average score over the folds
             score = aggregate_score / k_value
             print(f"Current score {score}")
@@ -534,7 +544,7 @@ class FTTransformerTrainer(BaseModel):
 
         # Get the best hyperparameters and corresponding score
         best_params = space_eval(space, best)
-        best_params["outer_params"] = outer_params
+        best_params["outer_params"] = self.outer_params
 
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]

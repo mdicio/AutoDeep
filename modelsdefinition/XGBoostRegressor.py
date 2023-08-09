@@ -137,14 +137,14 @@ class XGBoostRegressor(BaseModel):
         # Split the data into training and validation sets
 
         # Define the hyperparameter search space
-        outer_params = param_grid["outer_params"]
+        self.outer_params = param_grid["outer_params"]
         space = infer_hyperopt_space(param_grid)
         param_grid.pop("outer_params", None)
 
         # Define the objective function to minimize
         def objective(params):
             X_train, X_val, y_train, y_val = train_test_split(
-                X, y, test_size=outer_params["validation_fraction"], random_state=random_state
+                X, y, test_size=self.outer_params["validation_fraction"], random_state=random_state
             )
             params.pop("validation_fraction")
             # Create an XGBoost model with the given hyperparameters

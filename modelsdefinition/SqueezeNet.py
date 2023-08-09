@@ -344,10 +344,10 @@ class SqueezeNetTrainer:
         extra_info=None,
         *kwargs,
     ):
-        self.outer_params = param_grid["outer_params"]
+        self.self.outer_params = param_grid["outer_params"]
         num_epochs = self.outer_params.get("num_epochs", 3)
         early_stopping = self.outer_params.get("early_stopping", True)
-        patience = self.outer_params["early_stopping_patience"]
+        patience = self.self.outer_params["early_stopping_patience"]
         space = infer_hyperopt_space_s1dcnn(param_grid)
         # IGTD_ORDERING
         self.extra_info = extra_info
@@ -365,7 +365,7 @@ class SqueezeNetTrainer:
 
         # Define the objective function for hyperopt search
         def objective(params):
-            self.logger.debug(f"Training with hyperparameters: {params}")
+            self.logger.info(f"Training with hyperparameters: {params}")
             # Split the train data into training and validation sets
 
             self.model = self.build_model(self.problem_type, self.num_targets)
@@ -389,7 +389,7 @@ class SqueezeNetTrainer:
                 X,
                 y,
                 params["batch_size"],
-                outer_params["validation_fraction"],
+                self.outer_params["validation_fraction"],
                 self.img_rows,
                 self.img_columns,
                 self.transformation,
@@ -408,7 +408,7 @@ class SqueezeNetTrainer:
                 for epoch in range(num_epochs):
                     epoch_loss = self.train_step(train_loader)
 
-                    if early_stopping and outer_params["validation_fraction"] > 0:
+                    if early_stopping and self.outer_params["validation_fraction"] > 0:
                         val_loss = self.validate_step(val_loader)
                         self.scheduler.step(val_loss)
 

@@ -373,7 +373,7 @@ class SoftOrdering1DCNN:
         extra_info=None,
         *kwargs,
     ):
-        self.outer_params = param_grid["outer_params"]
+        self.self.outer_params = param_grid["outer_params"]
         num_epochs = self.outer_params.get("num_epochs", 3)
         early_stopping = self.outer_params.get("early_stopping", True)
         patience =  self.outer_params.get("early_stopping_patience", 5)
@@ -383,7 +383,7 @@ class SoftOrdering1DCNN:
 
         # Define the objective function for hyperopt search
         def objective(params):
-            self.logger.debug(f"Training with hyperparameters: {params}")
+            self.logger.info(f"Training with hyperparameters: {params}")
             # Split the train data into training and validation sets
 
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
