@@ -155,7 +155,7 @@ class ResNetTrainer:
         probabilities = None
         if self.problem_type == "binary_classification":
             probabilities = torch.sigmoid(self.model(inputs)).reshape(-1)
-            predictions = (outputs >= 0.5).float()
+            predictions = (probabilities >= 0.5).float()
             labels = labels.float()
         elif self.problem_type == "regression":
             predictions = self.model(inputs).numpy().reshape(-1)
@@ -234,7 +234,7 @@ class ResNetTrainer:
         X_train,
         y_train,
         batch_size,
-        validation_split,
+        validation_fraction,
         img_rows,
         img_columns,
         transform,
@@ -249,7 +249,7 @@ class ResNetTrainer:
 
         num_samples = len(dataset)
 
-        num_train_samples = int((1 - validation_split) * num_samples)
+        num_train_samples = int((1 - validation_fraction) * num_samples)
         num_val_samples = num_samples - num_train_samples
 
         train_dataset, val_dataset = random_split(
@@ -282,10 +282,9 @@ class ResNetTrainer:
 
     def train(self, X_train, y_train, params: Dict, extra_info: Dict):
         outer_params = params["outer_params"]
-        validation_fraction = params.get("validation_fraction", 0.2)
+        validation_fraction = outer_params.get("validation_fraction", 0.2)
         num_epochs = outer_params.get("num_epochs", 3)
         batch_size = params.get("batch_size", 32)
-        validation_split = params.get("validation_fraction", 0.2)
         early_stopping = outer_params.get("early_stopping", True)
         patience = params.get("early_stopping_patience", 5)
 
@@ -321,7 +320,7 @@ class ResNetTrainer:
             X_train,
             y_train,
             batch_size,
-            validation_split,
+            validation_fraction,
             self.img_rows,
             self.img_columns,
             self.transformation,
@@ -384,6 +383,8 @@ class ResNetTrainer:
         self.outer_params = param_grid["outer_params"]
         num_epochs = self.outer_params.get("num_epochs", 3)
         early_stopping = self.outer_params.get("early_stopping", True)
+        patience = self.outer_params.get("early_stopping_patience", 5)
+        validation_fraction = self.outer_params.get("validation_fraction", 0.2)
 
         space = infer_hyperopt_space_s1dcnn(param_grid)
         # IGTD_ORDERING
@@ -428,7 +429,7 @@ class ResNetTrainer:
                 X,
                 y,
                 params["batch_size"],
-                params["validation_fraction"],
+                validation_fraction,
                 self.img_rows,
                 self.img_columns,
                 self.transformation,
@@ -447,7 +448,7 @@ class ResNetTrainer:
                 for epoch in range(num_epochs):
                     epoch_loss = self.train_step(train_loader)
 
-                    if early_stopping and params["validation_fraction"] > 0:
+                    if early_stopping and validation_fraction > 0:
                         val_loss = self.validate_step(val_loader)
                         self.scheduler.step(val_loss)
 
@@ -469,7 +470,7 @@ class ResNetTrainer:
                             f"Val Loss: {val_loss:.4f}"
                         )
 
-                        if current_patience >= params["early_stopping_patience"]:
+                        if current_patience >= patience:
                             print(f"Early stopping triggered at epoch {epoch+1}")
                             break
 

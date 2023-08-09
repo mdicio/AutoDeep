@@ -63,8 +63,6 @@ class XGBoostRegressor(BaseModel):
             Dictionary of hyperparameters for the model.
         """
         self.logger.info("Starting training")
-
-        params.pop("validation_fraction", None)
         params.pop("outer_params", None)
 
         # Train the XGBoost model
@@ -139,13 +137,14 @@ class XGBoostRegressor(BaseModel):
         # Split the data into training and validation sets
 
         # Define the hyperparameter search space
+        outer_params = param_grid["outer_params"]
         space = infer_hyperopt_space(param_grid)
         param_grid.pop("outer_params", None)
 
         # Define the objective function to minimize
         def objective(params):
             X_train, X_val, y_train, y_val = train_test_split(
-                X, y, test_size=params["validation_fraction"], random_state=random_state
+                X, y, test_size=outer_params["validation_fraction"], random_state=random_state
             )
             params.pop("validation_fraction")
             # Create an XGBoost model with the given hyperparameters
@@ -190,15 +189,6 @@ class XGBoostRegressor(BaseModel):
         )
 
         best_params = space_eval(space, best)
-        for param_name, param_value in best_params.items():
-            if param_name in [
-                "gamma",
-                "max_depth",
-                "min_child_weight",
-                "max_bin",
-                "n_estimators",
-            ]:
-                best_params[param_name] = int(round(param_value))
 
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]

@@ -68,7 +68,6 @@ class XGBoostClassifier(BaseModel):
 
         # Set the number of boosting rounds (iterations) to default or use value from config
 
-        params.pop("validation_fraction", None)
         params.pop("outer_params", None)
 
         # Train the XGBoost model
@@ -155,7 +154,8 @@ class XGBoostClassifier(BaseModel):
             Tuple containing the best hyperparameters and the corresponding best score.
         """
         # Split the data into training and validation sets
-
+        outer_params = param_grid["outer_params"]
+        validation_fraction = outer_params["validation_fraction"]
         param_grid.pop("outer_params")
         # Define the hyperparameter search space
         space = infer_hyperopt_space(param_grid)
@@ -164,9 +164,8 @@ class XGBoostClassifier(BaseModel):
         def objective(params):
             self.logger.info(f"Hyperopt training with hyperparameters: {params}")
             X_train, X_val, y_train, y_val = train_test_split(
-                X, y, test_size=params["validation_fraction"], random_state=random_state
+                X, y, test_size=validation_fraction, random_state=random_state
             )
-            params.pop("validation_fraction")
             # Create an XGBoost model with the given hyperparameters
             model = xgb.XGBClassifier(**params)
             # Fit the model on the training data
@@ -215,17 +214,6 @@ class XGBoostClassifier(BaseModel):
         )
 
         best_params = space_eval(space, best)
-        print(f"THESE PARAMS ARE OUTPUTTED FROM HYPEROPT SPACE EVAL XGB: {best_params}")
-        for param_name, param_value in best_params.items():
-            if param_name in [
-                "gamma",
-                "max_depth",
-                "min_child_weight",
-                "max_bin",
-                "n_estimators",
-            ]:
-                best_params[param_name] = int(round(param_value))
-
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]
         self.best_model = best_trial["result"]["trained_model"]

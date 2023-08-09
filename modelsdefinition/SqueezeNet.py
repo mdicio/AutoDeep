@@ -197,7 +197,7 @@ class SqueezeNetTrainer:
         X_train,
         y_train,
         batch_size,
-        validation_split,
+        validation_fraction,
         img_rows,
         img_columns,
         transform,
@@ -212,7 +212,7 @@ class SqueezeNetTrainer:
 
         num_samples = len(dataset)
 
-        num_train_samples = int((1 - validation_split) * num_samples)
+        num_train_samples = int((1 - validation_fraction) * num_samples)
         num_val_samples = num_samples - num_train_samples
 
         train_dataset, val_dataset = random_split(
@@ -248,7 +248,7 @@ class SqueezeNetTrainer:
         validation_fraction = params.get("validation_fraction", 0.2)
         num_epochs = outer_params.get("num_epochs", 3)
         batch_size = params.get("batch_size", 32)
-        validation_split = params.get("validation_fraction", 0.2)
+        validation_fraction = params.get("validation_fraction", 0.2)
         early_stopping = outer_params.get("early_stopping", True)
         patience = params.get("early_stopping_patience", 5)
 
@@ -284,7 +284,7 @@ class SqueezeNetTrainer:
             X_train,
             y_train,
             batch_size,
-            validation_split,
+            validation_fraction,
             self.img_rows,
             self.img_columns,
             self.transformation,
@@ -347,7 +347,7 @@ class SqueezeNetTrainer:
         self.outer_params = param_grid["outer_params"]
         num_epochs = self.outer_params.get("num_epochs", 3)
         early_stopping = self.outer_params.get("early_stopping", True)
-
+        patience = self.outer_params["early_stopping_patience"]
         space = infer_hyperopt_space_s1dcnn(param_grid)
         # IGTD_ORDERING
         self.extra_info = extra_info
@@ -389,7 +389,7 @@ class SqueezeNetTrainer:
                 X,
                 y,
                 params["batch_size"],
-                params["validation_fraction"],
+                outer_params["validation_fraction"],
                 self.img_rows,
                 self.img_columns,
                 self.transformation,
@@ -408,7 +408,7 @@ class SqueezeNetTrainer:
                 for epoch in range(num_epochs):
                     epoch_loss = self.train_step(train_loader)
 
-                    if early_stopping and params["validation_fraction"] > 0:
+                    if early_stopping and outer_params["validation_fraction"] > 0:
                         val_loss = self.validate_step(val_loader)
                         self.scheduler.step(val_loss)
 
@@ -430,7 +430,7 @@ class SqueezeNetTrainer:
                             f"Val Loss: {val_loss:.4f}"
                         )
 
-                        if current_patience >= params["early_stopping_patience"]:
+                        if current_patience >= patience:
                             print(f"Early stopping triggered at epoch {epoch+1}")
                             break
 

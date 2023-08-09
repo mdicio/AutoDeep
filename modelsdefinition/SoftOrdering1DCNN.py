@@ -246,7 +246,7 @@ class SoftOrdering1DCNN:
             )
 
     def _pandas_to_torch_dataloaders(
-        self, X_train, y_train, batch_size, validation_split
+        self, X_train, y_train, batch_size, validation_fraction
     ):
         X_train_tensor = torch.tensor(X_train.values, dtype=torch.float)
         y_train_tensor = torch.tensor(
@@ -258,7 +258,7 @@ class SoftOrdering1DCNN:
 
         num_samples = len(dataset)
 
-        num_train_samples = int((1 - validation_split) * num_samples)
+        num_train_samples = int((1 - validation_fraction) * num_samples)
         num_val_samples = num_samples - num_train_samples
 
         train_dataset, val_dataset = random_split(
@@ -291,12 +291,11 @@ class SoftOrdering1DCNN:
 
     def train(self, X_train, y_train, params: Dict, extra_info: Dict):
         outer_params = params["outer_params"]
-        validation_fraction = params.get("validation_fraction", 0.2)
+        validation_fraction = outer_params.get("validation_fraction", 0.2)
         num_epochs = outer_params.get("num_epochs", 3)
         batch_size = params.get("batch_size", 32)
-        validation_split = params.get("validation_fraction", 0.2)
         early_stopping = outer_params.get("early_stopping", True)
-        patience = params.get("early_stopping_patience", 5)
+        patience = outer_params.get("early_stopping_patience", 5)
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.num_features = extra_info["num_features"]
@@ -317,7 +316,7 @@ class SoftOrdering1DCNN:
         self._set_loss_function(y_train)
 
         train_loader, val_loader = self._pandas_to_torch_dataloaders(
-            X_train, y_train, batch_size, validation_split
+            X_train, y_train, batch_size, validation_fraction
         )
 
         self.model.to(self.device)
@@ -377,8 +376,9 @@ class SoftOrdering1DCNN:
         self.outer_params = param_grid["outer_params"]
         num_epochs = self.outer_params.get("num_epochs", 3)
         early_stopping = self.outer_params.get("early_stopping", True)
-
+        patience =  self.outer_params.get("early_stopping_patience", 5)
         space = infer_hyperopt_space_s1dcnn(param_grid)
+        validation_fraction = self.outer_params.get("validation_fraction", 0.2)
         self.num_features = extra_info["num_features"]
 
         # Define the objective function for hyperopt search
@@ -405,7 +405,7 @@ class SoftOrdering1DCNN:
             )
 
             train_loader, val_loader = self._pandas_to_torch_dataloaders(
-                X, y, params["batch_size"], params["validation_fraction"]
+                X, y, params["batch_size"], validation_fraction
             )
 
             self.model.to(self.device)
@@ -421,7 +421,7 @@ class SoftOrdering1DCNN:
                 for epoch in range(num_epochs):
                     epoch_loss = self.train_step(train_loader)
 
-                    if early_stopping and params["validation_fraction"] > 0:
+                    if early_stopping and validation_fraction > 0:
                         val_loss = self.validate_step(val_loader)
                         self.scheduler.step(val_loss)
 
@@ -438,7 +438,7 @@ class SoftOrdering1DCNN:
                             f"Train Loss: {epoch_loss:.4f},"
                             f"Val Loss: {val_loss:.4f}"
                         )
-                        if current_patience >= params["early_stopping_patience"]:
+                        if current_patience >= patience:
                             print(
                                 f"Early stopping triggered at epoch {epoch+1} with best epoch {best_epoch+1}"
                             )

@@ -83,12 +83,12 @@ class MLP(BaseModel):
 
         # Create the MLP model based on problem_type
         if self.problem_type == "regression":
-            model = MLPRegressor(verbose=False, early_stopping=True, **params)
+            model = MLPRegressor(verbose=False, early_stopping=True, n_iter_no_change = params["n_iter_no_change"], max_iter = params["max_iter"], **params)
         elif self.problem_type in [
             "binary_classification",
             "multiclass_classification",
         ]:
-            model = MLPClassifier(verbose=False, early_stopping=True, **params)
+            model = MLPClassifier(verbose=False, early_stopping=True, n_iter_no_change = params["n_iter_no_change"], max_iter = params["max_iter"], **params)
         else:
             raise ValueError("Wrong problem type")
 
@@ -171,12 +171,12 @@ class MLP(BaseModel):
         scoring_metric = self.metric_mapping[metric]
         # Create the MLP model based on problem_type
         if self.problem_type == "regression":
-            model = MLPRegressor(verbose=False, early_stopping=True)
+            model = MLPRegressor(verbose=False, early_stopping=True,  n_iter_no_change = param_grid["n_iter_no_change"], max_iter = param_grid["max_iter"])
         elif self.problem_type in [
             "binary_classification",
             "multiclass_classification",
         ]:
-            model = MLPClassifier(verbose=False, early_stopping=True)
+            model = MLPClassifier(verbose=False, early_stopping=True,  n_iter_no_change = param_grid["n_iter_no_change"], max_iter = param_grid["max_iter"])
             if self.problem_type == "multiclass_classification":
                 if scoring_metric == "f1":
                     metric += "_weighted"

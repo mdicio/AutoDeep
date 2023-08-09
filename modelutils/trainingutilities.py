@@ -2,7 +2,7 @@ from hyperopt import hp
 from hyperopt.pyll import scope
 from typing import Dict
 import numpy as np
-from torch.optim import Adam, SGD
+from torch.optim import Adam, SGD, AdamW
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau, ExponentialLR
 
 
@@ -23,6 +23,7 @@ def stop_on_perfect_lossCondition(x, threshold, *kwargs):
 def map_optimizer_str_to_class(optimizer_str):
     optimizer_mapping = {
         "Adam": Adam,
+        "AdamW": AdamW,
         "SGD": SGD,
     }
     # Add more optimizers as needed

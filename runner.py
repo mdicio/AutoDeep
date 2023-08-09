@@ -13,8 +13,8 @@ import os
 import time
 
 
-output_results_filename = "default_pytorch_tabular_benchmark"
-DEFAULT = True
+output_results_filename = "catembed_benchmark"
+DEFAULT = False
 with open("./configuration/experiment_config.yml", "r") as f:
     config = yaml.safe_load(f)
 

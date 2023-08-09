@@ -155,7 +155,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
             max_epochs=outer_params["max_epochs"],
             early_stopping="valid_loss",  # Monitor valid_loss for early stopping
             early_stopping_mode="min",  # Set the mode as min because for val_loss, lower is better
-            early_stopping_patience=params[
+            early_stopping_patience=outer_params[
                 "early_stopping_patience"
             ],  # No. of epochs of degradation training will wait before terminating
             checkpoints="valid_loss",
@@ -173,6 +173,10 @@ class CategoryEmbeddingtTrainer(BaseModel):
         elif params["optimizer_fn"] == torch.optim.SGD:
             params["optimizer_params"] = dict(
                  momentum=params["SGD_momentum"]
+            )
+        elif params["optimizer_fn"] == torch.optim.AdamW:
+            params["optimizer_params"] = dict(
+                 weight_decay=params["AdamW_weight_decay"]
             )
         if params["scheduler_fn"] == torch.optim.lr_scheduler.StepLR:
             params["scheduler_params"] = dict(
