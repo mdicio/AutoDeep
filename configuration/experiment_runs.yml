@@ -158,6 +158,7 @@
     virtual_batch_size_ratio: &id035
     - 0.25
     - 0.5
+    - 1.0
     batch_size: &id036
     - 16
     - 32
@@ -170,32 +171,20 @@
     - entmax
     n_d: &id039
     - 4
-    - 48
+    - 12
     n_steps: &id040
     - 3
     - 10
     gamma: &id041
     - 1.0
     - 2.0
-    cat_emb_dim: &id042
-    - 1
-    - 3
-    n_independent: &id043
+    n_independent: &id042
     - 2
     - 3
-    n_shared: &id044
+    n_shared: &id043
     - 2
     - 3
-    lambda_sparse: &id045
-    - 0.001
-    - 0.01
-    momentum: &id046
-    - 0.001
-    - 0.4
-    clip_value: &id047
-    - 1
-    - 2
-    optimizer_fn: &id048
+    optimizer_fn: &id044
       Adam:
         weight_decay:
         - 0.0001
@@ -204,7 +193,7 @@
         weight_decay:
         - 0.0001
         - 0.01
-    scheduler_fn: &id049
+    scheduler_fn: &id045
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -227,32 +216,32 @@
   model: gate
   best_params: {}
   param_grid:
-    outer_params: &id050
+    outer_params: &id046
       hyperopt_evals: 10
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
       early_stopping_patience: 5
-    learning_rate: &id051
+    learning_rate: &id047
     - 0.001
     - 0.0001
-    batch_size: &id052
+    batch_size: &id048
     - 16
     - 32
     - 64
     - 128
-    tree_depth: &id053
+    tree_depth: &id049
     - 4
     - 7
-    num_trees: &id054
+    num_trees: &id050
     - 6
     - 12
-    chain_trees: &id055
+    chain_trees: &id051
     - false
-    gflu_stages: &id056
+    gflu_stages: &id052
     - 2
     - 4
-    optimizer_fn: &id057
+    optimizer_fn: &id053
       Adam:
         weight_decay:
         - 0.0001
@@ -261,7 +250,7 @@
         weight_decay:
         - 0.0001
         - 0.01
-    scheduler_fn: &id058
+    scheduler_fn: &id054
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -284,20 +273,20 @@
   model: fttransformer
   best_params: {}
   param_grid:
-    outer_params: &id059
+    outer_params: &id055
       hyperopt_evals: 10
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
       early_stopping_patience: 5
-    learning_rate: &id060
+    learning_rate: &id056
     - 0.001
     - 0.0001
-    batch_size: &id061
+    batch_size: &id057
     - 16
     - 32
     - 64
-    optimizer_fn: &id062
+    optimizer_fn: &id058
       Adam:
         weight_decay:
         - 0.0001
@@ -306,7 +295,7 @@
         weight_decay:
         - 0.0001
         - 0.01
-    scheduler_fn: &id063
+    scheduler_fn: &id059
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -329,38 +318,37 @@
   model: categoryembedding
   best_params: {}
   param_grid:
-    outer_params: &id064
-      hyperopt_evals: 3
+    outer_params: &id060
+      hyperopt_evals: 100
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
       early_stopping_patience: 10
       precision: 16
-    batch_size: &id065
+    batch_size: &id061
     - 8
     - 16
     - 32
     - 64
-    learning_rate: &id066
+    learning_rate: &id062
     - 0.001
     - 0.0001
-    layers: &id067
+    layers: &id063
     - 128-64-32
     - 64-32-16
     - 1024-512-32
     - 512-128-32
-    activation: &id068
+    activation: &id064
     - ReLU
     - Tanh
     - LeakyReLU
-    initialization: &id069
+    initialization: &id065
     - kaiming
     - xavier
-    - random
-    dropout: &id070
+    dropout: &id066
     - 0.0
     - 0.3
-    optimizer_fn: &id071
+    optimizer_fn: &id067
       Adam:
         weight_decay:
         - 0.0001
@@ -369,7 +357,7 @@
         weight_decay:
         - 0.0001
         - 0.01
-    scheduler_fn: &id072
+    scheduler_fn: &id068
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -392,20 +380,20 @@
   model: gandalf
   best_params: {}
   param_grid:
-    outer_params: &id073
+    outer_params: &id069
       hyperopt_evals: 10
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
       early_stopping_patience: 5
-    learning_rate: &id074
+    learning_rate: &id070
     - 0.001
     - 0.0001
-    batch_size: &id075
+    batch_size: &id071
     - 16
     - 32
     - 64
-    optimizer_fn: &id076
+    optimizer_fn: &id072
       Adam:
         weight_decay:
         - 0.0001
@@ -414,7 +402,7 @@
         weight_decay:
         - 0.0001
         - 0.01
-    scheduler_fn: &id077
+    scheduler_fn: &id073
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -437,79 +425,79 @@
   model: node
   best_params: {}
   param_grid:
-    outer_params: &id078
+    outer_params: &id074
       hyperopt_evals: 10
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
       early_stopping_patience: 5
-    num_layers: &id079
+    num_layers: &id075
     - 1
     - 2
-    num_trees: &id080
+    num_trees: &id076
     - 1024
     - 2048
-    additional_tree_output_dim: &id081
+    additional_tree_output_dim: &id077
     - 2
     - 3
     - 4
-    depth: &id082
+    depth: &id078
     - 4
     - 7
-    choice_function: &id083
+    choice_function: &id079
     - entmax15
     - sparsemax
-    bin_function: &id084
+    bin_function: &id080
     - entmoid15
     - sparsemoid
-    max_features: &id085
+    max_features: &id081
     - null
     - 50
     - 100
-    input_dropout: &id086
+    input_dropout: &id082
     - 0.0
     - 0.2
     - 0.4
-    initialize_response: &id087
+    initialize_response: &id083
     - normal
     - uniform
-    initialize_selection_logits: &id088
+    initialize_selection_logits: &id084
     - uniform
     - normal
-    threshold_init_beta: &id089
+    threshold_init_beta: &id085
     - 0.1
     - 1.0
     - 10.0
-    threshold_init_cutoff: &id090
+    threshold_init_cutoff: &id086
     - 0.5
     - 0.9
     - 1.5
-    cat_embedding_dropout: &id091
+    cat_embedding_dropout: &id087
     - 0.0
     - 0.1
     - 0.2
-    embed_categorical: &id092
+    embed_categorical: &id088
     - true
     - false
-    head: &id093
+    head: &id089
     - LinearHead
-    embedding_dropout: &id094
+    embedding_dropout: &id090
     - 0.0
     - 0.1
     - 0.2
-    batch_norm_continuous_input: &id095
+    batch_norm_continuous_input: &id091
     - true
     - false
-    learning_rate: &id096
+    learning_rate: &id092
     - 0.001
     - 0.0001
-    batch_size: &id097
+    batch_size: &id093
     - 8
     - 16
     - 32
     - 64
     - 128
-    optimizer_fn: &id098
+    optimizer_fn: &id094
       Adam:
         weight_decay:
         - 0.0001
@@ -518,7 +506,7 @@
         weight_decay:
         - 0.0001
         - 0.01
-    scheduler_fn: &id099
+    scheduler_fn: &id095
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -541,21 +529,21 @@
   model: autoint
   best_params: {}
   param_grid:
-    outer_params: &id100
+    outer_params: &id096
       hyperopt_evals: 10
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
       early_stopping_patience: 5
-    batch_size: &id101
+    batch_size: &id097
     - 8
     - 16
     - 32
     - 64
-    learning_rate: &id102
+    learning_rate: &id098
     - 0.001
     - 0.0001
-    optimizer_fn: &id103
+    optimizer_fn: &id099
       Adam:
         weight_decay:
         - 0.0001
@@ -564,7 +552,7 @@
         weight_decay:
         - 0.0001
         - 0.01
-    scheduler_fn: &id104
+    scheduler_fn: &id100
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -587,21 +575,21 @@
   model: tabtransformer
   best_params: {}
   param_grid:
-    outer_params: &id105
+    outer_params: &id101
       hyperopt_evals: 10
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
       early_stopping_patience: 5
-    batch_size: &id106
+    batch_size: &id102
     - 8
     - 16
     - 32
     - 64
-    learning_rate: &id107
+    learning_rate: &id103
     - 0.001
     - 0.0001
-    optimizer_fn: &id108
+    optimizer_fn: &id104
       Adam:
         weight_decay:
         - 0.0001
@@ -610,7 +598,7 @@
         weight_decay:
         - 0.0001
         - 0.01
-    scheduler_fn: &id109
+    scheduler_fn: &id105
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -690,153 +678,149 @@
     n_d: *id039
     n_steps: *id040
     gamma: *id041
-    cat_emb_dim: *id042
-    n_independent: *id043
-    n_shared: *id044
-    lambda_sparse: *id045
-    momentum: *id046
-    clip_value: *id047
-    optimizer_fn: *id048
-    scheduler_fn: *id049
+    n_independent: *id042
+    n_shared: *id043
+    optimizer_fn: *id044
+    scheduler_fn: *id045
 - dataset: iris
   model: gate
   best_params: {}
   param_grid:
-    outer_params: *id050
-    learning_rate: *id051
-    batch_size: *id052
-    tree_depth: *id053
-    num_trees: *id054
-    chain_trees: *id055
-    gflu_stages: *id056
-    optimizer_fn: *id057
-    scheduler_fn: *id058
+    outer_params: *id046
+    learning_rate: *id047
+    batch_size: *id048
+    tree_depth: *id049
+    num_trees: *id050
+    chain_trees: *id051
+    gflu_stages: *id052
+    optimizer_fn: *id053
+    scheduler_fn: *id054
 - dataset: iris
   model: fttransformer
   best_params: {}
   param_grid:
-    outer_params: *id059
-    learning_rate: *id060
-    batch_size: *id061
-    optimizer_fn: *id062
-    scheduler_fn: *id063
+    outer_params: *id055
+    learning_rate: *id056
+    batch_size: *id057
+    optimizer_fn: *id058
+    scheduler_fn: *id059
 - dataset: iris
   model: categoryembedding
   best_params: {}
   param_grid:
-    outer_params: *id064
-    batch_size: *id065
-    learning_rate: *id066
-    layers: *id067
-    activation: *id068
-    initialization: *id069
-    dropout: *id070
-    optimizer_fn: *id071
-    scheduler_fn: *id072
+    outer_params: *id060
+    batch_size: *id061
+    learning_rate: *id062
+    layers: *id063
+    activation: *id064
+    initialization: *id065
+    dropout: *id066
+    optimizer_fn: *id067
+    scheduler_fn: *id068
 - dataset: iris
   model: gandalf
   best_params: {}
   param_grid:
-    outer_params: *id073
-    learning_rate: *id074
-    batch_size: *id075
-    optimizer_fn: *id076
-    scheduler_fn: *id077
+    outer_params: *id069
+    learning_rate: *id070
+    batch_size: *id071
+    optimizer_fn: *id072
+    scheduler_fn: *id073
 - dataset: iris
   model: node
   best_params: {}
   param_grid:
-    outer_params: *id078
-    num_layers: *id079
-    num_trees: *id080
-    additional_tree_output_dim: *id081
-    depth: *id082
-    choice_function: *id083
-    bin_function: *id084
-    max_features: *id085
-    input_dropout: *id086
-    initialize_response: *id087
-    initialize_selection_logits: *id088
-    threshold_init_beta: *id089
-    threshold_init_cutoff: *id090
-    cat_embedding_dropout: *id091
-    embed_categorical: *id092
-    head: *id093
-    embedding_dropout: *id094
-    batch_norm_continuous_input: *id095
-    learning_rate: *id096
-    batch_size: *id097
-    optimizer_fn: *id098
-    scheduler_fn: *id099
+    outer_params: *id074
+    num_layers: *id075
+    num_trees: *id076
+    additional_tree_output_dim: *id077
+    depth: *id078
+    choice_function: *id079
+    bin_function: *id080
+    max_features: *id081
+    input_dropout: *id082
+    initialize_response: *id083
+    initialize_selection_logits: *id084
+    threshold_init_beta: *id085
+    threshold_init_cutoff: *id086
+    cat_embedding_dropout: *id087
+    embed_categorical: *id088
+    head: *id089
+    embedding_dropout: *id090
+    batch_norm_continuous_input: *id091
+    learning_rate: *id092
+    batch_size: *id093
+    optimizer_fn: *id094
+    scheduler_fn: *id095
 - dataset: iris
   model: autoint
   best_params: {}
   param_grid:
-    outer_params: *id100
-    batch_size: *id101
-    learning_rate: *id102
-    optimizer_fn: *id103
-    scheduler_fn: *id104
+    outer_params: *id096
+    batch_size: *id097
+    learning_rate: *id098
+    optimizer_fn: *id099
+    scheduler_fn: *id100
 - dataset: iris
   model: tabtransformer
   best_params: {}
   param_grid:
-    outer_params: *id105
-    batch_size: *id106
-    learning_rate: *id107
-    optimizer_fn: *id108
-    scheduler_fn: *id109
+    outer_params: *id101
+    batch_size: *id102
+    learning_rate: *id103
+    optimizer_fn: *id104
+    scheduler_fn: *id105
 - dataset: housing
   model: xgb
   best_params: {}
   param_grid:
-    outer_params: &id110
+    outer_params: &id106
       hyperopt_evals: 100
       validation_fraction: 0.2
-    n_estimators: &id111
+    n_estimators: &id107
     - 100
     - 1100
-    max_bin: &id112
+    max_bin: &id108
     - 128
     - 512
-    tree_method: &id113
+    tree_method: &id109
     - auto
-    max_depth: &id114
+    max_depth: &id110
     - 4
     - 10
-    learning_rate: &id115
+    learning_rate: &id111
     - 0.1
     - 0.33
-    subsample: &id116
+    subsample: &id112
     - 0.7
     - 1.0
-    colsample_bytree: &id117
+    colsample_bytree: &id113
     - 0.7
     - 1.0
-    min_child_weight: &id118
+    min_child_weight: &id114
     - 1
     - 50
-    alpha: &id119
+    alpha: &id115
     - 0.0
     - 5.0
-    gamma: &id120
+    gamma: &id116
     - 0.0
     - 5.0
-    lambda: &id121
+    lambda: &id117
     - 0.0
     - 5.0
 - dataset: housing
   model: mlp
   best_params: {}
   param_grid:
-    outer_params: &id122
+    outer_params: &id118
       cv_iterations: 10
       early_stopping: true
       cv_size: 5
       validation_fraction: 0.2
       n_iter_no_change: 5
       max_iter: 1000
-    hidden_layer_sizes: &id123
+    hidden_layer_sizes: &id119
     - - 16
       - 32
     - - 16
@@ -846,29 +830,29 @@
     - - 128
       - 64
       - 32
-    activation: &id124
+    activation: &id120
     - relu
     - tanh
     - logistic
-    solver: &id125
+    solver: &id121
     - adam
     - lbfgs
-    alpha: &id126
+    alpha: &id122
     - 0.0001
     - 0.001
     - 0.01
-    learning_rate_init: &id127
+    learning_rate_init: &id123
     - 0.001
     - 0.01
     - 0.1
-    beta_1: &id128
+    beta_1: &id124
     - 0.9
     - 0.99
     - 0.8
-    beta_2: &id129
+    beta_2: &id125
     - 0.999
     - 0.9
-    batch_size: &id130
+    batch_size: &id126
     - 256
     - 512
     - 1024
@@ -877,113 +861,102 @@
   model: resnet
   best_params: {}
   param_grid:
-    outer_params: &id131
+    outer_params: &id127
       hyperopt_evals: 10
       num_epochs: 1000
       early_stopping: true
       early_stopping_patience: 5
       validation_fraction: 0.2
-    learning_rate: &id132
+    learning_rate: &id128
     - 0.0001
     - 0.001
-    batch_size: &id133
+    batch_size: &id129
     - 256
     - 512
     - 1024
     - 2048
-    scheduler_factor: &id134
+    scheduler_factor: &id130
     - 0.1
     - 0.9
-    scheduler_patience: &id135
+    scheduler_patience: &id131
     - 3
     - 5
 - dataset: housing
   model: s1dcnn
   best_params: {}
   param_grid:
-    outer_params: &id136
+    outer_params: &id132
       hyperopt_evals: 10
       num_epochs: 1000
       early_stopping: true
       shuffle: true
       validation_fraction: 0.2
-    batch_size: &id137
+    batch_size: &id133
     - 256
     - 512
     - 1024
     - 2048
-    early_stopping_patience: &id138
+    early_stopping_patience: &id134
     - 3
     - 5
-    learning_rate: &id139
+    learning_rate: &id135
     - 0.01
     - 0.0001
-    hidden_size: &id140
+    hidden_size: &id136
     - 1024
     - 2048
     - 4096
-    scheduler_factor: &id141
+    scheduler_factor: &id137
     - 0.1
     - 0.9
-    scheduler_patience: &id142
+    scheduler_patience: &id138
     - 4
     - 7
 - dataset: housing
   model: tabnet
   best_params: {}
   param_grid:
-    outer_params: &id143
+    outer_params: &id139
       hyperopt_evals: 10
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
       early_stopping_patience: 5
-    learning_rate: &id144
+    learning_rate: &id140
     - 0.001
     - 0.0001
-    virtual_batch_size_ratio: &id145
+    virtual_batch_size_ratio: &id141
     - 0.125
     - 0.25
     - 0.5
-    batch_size: &id146
+    - 1.0
+    batch_size: &id142
     - 256
     - 512
     - 1024
     - 2048
-    weights: &id147
+    weights: &id143
     - 0
     - 1
-    mask_type: &id148
+    mask_type: &id144
     - sparsemax
     - entmax
-    n_d: &id149
+    n_d: &id145
     - 4
     - 12
-    n_steps: &id150
+    n_steps: &id146
     - 3
     - 10
-    gamma: &id151
+    gamma: &id147
     - 1.0
     - 2.0
-    cat_emb_dim: &id152
-    - 1
-    - 3
-    n_independent: &id153
+    n_independent: &id148
     - 2
     - 3
-    n_shared: &id154
+    n_shared: &id149
     - 2
     - 3
-    lambda_sparse: &id155
-    - 0.001
-    - 0.01
-    momentum: &id156
-    - 0.001
-    - 0.4
-    clip_value: &id157
-    - 1
-    - 2
-    optimizer_fn: &id158
+    optimizer_fn: &id150
       Adam:
         weight_decay:
         - 0.0001
@@ -992,7 +965,7 @@
         weight_decay:
         - 0.0001
         - 0.01
-    scheduler_fn: &id159
+    scheduler_fn: &id151
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -1015,31 +988,31 @@
   model: gate
   best_params: {}
   param_grid:
-    outer_params: &id160
+    outer_params: &id152
       hyperopt_evals: 10
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
       early_stopping_patience: 5
-    learning_rate: &id161
+    learning_rate: &id153
     - 0.001
     - 0.0001
-    batch_size: &id162
+    batch_size: &id154
     - 256
     - 512
     - 1024
-    tree_depth: &id163
+    tree_depth: &id155
     - 4
     - 7
-    num_trees: &id164
+    num_trees: &id156
     - 8
     - 22
-    chain_trees: &id165
+    chain_trees: &id157
     - false
-    gflu_stages: &id166
+    gflu_stages: &id158
     - 2
     - 4
-    optimizer_fn: &id167
+    optimizer_fn: &id159
       Adam:
         weight_decay:
         - 0.0001
@@ -1048,7 +1021,7 @@
         weight_decay:
         - 0.0001
         - 0.01
-    scheduler_fn: &id168
+    scheduler_fn: &id160
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -1071,21 +1044,60 @@
   model: fttransformer
   best_params: {}
   param_grid:
-    outer_params: &id169
+    outer_params: &id161
       hyperopt_evals: 10
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
       early_stopping_patience: 5
-    learning_rate: &id170
+    learning_rate: &id162
     - 0.001
     - 0.0001
-    batch_size: &id171
-    - 256
+    batch_size: &id163
     - 512
     - 1024
     - 2048
-    optimizer_fn: &id172
+    input_embed_dim: &id164
+    - 16
+    - 32
+    - 64
+    embedding_initialization: &id165
+    - kaiming
+    - kaiming_uniform
+    - kaiming_normal
+    shared_embedding_fraction: &id166
+    - 0.125
+    - 0.25
+    - 0.5
+    num_heads: &id167
+    - 6
+    - 10
+    num_attn_blocks: &id168
+    - 4
+    - 10
+    attn_dropout: &id169
+    - 0.05
+    - 0.3
+    add_norm_dropout: &id170
+    - 0.05
+    - 0.3
+    ff_dropout: &id171
+    - 0.05
+    - 0.3
+    ff_hidden_multiplier: &id172
+    - 2
+    - 6
+    transformer_activation: &id173
+    - GEGLU
+    - ReGLU
+    - SwiGLU
+    embedding_dropout: &id174
+    - 0.05
+    - 0.3
+    batch_norm_continuous_input: &id175
+    - 0.05
+    - 0.3
+    optimizer_fn: &id176
       Adam:
         weight_decay:
         - 0.0001
@@ -1094,7 +1106,7 @@
         weight_decay:
         - 0.0001
         - 0.01
-    scheduler_fn: &id173
+    scheduler_fn: &id177
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -1117,37 +1129,35 @@
   model: categoryembedding
   best_params: {}
   param_grid:
-    outer_params: &id174
-      hyperopt_evals: 3
+    outer_params: &id178
+      hyperopt_evals: 10
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
       early_stopping_patience: 5
       precision: 16
-    batch_size: &id175
+    batch_size: &id179
     - 128
     - 256
     - 512
     - 1024
-    learning_rate: &id176
+    learning_rate: &id180
     - 0.001
     - 0.0001
-    layers: &id177
+    layers: &id181
     - 128-64-32
     - 64-32-16
     - 512-128-32
-    activation: &id178
+    activation: &id182
     - ReLU
-    - Tanh
     - LeakyReLU
-    initialization: &id179
+    initialization: &id183
     - kaiming
     - xavier
-    - random
-    dropout: &id180
+    dropout: &id184
     - 0.0
     - 0.3
-    optimizer_fn: &id181
+    optimizer_fn: &id185
       Adam:
         weight_decay:
         - 0.0001
@@ -1156,7 +1166,7 @@
         weight_decay:
         - 0.0001
         - 0.01
-    scheduler_fn: &id182
+    scheduler_fn: &id186
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -1179,21 +1189,21 @@
   model: gandalf
   best_params: {}
   param_grid:
-    outer_params: &id183
+    outer_params: &id187
       hyperopt_evals: 10
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
       early_stopping_patience: 5
-    learning_rate: &id184
+    learning_rate: &id188
     - 0.001
     - 0.0001
-    batch_size: &id185
+    batch_size: &id189
     - 128
     - 256
     - 512
     - 1024
-    optimizer_fn: &id186
+    optimizer_fn: &id190
       Adam:
         weight_decay:
         - 0.0001
@@ -1202,7 +1212,7 @@
         weight_decay:
         - 0.0001
         - 0.01
-    scheduler_fn: &id187
+    scheduler_fn: &id191
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -1225,77 +1235,77 @@
   model: node
   best_params: {}
   param_grid:
-    outer_params: &id188
+    outer_params: &id192
       hyperopt_evals: 10
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
       early_stopping_patience: 5
-    num_layers: &id189
+    num_layers: &id193
     - 1
     - 2
-    num_trees: &id190
+    num_trees: &id194
     - 1024
     - 2048
-    additional_tree_output_dim: &id191
+    additional_tree_output_dim: &id195
     - 2
     - 3
     - 4
-    depth: &id192
+    depth: &id196
     - 4
     - 5
-    choice_function: &id193
+    choice_function: &id197
     - entmax15
     - sparsemax
-    bin_function: &id194
+    bin_function: &id198
     - entmoid15
     - sparsemoid
-    max_features: &id195
+    max_features: &id199
     - null
     - 50
     - 100
-    input_dropout: &id196
+    input_dropout: &id200
     - 0.0
     - 0.2
     - 0.4
-    initialize_response: &id197
+    initialize_response: &id201
     - normal
     - uniform
-    initialize_selection_logits: &id198
+    initialize_selection_logits: &id202
     - uniform
     - normal
-    threshold_init_beta: &id199
+    threshold_init_beta: &id203
     - 0.1
     - 1.0
     - 10.0
-    threshold_init_cutoff: &id200
+    threshold_init_cutoff: &id204
     - 0.5
     - 0.9
     - 1.5
-    cat_embedding_dropout: &id201
+    cat_embedding_dropout: &id205
     - 0.0
     - 0.1
     - 0.2
-    embed_categorical: &id202
+    embed_categorical: &id206
     - true
     - false
-    head: &id203
+    head: &id207
     - LinearHead
-    embedding_dropout: &id204
+    embedding_dropout: &id208
     - 0.0
     - 0.1
     - 0.2
-    batch_norm_continuous_input: &id205
+    batch_norm_continuous_input: &id209
     - true
     - false
-    learning_rate: &id206
+    learning_rate: &id210
     - 0.001
     - 0.0001
-    batch_size: &id207
+    batch_size: &id211
     - 512
     - 1024
     - 2048
-    optimizer_fn: &id208
+    optimizer_fn: &id212
       Adam:
         weight_decay:
         - 0.0001
@@ -1304,7 +1314,7 @@
         weight_decay:
         - 0.0001
         - 0.01
-    scheduler_fn: &id209
+    scheduler_fn: &id213
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -1327,21 +1337,21 @@
   model: autoint
   best_params: {}
   param_grid:
-    outer_params: &id210
+    outer_params: &id214
       hyperopt_evals: 10
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
       early_stopping_patience: 5
-    batch_size: &id211
+    batch_size: &id215
     - 128
     - 256
     - 512
     - 1024
-    learning_rate: &id212
+    learning_rate: &id216
     - 0.001
     - 0.0001
-    optimizer_fn: &id213
+    optimizer_fn: &id217
       Adam:
         weight_decay:
         - 0.0001
@@ -1350,7 +1360,7 @@
         weight_decay:
         - 0.0001
         - 0.01
-    scheduler_fn: &id214
+    scheduler_fn: &id218
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -1373,21 +1383,21 @@
   model: tabtransformer
   best_params: {}
   param_grid:
-    outer_params: &id215
+    outer_params: &id219
       hyperopt_evals: 10
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
       early_stopping_patience: 5
-    batch_size: &id216
+    batch_size: &id220
     - 128
     - 256
     - 512
     - 1024
-    learning_rate: &id217
+    learning_rate: &id221
     - 0.001
     - 0.0001
-    optimizer_fn: &id218
+    optimizer_fn: &id222
       Adam:
         weight_decay:
         - 0.0001
@@ -1396,7 +1406,7 @@
         weight_decay:
         - 0.0001
         - 0.01
-    scheduler_fn: &id219
+    scheduler_fn: &id223
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -1419,157 +1429,165 @@
   model: xgb
   best_params: {}
   param_grid:
-    outer_params: *id110
-    n_estimators: *id111
-    max_bin: *id112
-    tree_method: *id113
-    max_depth: *id114
-    learning_rate: *id115
-    subsample: *id116
-    colsample_bytree: *id117
-    min_child_weight: *id118
-    alpha: *id119
-    gamma: *id120
-    lambda: *id121
+    outer_params: *id106
+    n_estimators: *id107
+    max_bin: *id108
+    tree_method: *id109
+    max_depth: *id110
+    learning_rate: *id111
+    subsample: *id112
+    colsample_bytree: *id113
+    min_child_weight: *id114
+    alpha: *id115
+    gamma: *id116
+    lambda: *id117
 - dataset: adult
   model: mlp
   best_params: {}
   param_grid:
-    outer_params: *id122
-    hidden_layer_sizes: *id123
-    activation: *id124
-    solver: *id125
-    alpha: *id126
-    learning_rate_init: *id127
-    beta_1: *id128
-    beta_2: *id129
-    batch_size: *id130
+    outer_params: *id118
+    hidden_layer_sizes: *id119
+    activation: *id120
+    solver: *id121
+    alpha: *id122
+    learning_rate_init: *id123
+    beta_1: *id124
+    beta_2: *id125
+    batch_size: *id126
 - dataset: adult
   model: resnet
   best_params: {}
   param_grid:
-    outer_params: *id131
-    learning_rate: *id132
-    batch_size: *id133
-    scheduler_factor: *id134
-    scheduler_patience: *id135
+    outer_params: *id127
+    learning_rate: *id128
+    batch_size: *id129
+    scheduler_factor: *id130
+    scheduler_patience: *id131
 - dataset: adult
   model: s1dcnn
   best_params: {}
   param_grid:
-    outer_params: *id136
-    batch_size: *id137
-    early_stopping_patience: *id138
-    learning_rate: *id139
-    hidden_size: *id140
-    scheduler_factor: *id141
-    scheduler_patience: *id142
+    outer_params: *id132
+    batch_size: *id133
+    early_stopping_patience: *id134
+    learning_rate: *id135
+    hidden_size: *id136
+    scheduler_factor: *id137
+    scheduler_patience: *id138
 - dataset: adult
   model: tabnet
   best_params: {}
   param_grid:
-    outer_params: *id143
-    learning_rate: *id144
-    virtual_batch_size_ratio: *id145
-    batch_size: *id146
-    weights: *id147
-    mask_type: *id148
-    n_d: *id149
-    n_steps: *id150
-    gamma: *id151
-    cat_emb_dim: *id152
-    n_independent: *id153
-    n_shared: *id154
-    lambda_sparse: *id155
-    momentum: *id156
-    clip_value: *id157
-    optimizer_fn: *id158
-    scheduler_fn: *id159
+    outer_params: *id139
+    learning_rate: *id140
+    virtual_batch_size_ratio: *id141
+    batch_size: *id142
+    weights: *id143
+    mask_type: *id144
+    n_d: *id145
+    n_steps: *id146
+    gamma: *id147
+    n_independent: *id148
+    n_shared: *id149
+    optimizer_fn: *id150
+    scheduler_fn: *id151
 - dataset: adult
   model: gate
   best_params: {}
   param_grid:
-    outer_params: *id160
-    learning_rate: *id161
-    batch_size: *id162
-    tree_depth: *id163
-    num_trees: *id164
-    chain_trees: *id165
-    gflu_stages: *id166
-    optimizer_fn: *id167
-    scheduler_fn: *id168
+    outer_params: *id152
+    learning_rate: *id153
+    batch_size: *id154
+    tree_depth: *id155
+    num_trees: *id156
+    chain_trees: *id157
+    gflu_stages: *id158
+    optimizer_fn: *id159
+    scheduler_fn: *id160
 - dataset: adult
   model: fttransformer
   best_params: {}
   param_grid:
-    outer_params: *id169
-    learning_rate: *id170
-    batch_size: *id171
-    optimizer_fn: *id172
-    scheduler_fn: *id173
+    outer_params: *id161
+    learning_rate: *id162
+    batch_size: *id163
+    input_embed_dim: *id164
+    embedding_initialization: *id165
+    shared_embedding_fraction: *id166
+    num_heads: *id167
+    num_attn_blocks: *id168
+    attn_dropout: *id169
+    add_norm_dropout: *id170
+    ff_dropout: *id171
+    ff_hidden_multiplier: *id172
+    transformer_activation: *id173
+    embedding_dropout: *id174
+    batch_norm_continuous_input: *id175
+    optimizer_fn: *id176
+    scheduler_fn: *id177
 - dataset: adult
   model: categoryembedding
   best_params: {}
   param_grid:
-    outer_params: *id174
-    batch_size: *id175
-    learning_rate: *id176
-    layers: *id177
-    activation: *id178
-    initialization: *id179
-    dropout: *id180
-    optimizer_fn: *id181
-    scheduler_fn: *id182
+    outer_params: *id178
+    batch_size: *id179
+    learning_rate: *id180
+    layers: *id181
+    activation: *id182
+    initialization: *id183
+    dropout: *id184
+    optimizer_fn: *id185
+    scheduler_fn: *id186
 - dataset: adult
   model: gandalf
   best_params: {}
   param_grid:
-    outer_params: *id183
-    learning_rate: *id184
-    batch_size: *id185
-    optimizer_fn: *id186
-    scheduler_fn: *id187
+    outer_params: *id187
+    learning_rate: *id188
+    batch_size: *id189
+    optimizer_fn: *id190
+    scheduler_fn: *id191
 - dataset: adult
   model: node
   best_params: {}
   param_grid:
-    outer_params: *id188
-    num_layers: *id189
-    num_trees: *id190
-    additional_tree_output_dim: *id191
-    depth: *id192
-    choice_function: *id193
-    bin_function: *id194
-    max_features: *id195
-    input_dropout: *id196
-    initialize_response: *id197
-    initialize_selection_logits: *id198
-    threshold_init_beta: *id199
-    threshold_init_cutoff: *id200
-    cat_embedding_dropout: *id201
-    embed_categorical: *id202
-    head: *id203
-    embedding_dropout: *id204
-    batch_norm_continuous_input: *id205
-    learning_rate: *id206
-    batch_size: *id207
-    optimizer_fn: *id208
-    scheduler_fn: *id209
+    outer_params: *id192
+    num_layers: *id193
+    num_trees: *id194
+    additional_tree_output_dim: *id195
+    depth: *id196
+    choice_function: *id197
+    bin_function: *id198
+    max_features: *id199
+    input_dropout: *id200
+    initialize_response: *id201
+    initialize_selection_logits: *id202
+    threshold_init_beta: *id203
+    threshold_init_cutoff: *id204
+    cat_embedding_dropout: *id205
+    embed_categorical: *id206
+    head: *id207
+    embedding_dropout: *id208
+    batch_norm_continuous_input: *id209
+    learning_rate: *id210
+    batch_size: *id211
+    optimizer_fn: *id212
+    scheduler_fn: *id213
 - dataset: adult
   model: autoint
   best_params: {}
   param_grid:
-    outer_params: *id210
-    batch_size: *id211
-    learning_rate: *id212
-    optimizer_fn: *id213
-    scheduler_fn: *id214
+    outer_params: *id214
+    batch_size: *id215
+    learning_rate: *id216
+    optimizer_fn: *id217
+    scheduler_fn: *id218
 - dataset: adult
   model: tabtransformer
   best_params: {}
   param_grid:
-    outer_params: *id215
-    batch_size: *id216
-    learning_rate: *id217
-    optimizer_fn: *id218
-    scheduler_fn: *id219
+    outer_params: *id219
+    batch_size: *id220
+    learning_rate: *id221
+    optimizer_fn: *id222
+    scheduler_fn: *id223

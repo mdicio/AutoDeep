@@ -19,13 +19,13 @@ include_models:
 # List of datasets to include in the experiment
 include_datasets:
   #- creditcard  # Credit card fraud dataset
-  - iris        # Iris flower dataset
-  - titanic
+  #- iris        # Iris flower dataset
+  #- titanic
   #- bufix
-  #- breastcancer 
-  #- housing
-  #- ageconditions
-  #- adult
+  - breastcancer 
+  - housing
+  - ageconditions
+  - adult
   #- heloc
   #- covertype
 
