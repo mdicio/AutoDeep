@@ -330,11 +330,11 @@
   best_params: {}
   param_grid:
     outer_params: &id064
-      hyperopt_evals: 10
+      hyperopt_evals: 3
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2
-      early_stopping_patience: 5
+      early_stopping_patience: 10
       precision: 16
     batch_size: &id065
     - 8
@@ -375,7 +375,7 @@
         - 0.1
         - 0.9
         patience:
-        - 3
+        - 4
         - 5
       ExponentialLR:
         gamma:
@@ -384,7 +384,7 @@
       StepLR:
         step_size:
         - 10
-        - 30
+        - 20
         gamma:
         - 0.9
         - 0.99
@@ -1118,7 +1118,7 @@
   best_params: {}
   param_grid:
     outer_params: &id174
-      hyperopt_evals: 10
+      hyperopt_evals: 3
       auto_lr_find: false
       max_epochs: 1000
       val_size: 0.2

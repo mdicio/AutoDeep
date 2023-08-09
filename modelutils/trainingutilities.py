@@ -14,7 +14,7 @@ def remainder_equal_one(batch_size, virtual_batch_size_ratio):
 def handle_rogue_batch_size(train, batch_size):
     #pytorch doesnt like batch sizes of 1, and it happens if the last batch is 1 and drop_last batch is false.
     if len(train)%batch_size == 1:
-        return train[:-1]
+        return train.iloc[:-1]
 
     else:
         return train

@@ -158,7 +158,7 @@ class SoftOrdering1DCNN:
 
         self.random_state = 4200
 
-    def load_best_model(self):
+    def _load_best_model(self):
         """Load a trained model from a given path"""
         self.logger.info(f"Loading model")
         self.logger.debug("Model loaded successfully")
@@ -328,7 +328,7 @@ class SoftOrdering1DCNN:
 
         with tqdm(total=num_epochs, desc="Training", unit="epoch", ncols=80) as pbar:
             for epoch in range(num_epochs):
-                epoch_loss = self.train_step(train_loader)
+                epoch_loss = self.train_df_step(train_loader)
 
                 if early_stopping and validation_fraction > 0:
                     val_loss = self.validate_step(val_loader)
@@ -419,7 +419,7 @@ class SoftOrdering1DCNN:
                 total=num_epochs, desc="Training", unit="epoch", ncols=80
             ) as pbar:
                 for epoch in range(num_epochs):
-                    epoch_loss = self.train_step(train_loader)
+                    epoch_loss = self.train_df_step(train_loader)
 
                     if early_stopping and validation_fraction > 0:
                         val_loss = self.validate_step(val_loader)
@@ -496,6 +496,7 @@ class SoftOrdering1DCNN:
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]
         self.best_model = best_trial["result"]["trained_model"]
+        self._load_best_model()
 
         self.logger.info(f"Best hyperparameters: {best_params}")
         self.logger.info(

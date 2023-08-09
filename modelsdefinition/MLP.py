@@ -45,7 +45,7 @@ class MLP(BaseModel):
             "area_under_pr": "average_precision",
         }
 
-    def load_best_model(self):
+    def _load_best_model(self):
         """Load a trained model from a given path"""
         self.logger.info(f"Loading model")
         self.logger.debug("Model loaded successfully")

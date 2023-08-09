@@ -82,7 +82,7 @@ class NodeTrainer(BaseModel):
             "target_prediction" if self.problem_type == "regression" else "prediction"
         ][0]
 
-    def load_best_model(self):
+    def _load_best_model(self):
         """Load a trained model from a given path"""
         self.logger.info(f"Loading model")
         self.logger.debug("Model loaded successfully")
@@ -95,7 +95,7 @@ class NodeTrainer(BaseModel):
             data_config=self.data_config,
             model_config=self.model_config,
             optimizer_config=self.optimizer_config,
-            trainer_config=self.trainer_config,
+            trainer_config=self.train_dfer_config,
         ).load_model(model_path)
         self.logger.debug("Model loaded successfully")
 
@@ -266,20 +266,20 @@ class NodeTrainer(BaseModel):
         
         
         # Merge X_train and y_train
-        self.train = pd.concat([X_train, y_train], axis=1)
+        self.train_df = pd.concat([X_train, y_train], axis=1)
         
         # Merge X_val and y_val
-        self.validation = pd.concat([X_val, y_val], axis=1)
+        self.validation_df = pd.concat([X_val, y_val], axis=1)
 
         self._set_loss_function(y_train)
         self.model = self.prepare_tabular_model(params, params["outer_params"], default = self.default)
         self.logger.debug("WARNING ROGUE BATCH SIZE, REMOVING ONE OBSERVATION FROM TRAIN DATASET TO AVOID ERROR OF BATCH SIZE == 1")
-        train = handle_rogue_batch_size(train, params["batch_size"])
+        self.train_df = handle_rogue_batch_size(self.train_df, params["batch_size"])
         
 
         self.model.fit(
-            train=self.train,
-            validation=self.validation,
+            train=self.train_df,
+            validation=self.validation_df,
             loss=self.loss_fn,
             optimizer=params["optimizer_fn"],
             optimizer_params=params["optimizer_params"]
@@ -333,10 +333,10 @@ class NodeTrainer(BaseModel):
             random_state=self.random_state,
         )
         # Merge X_train and y_train
-        self.train = pd.concat([X_train, y_train], axis=1)
+        self.train_df = pd.concat([X_train, y_train], axis=1)
         
         # Merge X_val and y_val
-        self.validation = pd.concat([X_val, y_val], axis=1)
+        self.validation_df = pd.concat([X_val, y_val], axis=1)
 
         # Define the objective function for hyperopt search
         def objective(params):
@@ -346,10 +346,10 @@ class NodeTrainer(BaseModel):
             # Opened issue on pytorch tabular for this DEBUG
             params["optimizer_params"].pop("lr", None)
             
-            train = handle_rogue_batch_size(train, params["batch_size"])
+            self.train_df = handle_rogue_batch_size(self.train_df, params["batch_size"])
             model.fit(
-                train=self.train,
-                validation=self.validation,
+                train=self.train_df,
+                validation=self.validation_df,
                 loss=self.loss_fn,
                 optimizer=params["optimizer_fn"],
                 optimizer_params=params["optimizer_params"]
@@ -358,7 +358,7 @@ class NodeTrainer(BaseModel):
             )
 
             # Predict the labels of the validation data
-            pred_df = model.predict(self.validation)
+            pred_df = model.predict(self.validation_df)
             predictions = pred_df[self.prediction_col].values
             if self.problem_type == "binary_classification":
                 probabilities = pred_df["1_probability"].values
@@ -404,6 +404,7 @@ class NodeTrainer(BaseModel):
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]
         self.best_model = best_trial["result"]["trained_model"]
+        self._load_best_model()
 
         self.logger.info(f"Best hyperparameters: {best_params}")
         self.logger.info(
@@ -550,6 +551,7 @@ class NodeTrainer(BaseModel):
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]
         self.best_model = best_trial["result"]["trained_model"]
+        self._load_best_model()
 
         self.logger.info(f"Best hyperparameters: {best_params}")
         self.logger.info(

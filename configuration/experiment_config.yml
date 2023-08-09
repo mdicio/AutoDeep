@@ -20,12 +20,12 @@ include_models:
 include_datasets:
   #- creditcard  # Credit card fraud dataset
   - iris        # Iris flower dataset
-  #- titanic
+  - titanic
   #- bufix
   #- breastcancer 
-  - housing
+  #- housing
   #- ageconditions
-  - adult
+  #- adult
   #- heloc
   #- covertype
 
@@ -36,72 +36,84 @@ model_configs:
     normalize_features: mean_std
     encode_categorical: False  #for dataloader 
     return_extra_info: True # for dataloader
+    retrain: False
 
   node:
     execution_mode: hyperopt
     normalize_features: mean_std
     encode_categorical: False  #for dataloader 
     return_extra_info: True # for dataloader
+    retrain: False
 
   gandalf:
     execution_mode: hyperopt
     normalize_features: mean_std
     encode_categorical: False  #for dataloader 
     return_extra_info: True # for dataloader
+    retrain: False
 
   fttransformer:
     execution_mode: hyperopt
     normalize_features: mean_std
     encode_categorical: False  #for dataloader 
     return_extra_info: True # for dataloader
+    retrain: False
 
   categoryembedding:
     execution_mode: hyperopt
     normalize_features: mean_std
     encode_categorical: False  #for dataloader 
     return_extra_info: True # for dataloader
+    retrain: False
 
   squeezenet:
     execution_mode: hyperopt
     normalize_features: mean_std
     encode_categorical: False  #for dataloader 
     return_extra_info: True # for dataloader
+    retrain: False
 
   gate:
     execution_mode: hyperopt
     normalize_features: mean_std
     encode_categorical: False  #for dataloader 
     return_extra_info: True # for dataloader
+    retrain: False
   
   xgb:
     execution_mode: hyperopt
     normalize_features: mean_std
     encode_categorical: True
     return_extra_info: False
+    retrain: True
 
   tabnet:
     execution_mode: hyperopt
     normalize_features: mean_std
     encode_categorical: False
     return_extra_info: True
+    retrain: False
 
   mlp:
     execution_mode: cv
     normalize_features: mean_std
     encode_categorical: True
     return_extra_info: False
+    retrain: True
 
   resnet18:
     execution_mode: hyperopt
     normalize_features: mean_std
     encode_categorical: True
     return_extra_info: True
+    retrain: False
   
   s1dcnn:
     execution_mode: hyperopt
     normalize_features: mean_std
     encode_categorical: True
     return_extra_info: True
+    retrain: False
 
 dataset_configs:
 

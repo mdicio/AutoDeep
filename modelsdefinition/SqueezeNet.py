@@ -299,7 +299,7 @@ class SqueezeNetTrainer:
 
         with tqdm(total=num_epochs, desc="Training", unit="epoch", ncols=80) as pbar:
             for epoch in range(num_epochs):
-                epoch_loss = self.train_step(train_loader)
+                epoch_loss = self.train_df_step(train_loader)
 
                 if early_stopping and validation_fraction > 0:
                     val_loss = self.validate_step(val_loader)
@@ -406,7 +406,7 @@ class SqueezeNetTrainer:
                 total=num_epochs, desc="Training", unit="epoch", ncols=80
             ) as pbar:
                 for epoch in range(num_epochs):
-                    epoch_loss = self.train_step(train_loader)
+                    epoch_loss = self.train_df_step(train_loader)
 
                     if early_stopping and self.outer_params["validation_fraction"] > 0:
                         val_loss = self.validate_step(val_loader)
@@ -490,6 +490,7 @@ class SqueezeNetTrainer:
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]
         self.best_model = best_trial["result"]["trained_model"]
+        self._load_best_model()
 
         self.logger.info(f"Best hyperparameters: {best_params}")
         self.logger.info(

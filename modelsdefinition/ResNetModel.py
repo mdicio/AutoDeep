@@ -114,7 +114,7 @@ class ResNetTrainer:
 
         self.random_state = 4200
 
-    def load_best_model(self):
+    def _load_best_model(self):
         """Load a trained model from a given path"""
         """Load a trained model from a given path and set it as an attribute of the class"""
         self.model = self.build_model(self.problem_type, self.num_targets, self.depth)
@@ -335,7 +335,7 @@ class ResNetTrainer:
 
         with tqdm(total=num_epochs, desc="Training", unit="epoch", ncols=80) as pbar:
             for epoch in range(num_epochs):
-                epoch_loss = self.train_step(train_loader)
+                epoch_loss = self.train_df_step(train_loader)
 
                 if early_stopping and validation_fraction > 0:
                     val_loss = self.validate_step(val_loader)
@@ -446,7 +446,7 @@ class ResNetTrainer:
                 total=num_epochs, desc="Training", unit="epoch", ncols=80
             ) as pbar:
                 for epoch in range(num_epochs):
-                    epoch_loss = self.train_step(train_loader)
+                    epoch_loss = self.train_df_step(train_loader)
 
                     if early_stopping and validation_fraction > 0:
                         val_loss = self.validate_step(val_loader)
@@ -535,6 +535,7 @@ class ResNetTrainer:
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]
         self.best_model = best_trial["result"]["trained_model"]
+        self._load_best_model()
 
         torch.save(self.best_model.state_dict(), f"{self.save_path}_best")
 

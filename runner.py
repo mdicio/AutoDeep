@@ -19,7 +19,6 @@ with open("./configuration/experiment_config.yml", "r") as f:
     config = yaml.safe_load(f)
 
 random_state = config["random_state"]
-retrain = config["retrain"]
 seed_everything(random_state)
 
 # Extract the necessary information from the configuration file
@@ -44,6 +43,7 @@ for run in runs:
         and dataset_name.lower() in included_datasets
     ):
         model_configs = config["model_configs"][model_name]
+        retrain = model_configs.get("retrain", False)
         encode_categorical = model_configs["encode_categorical"]
         return_extra_info = model_configs["return_extra_info"]
         normalize_features = model_configs["normalize_features"]
@@ -130,72 +130,11 @@ for run in runs:
             best_params = run["best_params"]
             best_score = ""
 
-        print(f"THESE PARAMS AFTER OPTIMIZATION GO INTO TRAIN METHOD: {best_params}")
-
-        try:
-            # DEBUG
-            model.load_best_model()
-            if dataset_task == "binary_classification":
-                y_pred, y_prob = model.predict(X_test, predict_proba=True)
-            else:
-                y_pred = model.predict(X_test)
-                y_prob = None
-            print("MODEL COULD PREDICT YEAAAAAH BUDDYY")
-
-            evaluator = Evaluator(
-                y_true=y_test,
-                y_pred=y_pred,
-                y_prob=y_prob,
-                run_metrics=dataset_configs["eval_metrics"],
-                metric=dmetric,
-                problem_type=dataset_task,
-            )
-
-            output_metrics = evaluator.evaluate_model()
-            print(f"### FINAL Metrics NO Retrain: {output_metrics} #### ")
-
-            output_fields = [
-                "run_id",
-                "run_config",
-                "dataset",
-                "model",
-                "execution_mode",
-                "eval_metric",
-                "best_params",
-                "output_metrics",
-                "saved_model_path",
-                "run_time",
-                "debug_preds",
-                "debug_ytrue",
-            ]
-            output_writer = OutputWriter(
-                rf"./output/{output_results_filename}_noretrain.csv", output_fields
-            )
-
-            run_time = time.time() - start_time
-            print(f"Run time: {round(run_time/60,2)} minutes")
-
-            output_writer.write_row(
-                run_id=run_id,
-                run_config=run,
-                dataset=dataset_name,
-                model=model_name,
-                execution_mode=execution_mode,
-                eval_metric=dmetric,
-                best_params=best_params,
-                output_metrics=output_metrics,
-                saved_model_path=f"{model.save_path}/{run_id}",
-                run_time=run_time,
-                debug_preds=list(y_pred[:10]),
-                debug_ytrue=list(y_test[:10]),
-            )
-
-        except Exception as e:
-            print(f"{model_name} could not predict without retrain")
-            print(repr(e))
-            raise ValueError
+        
 
         if retrain:
+            print(f"RETRAINING {model_name} on {dataset_name}")
+            print(f"THESE PARAMS AFTER OPTIMIZATION GO INTO TRAIN METHOD: {best_params}")
             model.train(X_train, y_train, params=best_params, extra_info=extra_info)
 
         if dataset_task == "binary_classification":
@@ -256,6 +195,6 @@ for run in runs:
             # output_metrics_no_retrain=output_metrics_no_retrain,
         )
 
-        print(f"### FINAL Metrics With Retrain: {output_metrics} #### ")
+        print(f"### FINAL Metrics {output_metrics} #### ")
 
         ridx += 1

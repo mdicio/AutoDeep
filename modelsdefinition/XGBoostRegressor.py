@@ -37,7 +37,7 @@ class XGBoostRegressor(BaseModel):
         # extra_info used in case it is needed and specific to the dataset we are training on
         self.extra_info = None
 
-    def load_best_model(self):
+    def _load_best_model(self):
         """Load a trained model from a given path"""
         self.logger.info(f"Loading model")
         self.logger.debug("Model loaded successfully")
@@ -193,6 +193,7 @@ class XGBoostRegressor(BaseModel):
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]
         self.best_model = best_trial["result"]["trained_model"]
+        self._load_best_model()
 
         self.logger.info(f"Best hyperparameters: {best_params}")
         self.logger.info(
