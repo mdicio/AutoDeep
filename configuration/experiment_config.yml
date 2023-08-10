@@ -8,7 +8,7 @@ include_models:
   #- GATE 
   #- resnet18
   #- S1DCNN
-  #- CategoryEmbedding
+  - CategoryEmbedding
   - FTTransformer
   - GANDALF
   - Node
@@ -25,7 +25,7 @@ include_datasets:
   #- breastcancer 
   - housing
   #- ageconditions
-  - adult
+  #- adult
   #- heloc
   #- covertype
 

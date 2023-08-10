@@ -216,6 +216,10 @@ class TabNetTrainer(BaseModel):
         
         valid_params = {param: value for param, value in params.items()
         if param in inspect.signature(TabNetModelConfig).parameters}
+        
+        if self.task == "regression":
+            valid_params["target_range"] = self.target_range
+            
         self.logger.debug("valid parameters", valid_params)
         model_config = TabNetModelConfig(
             task=self.task,
@@ -262,6 +266,9 @@ class TabNetTrainer(BaseModel):
         self.logger.info("Starting training")
         self.extra_info = extra_info
         # Split the train data into training and validation sets
+        if (self.problem_type == "regression") and not hasattr(self, "target_range"):
+            self.target_range = [(float(np.min(y_train)*0.5), float(np.max(y_train)*1.5))]
+            
         X_train, X_val, y_train, y_val = train_test_split(
             X_train,
             y_train,
@@ -270,6 +277,7 @@ class TabNetTrainer(BaseModel):
         )
         
         
+
         # Merge X_train and y_train
         self.train_df = pd.concat([X_train, y_train], axis=1)
         
@@ -330,6 +338,11 @@ class TabNetTrainer(BaseModel):
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
 
+            
+        if (self.problem_type == "regression") and not hasattr(self, "target_range"):
+            self.target_range = [(float(np.min(y)*0.5), float(np.max(y)*1.5))]
+            
+            
         # Split the train data into training and validation sets
         X_train, X_val, y_train, y_val = train_test_split(
             X,
