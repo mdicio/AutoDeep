@@ -299,7 +299,7 @@ class SqueezeNetTrainer:
 
         with tqdm(total=num_epochs, desc="Training", unit="epoch", ncols=80) as pbar:
             for epoch in range(num_epochs):
-                epoch_loss = self.train_df_step(train_loader)
+                epoch_loss = self.train_step(train_loader)
 
                 if early_stopping and validation_fraction > 0:
                     val_loss = self.validate_step(val_loader)
@@ -344,10 +344,10 @@ class SqueezeNetTrainer:
         extra_info=None,
         *kwargs,
     ):
-        self.self.outer_params = param_grid["outer_params"]
+        self.outer_params = param_grid["outer_params"]
         num_epochs = self.outer_params.get("num_epochs", 3)
         early_stopping = self.outer_params.get("early_stopping", True)
-        patience = self.self.outer_params["early_stopping_patience"]
+        patience = self.outer_params["early_stopping_patience"]
         space = infer_hyperopt_space_s1dcnn(param_grid)
         # IGTD_ORDERING
         self.extra_info = extra_info
@@ -406,7 +406,7 @@ class SqueezeNetTrainer:
                 total=num_epochs, desc="Training", unit="epoch", ncols=80
             ) as pbar:
                 for epoch in range(num_epochs):
-                    epoch_loss = self.train_df_step(train_loader)
+                    epoch_loss = self.train_step(train_loader)
 
                     if early_stopping and self.outer_params["validation_fraction"] > 0:
                         val_loss = self.validate_step(val_loader)

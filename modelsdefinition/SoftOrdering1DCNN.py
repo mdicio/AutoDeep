@@ -328,7 +328,7 @@ class SoftOrdering1DCNN:
 
         with tqdm(total=num_epochs, desc="Training", unit="epoch", ncols=80) as pbar:
             for epoch in range(num_epochs):
-                epoch_loss = self.train_df_step(train_loader)
+                epoch_loss = self.train_step(train_loader)
 
                 if early_stopping and validation_fraction > 0:
                     val_loss = self.validate_step(val_loader)
@@ -373,7 +373,7 @@ class SoftOrdering1DCNN:
         extra_info=None,
         *kwargs,
     ):
-        self.self.outer_params = param_grid["outer_params"]
+        self.outer_params = param_grid["outer_params"]
         num_epochs = self.outer_params.get("num_epochs", 3)
         early_stopping = self.outer_params.get("early_stopping", True)
         patience =  self.outer_params.get("early_stopping_patience", 5)
@@ -419,7 +419,7 @@ class SoftOrdering1DCNN:
                 total=num_epochs, desc="Training", unit="epoch", ncols=80
             ) as pbar:
                 for epoch in range(num_epochs):
-                    epoch_loss = self.train_df_step(train_loader)
+                    epoch_loss = self.train_step(train_loader)
 
                     if early_stopping and validation_fraction > 0:
                         val_loss = self.validate_step(val_loader)
