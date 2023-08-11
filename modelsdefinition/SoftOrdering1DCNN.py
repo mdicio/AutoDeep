@@ -381,6 +381,8 @@ class SoftOrdering1DCNN:
         validation_fraction = self.outer_params.get("validation_fraction", 0.2)
         self.num_features = extra_info["num_features"]
 
+        
+        self.logger.debug(f"Training on {self.device}")
         # Define the objective function for hyperopt search
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")

@@ -386,6 +386,7 @@ class ResNetTrainer:
         patience = self.outer_params.get("early_stopping_patience", 5)
         validation_fraction = self.outer_params.get("validation_fraction", 0.2)
 
+        self.logger.debug(f"Training on {self.device}")
         space = infer_hyperopt_space_s1dcnn(param_grid)
         # IGTD_ORDERING
         self.extra_info = extra_info
