@@ -818,8 +818,8 @@ class CoverTypeDataLoader(DataLoader):
         if self.return_extra_info:
             extra_info = self.create_extra_info(
                 X_train,
-                img_rows=3,
-                img_columns=3,
+                img_rows=6,
+                img_columns=9,
                 igtd_path="./modelsdefinition/IGTD/results/covertype_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
@@ -889,8 +889,8 @@ class HelocDataLoader(DataLoader):
         if self.return_extra_info:
             extra_info = self.create_extra_info(
                 X_train,
-                img_rows=3,
-                img_columns=3,
+                img_rows=6,
+                img_columns=4,
                 igtd_path="./modelsdefinition/IGTD/results/heloc_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
