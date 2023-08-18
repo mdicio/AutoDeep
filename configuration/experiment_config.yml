@@ -3,7 +3,7 @@ retrain: True
 # List of models to include in the experiment
 include_models:
   #- XGB  # Extreme Gradient Boosting
-  #- MLP  # Multi-Layer Perceptron
+  - MLP  # Multi-Layer Perceptron
   - TabNet  # TabNet Classifier 
   #- GATE 
   - resnet18
@@ -23,9 +23,9 @@ include_datasets:
   #- titanic
   #- bufix
   #- breastcancer 
-  - housing
+  #- housing
   #- ageconditions
-  - adult
+  #- adult
   - heloc
   #- covertype
 

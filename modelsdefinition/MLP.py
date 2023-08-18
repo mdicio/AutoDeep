@@ -78,17 +78,18 @@ class MLP(BaseModel):
         # Set up the parameters for the model
         self.logger.info("Starting training")
         params["random_state"] = self.random_state
+        outer_params = params["outer_params"]
         if "outer_params" in params.keys():
             params.pop("outer_params")
 
         # Create the MLP model based on problem_type
         if self.problem_type == "regression":
-            model = MLPRegressor(verbose=False, early_stopping=True, n_iter_no_change = params["n_iter_no_change"], max_iter = params["max_iter"], **params)
+            model = MLPRegressor(verbose=False, early_stopping=True, n_iter_no_change = outer_params["n_iter_no_change"], max_iter = outer_params["max_iter"], **params)
         elif self.problem_type in [
             "binary_classification",
             "multiclass_classification",
         ]:
-            model = MLPClassifier(verbose=False, early_stopping=True, n_iter_no_change = params["n_iter_no_change"], max_iter = params["max_iter"], **params)
+            model = MLPClassifier(verbose=False, early_stopping=True, n_iter_no_change = outer_params["n_iter_no_change"], max_iter = outer_params["max_iter"], **params)
         else:
             raise ValueError("Wrong problem type")
 
@@ -162,21 +163,23 @@ class MLP(BaseModel):
             Dictionary containing the best hyperparameters and corresponding score.
         """
         self.logger.info(f"Starting cross-validation maximising {metric} metric")
-
-        cv_size = param_grid["outer_params"]["cv_size"]
-        n_iter = param_grid["outer_params"]["cv_iterations"]
+        outer_params = param_grid["outer_params"]
+        cv_size = outer_params["cv_size"]
+        n_iter = outer_params["cv_iterations"]
+        n_iter_no_change = outer_params["n_iter_no_change"]
+        max_iter = outer_params["max_iter"]
         if "outer_params" in param_grid.keys():
             param_grid.pop("outer_params")
 
         scoring_metric = self.metric_mapping[metric]
         # Create the MLP model based on problem_type
         if self.problem_type == "regression":
-            model = MLPRegressor(verbose=False, early_stopping=True,  n_iter_no_change = param_grid["n_iter_no_change"], max_iter = param_grid["max_iter"])
+            model = MLPRegressor(verbose=False, early_stopping=True,  n_iter_no_change = n_iter_no_change, max_iter = max_iter)
         elif self.problem_type in [
             "binary_classification",
             "multiclass_classification",
         ]:
-            model = MLPClassifier(verbose=False, early_stopping=True,  n_iter_no_change = param_grid["n_iter_no_change"], max_iter = param_grid["max_iter"])
+            model = MLPClassifier(verbose=False, early_stopping=True,  n_iter_no_change = n_iter_no_change, max_iter = max_iter)
             if self.problem_type == "multiclass_classification":
                 if scoring_metric == "f1":
                     metric += "_weighted"
@@ -197,6 +200,7 @@ class MLP(BaseModel):
         random_search.fit(X, y)
 
         best_params = random_search.best_params_
+        best_params["outer_params"] = outer_params
         best_score = random_search.best_score_
         self.best_model = random_search.best_estimator_
 
