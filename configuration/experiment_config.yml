@@ -3,13 +3,13 @@ retrain: True
 # List of models to include in the experiment
 include_models:
   #- XGB  # Extreme Gradient Boosting
-  - MLP  # Multi-Layer Perceptron
-  - TabNet  # TabNet Classifier 
-  #- GATE 
+  #- MLP  # Multi-Layer Perceptron
+  #- TabNet  # TabNet Classifier 
+  - GATE 
   - resnet18
-  - S1DCNN
-  - CategoryEmbedding
-  - FTTransformer
+  #- S1DCNN
+  #- CategoryEmbedding
+  #- FTTransformer
   - GANDALF
   #- Node
   - TabTransformer
@@ -53,6 +53,13 @@ model_configs:
     retrain: False
 
   fttransformer:
+    execution_mode: hyperopt
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+    retrain: False
+
+  tabransformer:
     execution_mode: hyperopt
     normalize_features: mean_std
     encode_categorical: False  #for dataloader 

@@ -9,6 +9,7 @@ from modelsdefinition.GATE import GATE
 from modelsdefinition.NodeModel import NodeTrainer
 from modelsdefinition.AutomaticFeatureInteractionModel import AutoIntTrainer
 from modelsdefinition.TabTransformerModel import TabTransformerTrainer
+from modelsdefinition.GANDALF import GandalfTrainer
 
 from modelsdefinition.SoftOrdering1DCNN import SoftOrdering1DCNN
 from modelsdefinition.SqueezeNet import SqueezeNetTrainer
@@ -59,7 +60,7 @@ def create_model(model_name, problem_type, num_classes, **kwargs):
         return FTTransformerTrainer(problem_type, **kwargs)
 
     elif mname == "gandalf":
-        return NodeTrainer(problem_type, **kwargs)
+        return GandalfTrainer(problem_type, **kwargs)
 
     elif mname == "node":
         return NodeTrainer(problem_type, **kwargs)
