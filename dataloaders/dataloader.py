@@ -3,11 +3,7 @@ import pandas as pd
 from typing import Dict
 import seaborn as sns
 from sklearn.model_selection import train_test_split
-from sklearn.datasets import (
-    load_iris,
-    fetch_california_housing,
-    load_breast_cancer
-)
+from sklearn.datasets import load_iris, fetch_california_housing, load_breast_cancer
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import torch
 import random
@@ -256,9 +252,7 @@ class BufixDataLoader(DataLoader):
     def load_data(self):
         # Load the Iris dataset from scikit-learn
 
-        df = pd.read_csv(
-            "./data/buf/sortedbulk_data-1.csv"
-        )
+        df = pd.read_csv("./data/buf/sortedbulk_data-1.csv")
         df = df.drop(["num_telefono", "target_event_date", "target_date"], axis=1)
         df_train = df.loc[df["partition_date"] < "2022-04-30"].drop(
             "partition_date", axis=1
@@ -789,9 +783,7 @@ class CoverTypeDataLoader(DataLoader):
 
     def load_data(self):
         # Load the Adult dataset from UCI Machine Learning Repository
-        df = pd.read_csv(
-            "./data/covertype/covtype.data.gz"
-        )
+        df = pd.read_csv("./data/covertype/covtype.data.gz")
 
         df = df.rename(columns={"5": self.target_column})
         df[self.target_column] = df[self.target_column] - 1
@@ -828,7 +820,7 @@ class CoverTypeDataLoader(DataLoader):
                 X_train,
                 img_rows=3,
                 img_columns=3,
-                igtd_path="./modelsdefinition/IGTD/results/adult_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path="./modelsdefinition/IGTD/results/covertype_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, X_test, y_train, y_test, extra_info
@@ -857,15 +849,17 @@ class HelocDataLoader(DataLoader):
 
     def load_data(self):
         # Load the Adult dataset from UCI Machine Learning Repository
-        df = pd.read_csv(
-            "./data/heloc/heloc_dataset_v1.csv"
-        )
+        df = pd.read_csv("./data/heloc/heloc_dataset_v1.csv")
 
         df = df.rename(columns={"RiskPerformance": self.target_column})
         df["target"] = (df["target"] == "Bad").astype(int)
         cat_cols = df.select_dtypes(include=["object", "category"]).columns
         if self.encode_categorical and len(cat_cols) > 0:
             df = self.force_encode_categorical(df, exclude_cols=[self.target_column])
+
+        df["CreditUtilizationRatio"] = (
+            df["NetFractionRevolvingBurden"] + df["NetFractionInstallBurden"]
+        )
 
         # Split the data into training and test sets
         df_train, df_test = train_test_split(
@@ -897,7 +891,7 @@ class HelocDataLoader(DataLoader):
                 X_train,
                 img_rows=3,
                 img_columns=3,
-                igtd_path="./modelsdefinition/IGTD/results/adult_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path="./modelsdefinition/IGTD/results/heloc_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, X_test, y_train, y_test, extra_info

@@ -5,14 +5,14 @@ include_models:
   #- XGB  # Extreme Gradient Boosting
   #- MLP  # Multi-Layer Perceptron
   #- TabNet  # TabNet Classifier 
-  - GATE 
+  #- GATE 
   - resnet18
   #- S1DCNN
   #- CategoryEmbedding
   #- FTTransformer
-  - GANDALF
+  #- GANDALF
   #- Node
-  - TabTransformer
+  #- TabTransformer
   #- AutoInt
   ###- squeezenet
 

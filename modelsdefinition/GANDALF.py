@@ -22,8 +22,7 @@ from pytorch_tabular.config import (
     TrainerConfig,
 )
 
-# from pytorch_tabular.models import GANDALFConfig
-# NOT IMPLEMENTED YET OFFICIALLY
+from pytorch_tabular.models import GANDALFConfig
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 
