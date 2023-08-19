@@ -1,5 +1,6 @@
 import warnings
 import numpy as np
+from sklearn.preprocessing import StandardScaler
 import pandas as pd
 from typing import Dict
 import torch
@@ -12,7 +13,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from tqdm import tqdm
 import os
-import logging 
+import logging
 import inspect
 from evaluation.generalevaluator import *
 from modelutils.trainingutilities import (
@@ -133,6 +134,8 @@ class SoftOrdering1DCNN:
         self.hidden_size = 4096
         self.problem_type = problem_type
         self.num_targets = num_targets
+
+        self.scaler = StandardScaler()  # Initialize the scaler for scaling y values
 
         self.batch_size = 512
         self.save_path = None
@@ -315,6 +318,9 @@ class SoftOrdering1DCNN:
         )
         self._set_loss_function(y_train)
 
+        # Fit the scaler on the training data
+        # self.scaler.fit_transform(y_train.values.reshape(-1, 1))
+
         train_loader, val_loader = self._pandas_to_torch_dataloaders(
             X_train, y_train, batch_size, validation_fraction
         )
@@ -376,13 +382,13 @@ class SoftOrdering1DCNN:
         self.outer_params = param_grid["outer_params"]
         num_epochs = self.outer_params.get("num_epochs", 3)
         early_stopping = self.outer_params.get("early_stopping", True)
-        patience =  self.outer_params.get("early_stopping_patience", 5)
+        patience = self.outer_params.get("early_stopping_patience", 5)
         space = infer_hyperopt_space_s1dcnn(param_grid)
         validation_fraction = self.outer_params.get("validation_fraction", 0.2)
         self.num_features = extra_info["num_features"]
 
-        
         self.logger.debug(f"Training on {self.device}")
+
         # Define the objective function for hyperopt search
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")

@@ -10,6 +10,7 @@ from modelsdefinition.NodeModel import NodeTrainer
 from modelsdefinition.AutomaticFeatureInteractionModel import AutoIntTrainer
 from modelsdefinition.TabTransformerModel import TabTransformerTrainer
 from modelsdefinition.GANDALF import GandalfTrainer
+from modelsdefinition.CatBoostModel import CatBoostTrainer
 
 from modelsdefinition.SoftOrdering1DCNN import SoftOrdering1DCNN
 from modelsdefinition.SqueezeNet import SqueezeNetTrainer
@@ -47,6 +48,9 @@ def create_model(model_name, problem_type, num_classes, **kwargs):
         return SqueezeNetTrainer(
             problem_type=problem_type, num_targets=num_classes, **kwargs
         )
+
+    elif mname == "catboost":
+        return CatBoostTrainer(problem_type, **kwargs)
 
     elif mname == "mlp":
         return MLP(problem_type, **kwargs)

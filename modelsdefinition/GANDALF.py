@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
 from sklearn.model_selection import KFold
+from sklearn.preprocessing import StandardScaler, RobustScaler
 
 from torch.optim import Adam, SGD
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau, ExponentialLR
@@ -138,6 +139,22 @@ class GandalfTrainer(BaseModel):
                 "Invalid problem_type. Supported values are 'binary', 'multiclass', and 'regression'."
             )
 
+    def scale_regression_target(self, y):
+        # Convert the Series to a 2D array and reshape it
+        y_array = y.to_numpy().reshape(-1, 1)
+
+        # Initialize the StandardScaler
+        self.target_scaler = StandardScaler()
+        # self.target_scaler = RobustScaler()
+
+        # Fit and transform the scaler on the data
+        y_scaled = self.target_scaler.fit_transform(y_array)
+
+        # Convert the scaled array back to a Series
+        y_scaled_series = pd.Series(y_scaled.flatten(), name="target")
+
+        return y_scaled_series
+
     # Define the data configuration
     def prepare_tabular_model(self, params, outer_params, default=False):
         data_config = DataConfig(
@@ -248,11 +265,16 @@ class GandalfTrainer(BaseModel):
         # Set up the parameters for the model
         self.logger.info("Starting training")
         self.extra_info = extra_info
+        self.scale_targets = extra_info.get("scale_regression_target", False)
+
         # Split the train data into training and validation sets
         if (self.problem_type == "regression") and not hasattr(self, "target_range"):
             self.target_range = [
                 (float(np.min(y_train) * 0.5), float(np.max(y_train) * 1.5))
             ]
+
+        if self.problem_type == "regression" and self.scale_targets:
+            y_train = self.scale_regression_target(y_train)
 
         X_train, X_val, y_train, y_val = train_test_split(
             X_train,
@@ -320,12 +342,16 @@ class GandalfTrainer(BaseModel):
         """
         self.logger.info(f"Starting hyperopt search maximising {metric} metric")
         self.extra_info = extra_info
+        self.scale_targets = extra_info.get("scale_regression_target", False)
         self.outer_params = param_grid["outer_params"]
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
 
         if (self.problem_type == "regression") and not hasattr(self, "target_range"):
             self.target_range = [(float(np.min(y) * 0.5), float(np.max(y) * 1.5))]
+
+        if self.problem_type == "regression" and self.scale_targets:
+            y = self.scale_regression_target(y)
 
         # Split the train data into training and validation sets
         X_train, X_val, y_train, y_val = train_test_split(
@@ -586,9 +612,17 @@ class GandalfTrainer(BaseModel):
         """
         self.logger.info("Computing predictions")
         # Make predictions using the trained model
+
         pred_df = self.model.predict(X_test)
         probabilities = None
         predictions = pred_df[self.prediction_col].values
+        # Convert standardized predictions back to unstandardized
+        if self.problem_type == "regression" and self.scale_targets:
+            predictions_unstandardized = self.target_scaler.inverse_transform(
+                predictions.reshape(-1, 1)
+            )
+            predictions = predictions_unstandardized.squeeze()
+
         if predict_proba:
             probabilities = pred_df["1_probability"].values
 

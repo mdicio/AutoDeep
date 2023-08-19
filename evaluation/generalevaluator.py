@@ -39,7 +39,7 @@ class Evaluator:
             "recall": (True, 1.0),
             "mse": (False, 0.0),
             "rmse": (False, 0.0),
-            "r2": (True, 1.0),
+            "r2_score": (True, 1.0),
         }
 
     def recall(self):
