@@ -118,7 +118,7 @@
   param_grid:
     outer_params: &id027
       hyperopt_evals: 2
-      num_epochs: 1000
+      num_epochs: 2
       early_stopping: true
       shuffle: true
       validation_fraction: 0.2
@@ -944,7 +944,7 @@
   param_grid:
     outer_params: &id142
       hyperopt_evals: 2
-      num_epochs: 1000
+      num_epochs: 2
       early_stopping: true
       shuffle: true
       validation_fraction: 0.2

@@ -573,10 +573,10 @@ class ResNetTrainer:
         with torch.no_grad():
             for inputs in test_loader:
                 inputs = inputs.to(self.device)
-                outputs = self.model(inputs).to(self.device)
+                outputs = self.model(inputs)
 
                 if self.problem_type == "binary_classification":
-                    probs = torch.sigmoid(outputs).numpy().reshape(-1)
+                    probs = torch.sigmoid(outputs).cpu().numpy().reshape(-1)
                     preds = (probs >= 0.5).astype(int)
                     probabilities.extend(probs)
 
@@ -584,7 +584,7 @@ class ResNetTrainer:
                     _, preds = torch.max(outputs, 1)
                     preds = preds.cpu().numpy()
                 elif self.problem_type == "regression":
-                    preds = outputs.cpu().numpy().reshape(-1)
+                    preds = outputs.cpu().numpy()
                 else:
                     raise ValueError(
                         "Invalid problem_type. Supported options: binary_classification, multiclass_classification, regression."
@@ -592,6 +592,7 @@ class ResNetTrainer:
 
                 predictions.extend(preds)
 
+        self.logger.debug("Model predicting success")
         predictions = np.array(predictions)
         probabilities = np.array(probabilities)
 
