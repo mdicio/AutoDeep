@@ -14,6 +14,7 @@ from modelutils.trainingutilities import (
     infer_hyperopt_space,
     stop_on_perfect_lossCondition,
 )
+import torch
 
 
 class CatBoostTrainer(BaseModel):
@@ -49,6 +50,7 @@ class CatBoostTrainer(BaseModel):
         ):
             self.logger.addHandler(file_handler)
 
+        self.device = "GPU" if torch.cuda.is_available() else "CPU"
         self.extra_info = None
 
     def _load_best_model(self):
@@ -118,6 +120,7 @@ class CatBoostTrainer(BaseModel):
             early_stopping_rounds=early_stopping_rounds,
             verbose=verbose,
             eval_set=eval_set,
+            task_type=self.device,
         )
 
         self.model = catboost_model
@@ -223,6 +226,7 @@ class CatBoostTrainer(BaseModel):
                 early_stopping_rounds=early_stopping_rounds,
                 verbose=verbose,
                 eval_set=eval_set,
+                task_type=self.device,
             )
 
             y_pred = catboost_model.predict(X_val).squeeze()
