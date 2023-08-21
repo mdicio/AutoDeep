@@ -116,16 +116,9 @@ class ResNetTrainer:
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
-        """Load a trained model from a given path and set it as an attribute of the class"""
-        self.model = self.build_model(self.problem_type, self.num_targets, self.depth)
-        self.model.load_state_dict(
-            torch.load(f"{self.save_path}_best", map_location=self.device)
-        )
-        self.model.to(self.device)
-        self.model.eval()
-
         self.logger.info(f"Loading model")
-        return self.model
+        self.model = self.best_model
+        self.logger.debug("Model loaded successfully")
 
     def build_model(self, problem_type, num_classes, depth):
         model = ResNetModel(problem_type, num_classes, depth)
@@ -151,12 +144,12 @@ class ResNetTrainer:
         return outputs, labels
 
     def process_inputs_labels_prediction(self, inputs, labels):
-        inputs, labels = inputs.to(self.device), labels.to(self.device)
         probabilities = None
         if self.problem_type == "binary_classification":
             probabilities = torch.sigmoid(self.model(inputs)).reshape(-1)
             predictions = (probabilities >= 0.5).float()
-            labels = labels.float().cpu().numpy()
+            probabilities = probabilities.cpu().numpy()
+            labels = labels.float()
         elif self.problem_type == "regression":
             predictions = self.model(inputs).reshape(-1)
             labels = labels.float()
@@ -171,7 +164,7 @@ class ResNetTrainer:
         return (
             predictions.cpu().numpy(),
             labels.cpu().numpy(),
-            probabilities.cpu().numpy(),
+            probabilities,
         )
 
     def train_step(self, train_loader):

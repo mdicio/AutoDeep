@@ -506,6 +506,8 @@ class SoftOrdering1DCNN:
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
+        torch.save(self.best_model.state_dict(), f"{self.save_path}_best")
+
         self.logger.info(f"Best hyperparameters: {best_params}")
         self.logger.info(
             f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {-best_score}"
