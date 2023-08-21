@@ -2,7 +2,7 @@ from modelsdefinition.CommonStructure import BaseModel
 from sklearn.neural_network import MLPClassifier, MLPRegressor
 from sklearn.model_selection import RandomizedSearchCV
 import os
-import logging 
+import logging
 import inspect
 import joblib
 import numpy as np
@@ -20,6 +20,7 @@ class MLP(BaseModel):
         self.num_classes = num_classes
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
+        self.random_state = 4200
         # Get the filename of the current Python script
         self.script_filename = os.path.basename(__file__)
         formatter = logging.Formatter(
@@ -84,12 +85,24 @@ class MLP(BaseModel):
 
         # Create the MLP model based on problem_type
         if self.problem_type == "regression":
-            model = MLPRegressor(verbose=False, early_stopping=True, n_iter_no_change = outer_params["n_iter_no_change"], max_iter = outer_params["max_iter"], **params)
+            model = MLPRegressor(
+                verbose=False,
+                early_stopping=True,
+                n_iter_no_change=outer_params["n_iter_no_change"],
+                max_iter=outer_params["max_iter"],
+                **params,
+            )
         elif self.problem_type in [
             "binary_classification",
             "multiclass_classification",
         ]:
-            model = MLPClassifier(verbose=False, early_stopping=True, n_iter_no_change = outer_params["n_iter_no_change"], max_iter = outer_params["max_iter"], **params)
+            model = MLPClassifier(
+                verbose=False,
+                early_stopping=True,
+                n_iter_no_change=outer_params["n_iter_no_change"],
+                max_iter=outer_params["max_iter"],
+                **params,
+            )
         else:
             raise ValueError("Wrong problem type")
 
@@ -174,12 +187,22 @@ class MLP(BaseModel):
         scoring_metric = self.metric_mapping[metric]
         # Create the MLP model based on problem_type
         if self.problem_type == "regression":
-            model = MLPRegressor(verbose=False, early_stopping=True,  n_iter_no_change = n_iter_no_change, max_iter = max_iter)
+            model = MLPRegressor(
+                verbose=False,
+                early_stopping=True,
+                n_iter_no_change=n_iter_no_change,
+                max_iter=max_iter,
+            )
         elif self.problem_type in [
             "binary_classification",
             "multiclass_classification",
         ]:
-            model = MLPClassifier(verbose=False, early_stopping=True,  n_iter_no_change = n_iter_no_change, max_iter = max_iter)
+            model = MLPClassifier(
+                verbose=False,
+                early_stopping=True,
+                n_iter_no_change=n_iter_no_change,
+                max_iter=max_iter,
+            )
             if self.problem_type == "multiclass_classification":
                 if scoring_metric == "f1":
                     metric += "_weighted"

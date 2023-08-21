@@ -17,7 +17,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from tqdm import tqdm
 import os
-import logging 
+import logging
 import inspect
 from evaluation.generalevaluator import *
 from modelutils.trainingutilities import (
@@ -75,6 +75,7 @@ class SqueezeNetTrainer:
         self.transformation = None
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
+        self.random_state = 4200
         # Get the filename of the current Python script
         self.script_filename = os.path.basename(__file__)
         formatter = logging.Formatter(

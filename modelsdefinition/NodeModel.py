@@ -1,5 +1,5 @@
 import os
-import logging 
+import logging
 import inspect
 import numpy as np
 import pandas as pd
@@ -30,7 +30,7 @@ from modelutils.trainingutilities import (
     infer_hyperopt_space_pytorch_tabular,
     stop_on_perfect_lossCondition,
     calculate_possible_fold_sizes,
-    handle_rogue_batch_size
+    handle_rogue_batch_size,
 )
 
 
@@ -42,6 +42,7 @@ class NodeTrainer(BaseModel):
         self.cv_size = None
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
+        self.random_state = 4200
         # Get the filename of the current Python script
         self.script_filename = os.path.basename(__file__)
         formatter = logging.Formatter(
@@ -65,10 +66,9 @@ class NodeTrainer(BaseModel):
         ):
             self.logger.addHandler(file_handler)
 
-        
         # configure logging at the root level of Lightning
         logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
-        os.environ['PT_LOGLEVEL'] = "CRITICAL" 
+        os.environ["PT_LOGLEVEL"] = "CRITICAL"
 
         self.problem_type = problem_type
         self.num_classes = num_classes
@@ -138,7 +138,7 @@ class NodeTrainer(BaseModel):
             )
 
     # Define the data configuration
-    def prepare_tabular_model(self, params, outer_params, default = False):
+    def prepare_tabular_model(self, params, outer_params, default=False):
         data_config = DataConfig(
             target=["target"],
             continuous_cols=[
@@ -161,23 +161,16 @@ class NodeTrainer(BaseModel):
             checkpoints="valid_loss",
             checkpoints_path=self.save_path,  # Save best checkpoint monitoring val_loss
             load_best=True,  # After training, load the best checkpoint
-            progress_bar = outer_params.get("progress_bar", "rich"),#none, simple, rich
-            precision = outer_params.get("precision",32) #16, 32, 64
-
+            progress_bar=outer_params.get("progress_bar", "rich"),  # none, simple, rich
+            precision=outer_params.get("precision", 32),  # 16, 32, 64
         )
 
         if params["optimizer_fn"] == torch.optim.Adam:
-            params["optimizer_params"] = dict(
-                weight_decay=params["Adam_weight_decay"]
-            )
+            params["optimizer_params"] = dict(weight_decay=params["Adam_weight_decay"])
         elif params["optimizer_fn"] == torch.optim.SGD:
-            params["optimizer_params"] = dict(
-                 momentum=params["SGD_momentum"]
-            )
+            params["optimizer_params"] = dict(momentum=params["SGD_momentum"])
         elif params["optimizer_fn"] == torch.optim.AdamW:
-            params["optimizer_params"] = dict(
-                 weight_decay=params["AdamW_weight_decay"]
-            )
+            params["optimizer_params"] = dict(weight_decay=params["AdamW_weight_decay"])
         if params["scheduler_fn"] == torch.optim.lr_scheduler.StepLR:
             params["scheduler_fn"] = "StepLR"
             params["scheduler_params"] = dict(
@@ -207,24 +200,22 @@ class NodeTrainer(BaseModel):
             lr_scheduler_monitor_metric="valid_loss",
         )
 
-
-        valid_params = {param: value for param, value in params.items()
-        if param in inspect.signature(NodeConfig).parameters}
+        valid_params = {
+            param: value
+            for param, value in params.items()
+            if param in inspect.signature(NodeConfig).parameters
+        }
         if self.task == "regression":
             valid_params["target_range"] = self.target_range
-            
-        self.logger.debug("valid parameters", valid_params)
-        model_config = NodeConfig(
-            task=self.task,
-            **valid_params
-    )
 
-        #override if we want to use default parameters
+        self.logger.debug("valid parameters", valid_params)
+        model_config = NodeConfig(task=self.task, **valid_params)
+
+        # override if we want to use default parameters
         if default:
-            model_config = NodeConfig(
-            task=self.task)
+            model_config = NodeConfig(task=self.task)
             optimizer_config = OptimizerConfig()
-            
+
         # Now you can use the created NodeConfig for further processing
 
         tabular_model = TabularModel(
@@ -261,27 +252,31 @@ class NodeTrainer(BaseModel):
         self.extra_info = extra_info
         # Split the train data into training and validation sets
         if (self.problem_type == "regression") and not hasattr(self, "target_range"):
-            self.target_range = [(float(np.min(y_train)*0.5), float(np.max(y_train)*1.5))]
-            
+            self.target_range = [
+                (float(np.min(y_train) * 0.5), float(np.max(y_train) * 1.5))
+            ]
+
         X_train, X_val, y_train, y_val = train_test_split(
             X_train,
             y_train,
             test_size=params["outer_params"]["val_size"],
             random_state=self.random_state,
         )
-        
-        
+
         # Merge X_train and y_train
         self.train_df = pd.concat([X_train, y_train], axis=1)
-        
+
         # Merge X_val and y_val
         self.validation_df = pd.concat([X_val, y_val], axis=1)
 
         self._set_loss_function(y_train)
-        self.model = self.prepare_tabular_model(params, params["outer_params"], default = self.default)
-        self.logger.debug("WARNING ROGUE BATCH SIZE, REMOVING ONE OBSERVATION FROM TRAIN DATASET TO AVOID ERROR OF BATCH SIZE == 1")
+        self.model = self.prepare_tabular_model(
+            params, params["outer_params"], default=self.default
+        )
+        self.logger.debug(
+            "WARNING ROGUE BATCH SIZE, REMOVING ONE OBSERVATION FROM TRAIN DATASET TO AVOID ERROR OF BATCH SIZE == 1"
+        )
         self.train_df = handle_rogue_batch_size(self.train_df, params["batch_size"])
-        
 
         self.model.fit(
             train=self.train_df,
@@ -332,8 +327,8 @@ class NodeTrainer(BaseModel):
         self._set_loss_function(y)
 
         if (self.problem_type == "regression") and not hasattr(self, "target_range"):
-            self.target_range = [(float(np.min(y)*0.5), float(np.max(y)*1.5))]
-            
+            self.target_range = [(float(np.min(y) * 0.5), float(np.max(y) * 1.5))]
+
         # Split the train data into training and validation sets
         X_train, X_val, y_train, y_val = train_test_split(
             X,
@@ -343,18 +338,20 @@ class NodeTrainer(BaseModel):
         )
         # Merge X_train and y_train
         self.train_df = pd.concat([X_train, y_train], axis=1)
-        
+
         # Merge X_val and y_val
         self.validation_df = pd.concat([X_val, y_val], axis=1)
 
         # Define the objective function for hyperopt search
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")
-            model = self.prepare_tabular_model(params, self.outer_params, default = self.default)
+            model = self.prepare_tabular_model(
+                params, self.outer_params, default=self.default
+            )
 
             # Opened issue on pytorch tabular for this DEBUG
             params["optimizer_params"].pop("lr", None)
-            
+
             self.train_df = handle_rogue_batch_size(self.train_df, params["batch_size"])
             model.fit(
                 train=self.train_df,
@@ -469,7 +466,9 @@ class NodeTrainer(BaseModel):
         # Define the objective function for hyperopt search
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")
-            model = self.prepare_tabular_model(params, self.outer_params, default = self.default)
+            model = self.prepare_tabular_model(
+                params, self.outer_params, default=self.default
+            )
 
             kf = KFold(n_splits=k_value, shuffle=True, random_state=42)
 
@@ -493,7 +492,9 @@ class NodeTrainer(BaseModel):
                 self.logger.debug(f"Train fold shape : {train_fold.shape}")
                 self.logger.debug(f"Val fold shape : {val_fold.shape}")
                 # Initialize the tabular model
-                model = self.prepare_tabular_model(params, self.outer_params, default = self.default)
+                model = self.prepare_tabular_model(
+                    params, self.outer_params, default=self.default
+                )
                 # Fit the model
                 # Opened issue on pytorch tabular for this DEBUG
                 params["optimizer_params"].pop("lr", None)

@@ -1,5 +1,5 @@
 import os
-import logging 
+import logging
 import inspect
 import numpy as np
 from typing import Dict
@@ -21,6 +21,7 @@ class XGBoostClassifier(BaseModel):
         self.cv_size = None
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
+        self.random_state = 4200
         # Get the filename of the current Python script
         self.script_filename = os.path.basename(__file__)
         self.problem_type = problem_type
@@ -67,7 +68,9 @@ class XGBoostClassifier(BaseModel):
         self.logger.info("Starting training")
 
         # Set the number of boosting rounds (iterations) to default or use value from config
-
+        self.outer_params = params["outer_params"]
+        early_stopping_rounds = self.outer_params.get("early_stopping_rounds", 100)
+        verbose = self.outer_params.get("verbose", False)
         params.pop("outer_params", None)
 
         # Train the XGBoost model
@@ -83,7 +86,21 @@ class XGBoostClassifier(BaseModel):
                 "Problem type for XGBClassifier must be binary_classification or multiclass_classification"
             )
 
-        xgb_model.fit(X_train, y_train)
+        X_train, X_val, y_train, y_val = train_test_split(
+            X_train,
+            y_train,
+            test_size=self.outer_params.get["validation_fraction"],
+            random_state=self.random_state,
+        )
+        eval_set = [(X_val, y_val)]
+
+        xgb_model.fit(
+            X_train,
+            y_train,
+            early_stopping_rounds=early_stopping_rounds,
+            verbose=verbose,
+            eval_set=eval_set,
+        )
 
         self.model = xgb_model
         self.logger.debug("Training completed successfully")
@@ -128,8 +145,7 @@ class XGBoostClassifier(BaseModel):
         metric,
         max_evals=100,
         random_state=42,
-        val_size=None,
-        problem_type="binary_classification",
+        problem_type=None,
         extra_info=None,
     ):
         """
@@ -156,21 +172,34 @@ class XGBoostClassifier(BaseModel):
         # Split the data into training and validation sets
         self.outer_params = param_grid["outer_params"]
         validation_fraction = self.outer_params["validation_fraction"]
+        # Set the number of boosting rounds (iterations) to default or use value from config
+        early_stopping_rounds = self.outer_params.get("early_stopping_rounds", 100)
+        verbose = self.outer_params.get("verbose", False)
         param_grid.pop("outer_params")
         # Define the hyperparameter search space
         space = infer_hyperopt_space(param_grid)
 
+        X_train, X_val, y_train, y_val = train_test_split(
+            X, y, test_size=validation_fraction, random_state=random_state
+        )
+
+        eval_set = [(X_val, y_val)]
+
         # Define the objective function to minimize
         def objective(params):
             self.logger.info(f"Hyperopt training with hyperparameters: {params}")
-            X_train, X_val, y_train, y_val = train_test_split(
-                X, y, test_size=validation_fraction, random_state=random_state
-            )
+
             # Create an XGBoost model with the given hyperparameters
             model = xgb.XGBClassifier(**params)
             # Fit the model on the training data
-            model.fit(X_train, y_train)
 
+            model.fit(
+                X_train,
+                y_train,
+                early_stopping_rounds=early_stopping_rounds,
+                verbose=verbose,
+                eval_set=eval_set,
+            )
             # Predict the labels of the validation data
             y_pred = model.predict(X_val)
 

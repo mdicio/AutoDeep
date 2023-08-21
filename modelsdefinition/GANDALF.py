@@ -45,6 +45,7 @@ class GandalfTrainer(BaseModel):
         self.cv_size = None
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
+        self.random_state = 4200
         # Get the filename of the current Python script
         self.script_filename = os.path.basename(__file__)
         formatter = logging.Formatter(

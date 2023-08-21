@@ -13,7 +13,7 @@ import os
 import time
 
 
-output_results_filename = "catembed_benchmark"
+output_results_filename = "xgbcatboost"
 DEFAULT = False
 with open("./configuration/experiment_config.yml", "r") as f:
     config = yaml.safe_load(f)
@@ -130,11 +130,11 @@ for run in runs:
             best_params = run["best_params"]
             best_score = ""
 
-        
-
         if retrain:
             print(f"RETRAINING {model_name} on {dataset_name}")
-            print(f"THESE PARAMS AFTER OPTIMIZATION GO INTO TRAIN METHOD: {best_params}")
+            print(
+                f"THESE PARAMS AFTER OPTIMIZATION GO INTO TRAIN METHOD: {best_params}"
+            )
             model.train(X_train, y_train, params=best_params, extra_info=extra_info)
 
         if dataset_task == "binary_classification":

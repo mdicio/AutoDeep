@@ -1,5 +1,5 @@
 import os
-import logging 
+import logging
 import inspect
 import numpy as np
 from typing import Dict
@@ -21,6 +21,7 @@ class XGBoostRegressor(BaseModel):
         self.cv_size = None
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
+        self.random_state = 4200
         # Get the filename of the current Python script
         self.script_filename = os.path.basename(__file__)
         formatter = logging.Formatter(
@@ -63,7 +64,19 @@ class XGBoostRegressor(BaseModel):
             Dictionary of hyperparameters for the model.
         """
         self.logger.info("Starting training")
+        # Define the hyperparameter search space
+        self.outer_params = params["outer_params"]
+        early_stopping_rounds = self.outer_params.get("early_stopping_rounds", 100)
+        verbose = self.outer_params.get("verbose", False)
         params.pop("outer_params", None)
+
+        X_train, X_val, y_train, y_val = train_test_split(
+            X_train,
+            y_train,
+            test_size=self.outer_params.get["validation_fraction"],
+            random_state=self.random_state,
+        )
+        eval_set = [(X_val, y_val)]
 
         # Train the XGBoost model
         if params is not None:
@@ -71,7 +84,13 @@ class XGBoostRegressor(BaseModel):
         else:
             xgb_model = xgb.XGBRegressor()
 
-        xgb_model.fit(X_train, y_train)
+        xgb_model.fit(
+            X_train,
+            y_train,
+            early_stopping_rounds=early_stopping_rounds,
+            verbose=verbose,
+            eval_set=eval_set,
+        )
         self.model = xgb_model
 
         self.model = xgb_model
@@ -138,20 +157,33 @@ class XGBoostRegressor(BaseModel):
 
         # Define the hyperparameter search space
         self.outer_params = param_grid["outer_params"]
+        early_stopping_rounds = self.outer_params.get("early_stopping_rounds", 100)
+        verbose = self.outer_params.get("verbose", False)
         space = infer_hyperopt_space(param_grid)
         param_grid.pop("outer_params", None)
 
+        X_train, X_val, y_train, y_val = train_test_split(
+            X,
+            y,
+            test_size=self.outer_params["validation_fraction"],
+            random_state=random_state,
+        )
+        eval_set = [(X_val, y_val)]
+
         # Define the objective function to minimize
         def objective(params):
-            X_train, X_val, y_train, y_val = train_test_split(
-                X, y, test_size=self.outer_params["validation_fraction"], random_state=random_state
-            )
             params.pop("validation_fraction")
             # Create an XGBoost model with the given hyperparameters
             model = xgb.XGBRegressor(**params)
 
             # Fit the model on the training data
-            model.fit(X_train, y_train)
+            model.fit(
+                X_train,
+                y_train,
+                early_stopping_rounds=early_stopping_rounds,
+                verbose=verbose,
+                eval_set=eval_set,
+            )
 
             # Predict the labels of the validation data
             y_pred = model.predict(X_val)

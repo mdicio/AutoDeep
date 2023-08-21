@@ -23,6 +23,7 @@ class CatBoostTrainer(BaseModel):
         super().__init__(**kwargs)
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
+        self.random_state = 4200
         self.script_filename = os.path.basename(__file__)
         self.problem_type = problem_type
         self.num_classes = num_classes
@@ -56,6 +57,11 @@ class CatBoostTrainer(BaseModel):
     def train(self, X_train, y_train, params: Dict, extra_info: Dict):
         self.logger.info("Starting training")
 
+        # Define the hyperparameter search space
+        self.outer_params = params["outer_params"]
+        early_stopping_rounds = self.outer_params.get("early_stopping_rounds", 100)
+        verbose = self.outer_params.get("verbose", False)
+
         self.extra_info = extra_info
         self.cat_features = self.extra_info["cat_col_idx"]
         params["cat_features"] = self.cat_features
@@ -77,7 +83,21 @@ class CatBoostTrainer(BaseModel):
                 "Problem type must be binary_classification, multiclass_classification, or regression"
             )
 
-        catboost_model.fit(X_train, y_train)
+        X_train, X_val, y_train, y_val = train_test_split(
+            X_train,
+            y_train,
+            test_size=self.outer_params["validation_fraction"],
+            random_state=self.random_state,
+        )
+        eval_set = [(X_val, y_val)]
+
+        catboost_model.fit(
+            X_train,
+            y_train,
+            early_stopping_rounds=early_stopping_rounds,
+            verbose=verbose,
+            eval_set=eval_set,
+        )
 
         self.model = catboost_model
         self.logger.debug("Training completed successfully")
@@ -107,8 +127,7 @@ class CatBoostTrainer(BaseModel):
         metric,
         max_evals=100,
         random_state=42,
-        val_size=None,
-        problem_type="binary_classification",
+        problem_type=None,
         extra_info=None,
     ):
         """
@@ -137,16 +156,22 @@ class CatBoostTrainer(BaseModel):
         self.extra_info = extra_info
         self.cat_features = self.extra_info["cat_col_idx"]
         # Define the hyperparameter search space
+        # Define the hyperparameter search space
+        self.outer_params = param_grid["outer_params"]
+        early_stopping_rounds = self.outer_params.get("early_stopping_rounds", 100)
+        verbose = self.outer_params.get("verbose", False)
         space = infer_hyperopt_space(param_grid)
 
         self.num_classes = len(np.unique(y))
 
+        X_train, X_val, y_train, y_val = train_test_split(
+            X, y, test_size=validation_fraction, random_state=random_state
+        )
+        eval_set = [(X_val, y_val)]
+
         # Define the objective function to minimize
         def objective(params):
             self.logger.info(f"Hyperopt training with hyperparameters: {params}")
-            X_train, X_val, y_train, y_val = train_test_split(
-                X, y, test_size=validation_fraction, random_state=random_state
-            )
 
             params["cat_features"] = self.cat_features
 
@@ -165,7 +190,13 @@ class CatBoostTrainer(BaseModel):
                     "Problem type must be binary_classification, multiclass_classification, or regression"
                 )
 
-            catboost_model.fit(X_train, y_train)
+            catboost_model.fit(
+                X_train,
+                y_train,
+                early_stopping_rounds=early_stopping_rounds,
+                verbose=verbose,
+                eval_set=eval_set,
+            )
 
             y_pred = catboost_model.predict(X_val)
             probabilities = None

@@ -5,6 +5,8 @@
     outer_params: &id001
       hyperopt_evals: 32
       validation_fraction: 0.2
+      early_stopping_rounds: 30
+      verbose: false
     iterations: &id002
     - 500
     - 100
@@ -50,6 +52,8 @@
     outer_params: &id012
       hyperopt_evals: 32
       validation_fraction: 0.2
+      early_stopping_rounds: 30
+      verbose: false
     n_estimators: &id013
     - 100
     - 5000
