@@ -1,13 +1,11 @@
 import numpy as np
 import pandas as pd
-from typing import Dict
 import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.datasets import load_iris, fetch_california_housing, load_breast_cancer
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-import torch
-import random
-from sklearn.preprocessing import LabelEncoder
+import os
+from pathlib import Path
 
 
 class DataLoader:
@@ -30,6 +28,10 @@ class DataLoader:
         self.encode_categorical = encode_categorical
         self.random_state = random_state
         self.num_targets = num_targets
+        # Construct the path to the CSV data file using pathlib
+        self.script_path = Path(__file__).resolve()
+        self.data_path = f"{self.script_path.parents[1]}/data/"
+        self.igtd_path = f"{self.script_path.parents[1]}/modelsdefinition/IGTD/"
 
     def load_data(self):
         raise NotImplementedError
@@ -169,14 +171,14 @@ class KaggleAgeConditionsLoader(DataLoader):
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
         self.num_targets = num_targets
-        self.num_targets = num_targets
+        self.filename = (
+            f"{self.data_path}kaggle/icr-identify-age-related-conditions/train.csv"
+        )
 
     def load_data(self):
         # Load the Iris dataset from scikit-learn
 
-        df = pd.read_csv(
-            "./data/kaggle/icr-identify-age-related-conditions/train.csv"
-        ).drop(columns=["Id"])
+        df = pd.read_csv(self.filename).drop(columns=["Id"])
         df = df.rename(columns={"Class": "target"})
         # map the values to 0 and 1
         df["EJ"] = df["EJ"].map({"A": 1, "B": 0})
@@ -202,10 +204,7 @@ class KaggleAgeConditionsLoader(DataLoader):
         input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
         print(len(input_cat_cols), input_cat_cols)
         # Check if encoding is disabled and there are no categorical columns
-        if not self.encode_categorical and len(input_cat_cols) == 0:
-            df_train, df_test = self.bin_random_numerical_column(
-                df_train, df_test, [self.target_column]
-            )
+        ###
 
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
@@ -221,7 +220,7 @@ class KaggleAgeConditionsLoader(DataLoader):
                 X_train,
                 img_rows=8,
                 img_columns=7,
-                igtd_path="./modelsdefinition/IGTD/results/ageconditions_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path=f"{self.igtd_path}results/ageconditions_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
             extra_info["num_targets"] = self.num_targets
 
@@ -248,29 +247,29 @@ class BufixDataLoader(DataLoader):
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
         self.num_targets = num_targets
+        self.filename = f"{self.data_path}/buf/sortedbulk_data-1.csv"
 
     def load_data(self):
         # Load the Iris dataset from scikit-learn
 
-        df = pd.read_csv("./data/buf/sortedbulk_data-1.csv")
+        df = pd.read_csv(self.filename)
         df = df.drop(["num_telefono", "target_event_date", "target_date"], axis=1)
         df_train = df.loc[df["partition_date"] < "2022-04-30"].drop(
             "partition_date", axis=1
         )
-        df_train = self._undersample(
-            df_train, "target", 6
+        df_train = self._undersample(df_train, "target", 6).reset_index(
+            drop=True
         )  # Keep 6 times as many 0s as 1s
 
-        df_test = df.loc[df["partition_date"] >= "2022-04-30"].drop(
-            "partition_date", axis=1
+        df_test = (
+            df.loc[df["partition_date"] >= "2022-04-30"]
+            .drop("partition_date", axis=1)
+            .reset_index(drop=True)
         )
 
         # Get the categorical and numerical columns
         input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
-        if not self.encode_categorical and len(input_cat_cols) == 0:
-            df_train, df_test = self.bin_random_numerical_column(
-                df_train, df_test, [self.target_column]
-            )
+        ###
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
         X_test = df_test.drop(columns=[self.target_column])
@@ -288,7 +287,7 @@ class BufixDataLoader(DataLoader):
                 X_train,
                 img_rows=10,
                 img_columns=11,
-                igtd_path="./modelsdefinition/IGTD/results/bufix_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path=f"{self.igtd_path}results/bufix_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, X_test, y_train, y_test, extra_info
@@ -352,10 +351,7 @@ class TitanicDataLoader(DataLoader):
         # Get the categorical and numerical columns
         input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
         # Check if encoding is disabled and there are no categorical columns
-        if not self.encode_categorical and len(input_cat_cols) == 0:
-            df_train, df_test = self.bin_random_numerical_column(
-                df_train, df_test, [self.target_column]
-            )
+        ###
 
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
@@ -374,7 +370,7 @@ class TitanicDataLoader(DataLoader):
                 X_train,
                 img_rows=4,
                 img_columns=7,
-                igtd_path="./modelsdefinition/IGTD/results/titanic_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path=f"{self.igtd_path}results/titanic_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
         return X_train, X_test, y_train, y_test, extra_info
 
@@ -418,10 +414,7 @@ class BreastCancerDataLoader(DataLoader):
 
         # Get the categorical and numerical columns
         input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
-        if not self.encode_categorical and len(input_cat_cols) == 0:
-            df_train, df_test = self.bin_random_numerical_column(
-                df_train, df_test, [self.target_column]
-            )
+        ###
 
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
@@ -440,7 +433,7 @@ class BreastCancerDataLoader(DataLoader):
                 X_train,
                 img_rows=6,
                 img_columns=5,
-                igtd_path="./modelsdefinition/IGTD/results/breastcancer_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path=f"{self.igtd_path}results/breastcancer_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
         return X_train, X_test, y_train, y_test, extra_info
 
@@ -465,10 +458,11 @@ class CreditDataLoader(DataLoader):
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
         self.num_targets = num_targets
+        self.filename = f"{self.data_path}creditcard/creditcard.csv"
 
     def load_data(self):
         # Load the Credit Card Fraud Detection dataset from Kaggle
-        df = pd.read_csv("/Users/mdicio/Downloads/creditcard.csv")
+        df = pd.read_csv(self.filename)
         df = df.rename(columns={"Class": self.target_column})
 
         # Split the data into training and test sets
@@ -482,12 +476,12 @@ class CreditDataLoader(DataLoader):
             df_train, "target", 6
         )  # Keep 6 times as many 0s as 1s
 
+        df_train.reset_index(drop=True, inplace=True)
+        df_test.reset_index(drop=True, inplace=True)
+
         # Get the categorical and numerical columns
         input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
-        if not self.encode_categorical and len(input_cat_cols) == 0:
-            df_train, df_test = self.bin_random_numerical_column(
-                df_train, df_test, [self.target_column]
-            )
+        ###
 
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
@@ -506,7 +500,7 @@ class CreditDataLoader(DataLoader):
                 X_train,
                 img_rows=5,
                 img_columns=6,
-                igtd_path="./modelsdefinition/IGTD/results/creditcard_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path=f"{self.igtd_path}results/creditcard_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, X_test, y_train, y_test, extra_info
@@ -551,10 +545,7 @@ class IrisDataLoader(DataLoader):
 
         # Get the categorical and numerical columns
         input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
-        if not self.encode_categorical and len(input_cat_cols) == 0:
-            df_train, df_test = self.bin_random_numerical_column(
-                df_train, df_test, [self.target_column]
-            )
+        ###
 
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
@@ -573,7 +564,7 @@ class IrisDataLoader(DataLoader):
                 X_train,
                 img_rows=2,
                 img_columns=2,
-                igtd_path="./modelsdefinition/IGTD/results/iris_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path=f"{self.igtd_path}results/iris_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, X_test, y_train, y_test, extra_info
@@ -617,10 +608,7 @@ class CaliforniaHousingDataLoader(DataLoader):
 
         # Get the categorical and numerical columns
         input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
-        if not self.encode_categorical and len(input_cat_cols) == 0:
-            df_train, df_test = self.bin_random_numerical_column(
-                df_train, df_test, [self.target_column]
-            )
+        ###
 
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
@@ -639,7 +627,7 @@ class CaliforniaHousingDataLoader(DataLoader):
                 X_train,
                 img_rows=3,
                 img_columns=3,
-                igtd_path="./modelsdefinition/IGTD/results/housing_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path=f"{self.igtd_path}results/housing_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, X_test, y_train, y_test, extra_info
@@ -732,10 +720,7 @@ class AdultDataLoader(DataLoader):
 
         # Get the categorical and numerical columns
         input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
-        if not self.encode_categorical and len(input_cat_cols) == 0:
-            df_train, df_test = self.bin_random_numerical_column(
-                df_train, df_test, [self.target_column]
-            )
+        ###
 
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
@@ -754,7 +739,7 @@ class AdultDataLoader(DataLoader):
                 X_train,
                 img_rows=3,
                 img_columns=3,
-                igtd_path="./modelsdefinition/IGTD/results/adult_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path=f"{self.igtd_path}results/adult_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, X_test, y_train, y_test, extra_info
@@ -780,10 +765,11 @@ class CoverTypeDataLoader(DataLoader):
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
         self.num_targets = num_targets
+        self.filename = f"{self.data_path}/covertype/covtype.data.gz"
 
     def load_data(self):
         # Load the Adult dataset from UCI Machine Learning Repository
-        df = pd.read_csv("./data/covertype/covtype.data.gz")
+        df = pd.read_csv(self.filename)
 
         df = df.rename(columns={"5": self.target_column})
         df[self.target_column] = df[self.target_column] - 1
@@ -798,10 +784,7 @@ class CoverTypeDataLoader(DataLoader):
 
         # Get the categorical and numerical columns
         input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
-        if not self.encode_categorical and len(input_cat_cols) == 0:
-            df_train, df_test = self.bin_random_numerical_column(
-                df_train, df_test, [self.target_column]
-            )
+        ###
 
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
@@ -820,7 +803,7 @@ class CoverTypeDataLoader(DataLoader):
                 X_train,
                 img_rows=6,
                 img_columns=9,
-                igtd_path="./modelsdefinition/IGTD/results/covertype_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path=f"{self.igtd_path}results/covertype_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, X_test, y_train, y_test, extra_info
@@ -846,10 +829,11 @@ class HelocDataLoader(DataLoader):
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
         self.num_targets = num_targets
+        self.filename = f"{self.data_path}heloc/heloc_dataset_v1.csv"
 
     def load_data(self):
         # Load the Adult dataset from UCI Machine Learning Repository
-        df = pd.read_csv("./data/heloc/heloc_dataset_v1.csv")
+        df = pd.read_csv(self.filename)
 
         df = df.rename(columns={"RiskPerformance": self.target_column})
         df["target"] = (df["target"] == "Bad").astype(int)
@@ -869,10 +853,7 @@ class HelocDataLoader(DataLoader):
         # Get the categorical and numerical columns
         input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
         print(len(input_cat_cols), input_cat_cols)
-        if not self.encode_categorical and len(input_cat_cols) == 0:
-            df_train, df_test = self.bin_random_numerical_column(
-                df_train, df_test, [self.target_column]
-            )
+        ###
 
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
@@ -891,7 +872,7 @@ class HelocDataLoader(DataLoader):
                 X_train,
                 img_rows=6,
                 img_columns=4,
-                igtd_path="./modelsdefinition/IGTD/results/heloc_igtd_Euclidean_Euclidean/abs/_index.txt",
+                igtd_path=f"{self.igtd_path}results/heloc_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, X_test, y_train, y_test, extra_info
