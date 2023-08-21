@@ -154,21 +154,25 @@ class ResNetTrainer:
         inputs, labels = inputs.to(self.device), labels.to(self.device)
         probabilities = None
         if self.problem_type == "binary_classification":
-            probabilities = torch.sigmoid(self.model(inputs)).reshape(-1).cpu().numpy()
+            probabilities = torch.sigmoid(self.model(inputs)).reshape(-1)
             predictions = (probabilities >= 0.5).float()
             labels = labels.float().cpu().numpy()
         elif self.problem_type == "regression":
-            predictions = self.model(inputs).reshape(-1).cpu().numpy()
-            labels = labels.float().cpu().numpy()
+            predictions = self.model(inputs).reshape(-1)
+            labels = labels.float()
         elif self.problem_type == "multiclass_classification":
-            labels = labels.long().cpu().numpy()
-            _, predictions = torch.max(self.model(inputs), dim=1).cpu().numpy()
+            labels = labels.long()
+            _, predictions = torch.max(self.model(inputs), dim=1)
         else:
             raise ValueError(
                 "Invalid problem_type. Supported options: binary_classification, multiclass_classification"
             )
 
-        return predictions, labels, probabilities
+        return (
+            predictions.cpu().numpy(),
+            labels.cpu().numpy(),
+            probabilities.cpu().numpy(),
+        )
 
     def train_step(self, train_loader):
         running_loss = 0.0
