@@ -7,11 +7,11 @@ include_models:
   #- MLP  # Multi-Layer Perceptron
   #- TabNet  # TabNet Classifier 
   #- GATE 
-  #- resnet18
-  #- S1DCNN
+  - resnet18
+  - S1DCNN
   #- CategoryEmbedding
-  - FTTransformer
-  - GANDALF
+  #- FTTransformer
+  #- GANDALF
   #- Node
   #- TabTransformer
   #- AutoInt
