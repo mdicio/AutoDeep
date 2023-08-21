@@ -28,13 +28,23 @@ class XGBoostRegressor(BaseModel):
             f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
         )
         console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.DEBUG)
+        console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(formatter)
         if not any(
             isinstance(handler, logging.StreamHandler)
             for handler in self.logger.handlers
         ):
             self.logger.addHandler(console_handler)
+
+        # Add file handler
+        file_handler = logging.FileHandler("logfile.log")
+        file_handler.setLevel(logging.DEBUG)  # Set log level to INFO
+        file_handler.setFormatter(formatter)
+        if not any(
+            isinstance(handler, logging.FileHandler) for handler in self.logger.handlers
+        ):
+            self.logger.addHandler(file_handler)
+
         # extra_info used in case it is needed and specific to the dataset we are training on
         self.extra_info = None
 
@@ -73,7 +83,7 @@ class XGBoostRegressor(BaseModel):
         X_train, X_val, y_train, y_val = train_test_split(
             X_train,
             y_train,
-            test_size=self.outer_params.get["validation_fraction"],
+            test_size=self.outer_params["validation_fraction"],
             random_state=self.random_state,
         )
         eval_set = [(X_val, y_val)]
@@ -221,7 +231,7 @@ class XGBoostRegressor(BaseModel):
         )
 
         best_params = space_eval(space, best)
-
+        best_params["outer_params"] = self.outer_params
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]
         self.best_model = best_trial["result"]["trained_model"]

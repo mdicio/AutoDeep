@@ -32,13 +32,22 @@ class CatBoostTrainer(BaseModel):
             f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
         )
         console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.DEBUG)
+        console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(formatter)
         if not any(
             isinstance(handler, logging.StreamHandler)
             for handler in self.logger.handlers
         ):
             self.logger.addHandler(console_handler)
+
+        # Add file handler
+        file_handler = logging.FileHandler("logfile.log")
+        file_handler.setLevel(logging.DEBUG)  # Set log level to INFO
+        file_handler.setFormatter(formatter)
+        if not any(
+            isinstance(handler, logging.FileHandler) for handler in self.logger.handlers
+        ):
+            self.logger.addHandler(file_handler)
 
         self.extra_info = None
 
@@ -67,17 +76,29 @@ class CatBoostTrainer(BaseModel):
         params["cat_features"] = self.cat_features
 
         if self.problem_type == "binary_classification":
-            catboost_model = CatBoostClassifier(**params)
+            catboost_model = CatBoostClassifier(
+                od_type="Iter",
+                od_wait=20,
+                **params,
+            )
         elif self.problem_type == "multiclass_classification":
             params.pop("scale_pos_weight", None)
             self.num_classes = len(np.unique(y_train))
             catboost_model = CatBoostClassifier(
-                loss_function="MultiClass", classes_count=self.num_classes, **params
+                loss_function="MultiClass",
+                classes_count=self.num_classes,
+                od_type="Iter",
+                od_wait=20,
+                **params,
             )
 
         elif self.problem_type == "regression":
             params.pop("scale_pos_weight", None)
-            catboost_model = CatBoostRegressor(**params)
+            catboost_model = CatBoostRegressor(
+                od_type="Iter",
+                od_wait=20,
+                **params,
+            )
         else:
             raise ValueError(
                 "Problem type must be binary_classification, multiclass_classification, or regression"
@@ -105,7 +126,7 @@ class CatBoostTrainer(BaseModel):
     def predict(self, X_test, predict_proba=False):
         self.logger.info("Computing predictions")
 
-        predictions = self.model.predict(X_test)
+        predictions = self.model.predict(X_test).squeeze()
 
         probabilities = None
         if predict_proba and hasattr(self.model, "predict_proba"):
@@ -176,15 +197,21 @@ class CatBoostTrainer(BaseModel):
             params["cat_features"] = self.cat_features
 
             if self.problem_type == "binary_classification":
-                catboost_model = CatBoostClassifier(**params)
+                catboost_model = CatBoostClassifier(
+                    od_type="Iter", od_wait=20, **params
+                )
             elif self.problem_type == "multiclass_classification":
                 params.pop("scale_pos_weight", None)
                 catboost_model = CatBoostClassifier(
-                    loss_function="MultiClass", classes_count=self.num_classes, **params
+                    loss_function="MultiClass",
+                    classes_count=self.num_classes,
+                    od_type="Iter",
+                    od_wait=20,
+                    **params,
                 )
             elif self.problem_type == "regression":
                 params.pop("scale_pos_weight", None)
-                catboost_model = CatBoostRegressor(**params)
+                catboost_model = CatBoostRegressor(od_type="Iter", od_wait=20, **params)
             else:
                 raise ValueError(
                     "Problem type must be binary_classification, multiclass_classification, or regression"
@@ -198,7 +225,8 @@ class CatBoostTrainer(BaseModel):
                 eval_set=eval_set,
             )
 
-            y_pred = catboost_model.predict(X_val)
+            y_pred = catboost_model.predict(X_val).squeeze()
+            self.logger.debug(f"y_pred {type(y_pred)}, {y_pred[:10]}")
             probabilities = None
 
             if self.problem_type != "regression":
@@ -239,6 +267,7 @@ class CatBoostTrainer(BaseModel):
         )
 
         best_params = space_eval(space, best)
+        best_params["outer_params"] = self.outer_params
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]
         self.best_model = best_trial["result"]["trained_model"]

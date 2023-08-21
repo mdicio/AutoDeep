@@ -105,13 +105,22 @@ class ResNetTrainer:
             f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
         )
         console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.DEBUG)
+        console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(formatter)
         if not any(
             isinstance(handler, logging.StreamHandler)
             for handler in self.logger.handlers
         ):
             self.logger.addHandler(console_handler)
+
+        # Add file handler
+        file_handler = logging.FileHandler("logfile.log")
+        file_handler.setLevel(logging.DEBUG)  # Set log level to INFO
+        file_handler.setFormatter(formatter)
+        if not any(
+            isinstance(handler, logging.FileHandler) for handler in self.logger.handlers
+        ):
+            self.logger.addHandler(file_handler)
 
         self.random_state = 4200
 

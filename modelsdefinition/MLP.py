@@ -27,7 +27,7 @@ class MLP(BaseModel):
             f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
         )
         console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.DEBUG)
+        console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(formatter)
         if not any(
             isinstance(handler, logging.StreamHandler)

@@ -5,86 +5,69 @@
     outer_params: &id001
       hyperopt_evals: 32
       validation_fraction: 0.2
-      early_stopping_rounds: 30
+      early_stopping_rounds: 100
       verbose: false
     iterations: &id002
-    - 500
-    - 100
-    - 5000
+    - 200
+    - 2000
     learning_rate: &id003
+    - 0.001
     - 0.1
-    - 0.01
-    - 0.3
     depth: &id004
-    - 6
     - 4
-    - 12
-    l2_leaf_reg: &id005
-    - 3.0
-    - 0.1
-    - 10.0
-    border_count: &id006
-    - 254
-    - 32
-    - 512
-    bagging_temperature: &id007
-    - 1.0
-    - 0.5
-    - 2.0
-    random_strength: &id008
-    - 1.0
-    - 0.0
-    - 2.0
-    scale_pos_weight: &id009
-    - 1.0
-    - 0.5
-    - 2.0
-    colsample_bylevel: &id010
+    - 10
+    colsample_bylevel: &id005
     - 0.05
     - 1.0
-    min_data_in_leaf: &id011
+    l2_leaf_reg: &id006
+    - 0.5
+    - 5.0
+    min_child_samples: &id007
     - 1
     - 100
+    bagging_temperature: &id008
+    - 0.1
+    - 2.0
 - dataset: titanic
   model: xgb
   best_params: {}
   param_grid:
-    outer_params: &id012
+    outer_params: &id009
       hyperopt_evals: 32
       validation_fraction: 0.2
       early_stopping_rounds: 30
       verbose: false
-    n_estimators: &id013
+    n_estimators: &id010
     - 100
     - 5000
-    max_bin: &id014
+    max_bin: &id011
     - 256
     - 32
-    tree_method: &id015
+    tree_method: &id012
     - auto
     - hist
-    max_depth: &id016
+    max_depth: &id013
     - 4
     - 12
-    learning_rate: &id017
+    learning_rate: &id014
     - 0.1
     - 0.33
-    subsample: &id018
+    subsample: &id015
     - 0.7
     - 1.0
-    colsample_bytree: &id019
+    colsample_bytree: &id016
     - 0.5
     - 1.0
-    min_child_weight: &id020
+    min_child_weight: &id017
     - 1
     - 10
-    alpha: &id021
+    alpha: &id018
     - 0.0
     - 5.0
-    gamma: &id022
+    gamma: &id019
     - 0.0
     - 5.0
-    lambda: &id023
+    lambda: &id020
     - 0.0
     - 5.0
 - dataset: iris
@@ -95,29 +78,26 @@
     iterations: *id002
     learning_rate: *id003
     depth: *id004
-    l2_leaf_reg: *id005
-    border_count: *id006
-    bagging_temperature: *id007
-    random_strength: *id008
-    scale_pos_weight: *id009
-    colsample_bylevel: *id010
-    min_data_in_leaf: *id011
+    colsample_bylevel: *id005
+    l2_leaf_reg: *id006
+    min_child_samples: *id007
+    bagging_temperature: *id008
 - dataset: iris
   model: xgb
   best_params: {}
   param_grid:
-    outer_params: *id012
-    n_estimators: *id013
-    max_bin: *id014
-    tree_method: *id015
-    max_depth: *id016
-    learning_rate: *id017
-    subsample: *id018
-    colsample_bytree: *id019
-    min_child_weight: *id020
-    alpha: *id021
-    gamma: *id022
-    lambda: *id023
+    outer_params: *id009
+    n_estimators: *id010
+    max_bin: *id011
+    tree_method: *id012
+    max_depth: *id013
+    learning_rate: *id014
+    subsample: *id015
+    colsample_bytree: *id016
+    min_child_weight: *id017
+    alpha: *id018
+    gamma: *id019
+    lambda: *id020
 - dataset: adult
   model: catboost
   best_params: {}
@@ -126,29 +106,26 @@
     iterations: *id002
     learning_rate: *id003
     depth: *id004
-    l2_leaf_reg: *id005
-    border_count: *id006
-    bagging_temperature: *id007
-    random_strength: *id008
-    scale_pos_weight: *id009
-    colsample_bylevel: *id010
-    min_data_in_leaf: *id011
+    colsample_bylevel: *id005
+    l2_leaf_reg: *id006
+    min_child_samples: *id007
+    bagging_temperature: *id008
 - dataset: adult
   model: xgb
   best_params: {}
   param_grid:
-    outer_params: *id012
-    n_estimators: *id013
-    max_bin: *id014
-    tree_method: *id015
-    max_depth: *id016
-    learning_rate: *id017
-    subsample: *id018
-    colsample_bytree: *id019
-    min_child_weight: *id020
-    alpha: *id021
-    gamma: *id022
-    lambda: *id023
+    outer_params: *id009
+    n_estimators: *id010
+    max_bin: *id011
+    tree_method: *id012
+    max_depth: *id013
+    learning_rate: *id014
+    subsample: *id015
+    colsample_bytree: *id016
+    min_child_weight: *id017
+    alpha: *id018
+    gamma: *id019
+    lambda: *id020
 - dataset: covertype
   model: catboost
   best_params: {}
@@ -157,29 +134,26 @@
     iterations: *id002
     learning_rate: *id003
     depth: *id004
-    l2_leaf_reg: *id005
-    border_count: *id006
-    bagging_temperature: *id007
-    random_strength: *id008
-    scale_pos_weight: *id009
-    colsample_bylevel: *id010
-    min_data_in_leaf: *id011
+    colsample_bylevel: *id005
+    l2_leaf_reg: *id006
+    min_child_samples: *id007
+    bagging_temperature: *id008
 - dataset: covertype
   model: xgb
   best_params: {}
   param_grid:
-    outer_params: *id012
-    n_estimators: *id013
-    max_bin: *id014
-    tree_method: *id015
-    max_depth: *id016
-    learning_rate: *id017
-    subsample: *id018
-    colsample_bytree: *id019
-    min_child_weight: *id020
-    alpha: *id021
-    gamma: *id022
-    lambda: *id023
+    outer_params: *id009
+    n_estimators: *id010
+    max_bin: *id011
+    tree_method: *id012
+    max_depth: *id013
+    learning_rate: *id014
+    subsample: *id015
+    colsample_bytree: *id016
+    min_child_weight: *id017
+    alpha: *id018
+    gamma: *id019
+    lambda: *id020
 - dataset: housing
   model: catboost
   best_params: {}
@@ -188,29 +162,26 @@
     iterations: *id002
     learning_rate: *id003
     depth: *id004
-    l2_leaf_reg: *id005
-    border_count: *id006
-    bagging_temperature: *id007
-    random_strength: *id008
-    scale_pos_weight: *id009
-    colsample_bylevel: *id010
-    min_data_in_leaf: *id011
+    colsample_bylevel: *id005
+    l2_leaf_reg: *id006
+    min_child_samples: *id007
+    bagging_temperature: *id008
 - dataset: housing
   model: xgb
   best_params: {}
   param_grid:
-    outer_params: *id012
-    n_estimators: *id013
-    max_bin: *id014
-    tree_method: *id015
-    max_depth: *id016
-    learning_rate: *id017
-    subsample: *id018
-    colsample_bytree: *id019
-    min_child_weight: *id020
-    alpha: *id021
-    gamma: *id022
-    lambda: *id023
+    outer_params: *id009
+    n_estimators: *id010
+    max_bin: *id011
+    tree_method: *id012
+    max_depth: *id013
+    learning_rate: *id014
+    subsample: *id015
+    colsample_bytree: *id016
+    min_child_weight: *id017
+    alpha: *id018
+    gamma: *id019
+    lambda: *id020
 - dataset: creditcard
   model: catboost
   best_params: {}
@@ -219,29 +190,26 @@
     iterations: *id002
     learning_rate: *id003
     depth: *id004
-    l2_leaf_reg: *id005
-    border_count: *id006
-    bagging_temperature: *id007
-    random_strength: *id008
-    scale_pos_weight: *id009
-    colsample_bylevel: *id010
-    min_data_in_leaf: *id011
+    colsample_bylevel: *id005
+    l2_leaf_reg: *id006
+    min_child_samples: *id007
+    bagging_temperature: *id008
 - dataset: creditcard
   model: xgb
   best_params: {}
   param_grid:
-    outer_params: *id012
-    n_estimators: *id013
-    max_bin: *id014
-    tree_method: *id015
-    max_depth: *id016
-    learning_rate: *id017
-    subsample: *id018
-    colsample_bytree: *id019
-    min_child_weight: *id020
-    alpha: *id021
-    gamma: *id022
-    lambda: *id023
+    outer_params: *id009
+    n_estimators: *id010
+    max_bin: *id011
+    tree_method: *id012
+    max_depth: *id013
+    learning_rate: *id014
+    subsample: *id015
+    colsample_bytree: *id016
+    min_child_weight: *id017
+    alpha: *id018
+    gamma: *id019
+    lambda: *id020
 - dataset: bufix
   model: catboost
   best_params: {}
@@ -250,29 +218,26 @@
     iterations: *id002
     learning_rate: *id003
     depth: *id004
-    l2_leaf_reg: *id005
-    border_count: *id006
-    bagging_temperature: *id007
-    random_strength: *id008
-    scale_pos_weight: *id009
-    colsample_bylevel: *id010
-    min_data_in_leaf: *id011
+    colsample_bylevel: *id005
+    l2_leaf_reg: *id006
+    min_child_samples: *id007
+    bagging_temperature: *id008
 - dataset: bufix
   model: xgb
   best_params: {}
   param_grid:
-    outer_params: *id012
-    n_estimators: *id013
-    max_bin: *id014
-    tree_method: *id015
-    max_depth: *id016
-    learning_rate: *id017
-    subsample: *id018
-    colsample_bytree: *id019
-    min_child_weight: *id020
-    alpha: *id021
-    gamma: *id022
-    lambda: *id023
+    outer_params: *id009
+    n_estimators: *id010
+    max_bin: *id011
+    tree_method: *id012
+    max_depth: *id013
+    learning_rate: *id014
+    subsample: *id015
+    colsample_bytree: *id016
+    min_child_weight: *id017
+    alpha: *id018
+    gamma: *id019
+    lambda: *id020
 - dataset: heloc
   model: catboost
   best_params: {}
@@ -281,29 +246,26 @@
     iterations: *id002
     learning_rate: *id003
     depth: *id004
-    l2_leaf_reg: *id005
-    border_count: *id006
-    bagging_temperature: *id007
-    random_strength: *id008
-    scale_pos_weight: *id009
-    colsample_bylevel: *id010
-    min_data_in_leaf: *id011
+    colsample_bylevel: *id005
+    l2_leaf_reg: *id006
+    min_child_samples: *id007
+    bagging_temperature: *id008
 - dataset: heloc
   model: xgb
   best_params: {}
   param_grid:
-    outer_params: *id012
-    n_estimators: *id013
-    max_bin: *id014
-    tree_method: *id015
-    max_depth: *id016
-    learning_rate: *id017
-    subsample: *id018
-    colsample_bytree: *id019
-    min_child_weight: *id020
-    alpha: *id021
-    gamma: *id022
-    lambda: *id023
+    outer_params: *id009
+    n_estimators: *id010
+    max_bin: *id011
+    tree_method: *id012
+    max_depth: *id013
+    learning_rate: *id014
+    subsample: *id015
+    colsample_bytree: *id016
+    min_child_weight: *id017
+    alpha: *id018
+    gamma: *id019
+    lambda: *id020
 - dataset: breastcancer
   model: catboost
   best_params: {}
@@ -312,29 +274,26 @@
     iterations: *id002
     learning_rate: *id003
     depth: *id004
-    l2_leaf_reg: *id005
-    border_count: *id006
-    bagging_temperature: *id007
-    random_strength: *id008
-    scale_pos_weight: *id009
-    colsample_bylevel: *id010
-    min_data_in_leaf: *id011
+    colsample_bylevel: *id005
+    l2_leaf_reg: *id006
+    min_child_samples: *id007
+    bagging_temperature: *id008
 - dataset: breastcancer
   model: xgb
   best_params: {}
   param_grid:
-    outer_params: *id012
-    n_estimators: *id013
-    max_bin: *id014
-    tree_method: *id015
-    max_depth: *id016
-    learning_rate: *id017
-    subsample: *id018
-    colsample_bytree: *id019
-    min_child_weight: *id020
-    alpha: *id021
-    gamma: *id022
-    lambda: *id023
+    outer_params: *id009
+    n_estimators: *id010
+    max_bin: *id011
+    tree_method: *id012
+    max_depth: *id013
+    learning_rate: *id014
+    subsample: *id015
+    colsample_bytree: *id016
+    min_child_weight: *id017
+    alpha: *id018
+    gamma: *id019
+    lambda: *id020
 - dataset: ageconditions
   model: catboost
   best_params: {}
@@ -343,26 +302,23 @@
     iterations: *id002
     learning_rate: *id003
     depth: *id004
-    l2_leaf_reg: *id005
-    border_count: *id006
-    bagging_temperature: *id007
-    random_strength: *id008
-    scale_pos_weight: *id009
-    colsample_bylevel: *id010
-    min_data_in_leaf: *id011
+    colsample_bylevel: *id005
+    l2_leaf_reg: *id006
+    min_child_samples: *id007
+    bagging_temperature: *id008
 - dataset: ageconditions
   model: xgb
   best_params: {}
   param_grid:
-    outer_params: *id012
-    n_estimators: *id013
-    max_bin: *id014
-    tree_method: *id015
-    max_depth: *id016
-    learning_rate: *id017
-    subsample: *id018
-    colsample_bytree: *id019
-    min_child_weight: *id020
-    alpha: *id021
-    gamma: *id022
-    lambda: *id023
+    outer_params: *id009
+    n_estimators: *id010
+    max_bin: *id011
+    tree_method: *id012
+    max_depth: *id013
+    learning_rate: *id014
+    subsample: *id015
+    colsample_bytree: *id016
+    min_child_weight: *id017
+    alpha: *id018
+    gamma: *id019
+    lambda: *id020
