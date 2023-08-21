@@ -144,6 +144,7 @@ class ResNetTrainer:
         return outputs, labels
 
     def process_inputs_labels_prediction(self, inputs, labels):
+        inputs, labels = inputs.to(self.device), labels.to(self.device)
         probabilities = None
         if self.problem_type == "binary_classification":
             probabilities = torch.sigmoid(self.model(inputs)).reshape(-1)
