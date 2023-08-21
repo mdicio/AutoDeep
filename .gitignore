@@ -2,6 +2,7 @@
 data/
 output/
 notebooks/
+catboost_info/
 
 # saved models
 saved_models/
