@@ -24,7 +24,7 @@ include_datasets:
   - titanic
   #- bufix
   #- breastcancer 
-  - housing
+  #- housing
   #- ageconditions
   #- adult
   #- heloc

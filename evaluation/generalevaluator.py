@@ -80,9 +80,9 @@ class Evaluator:
         elif self.problem_type == "multiclass_classification":
             if self.y_pred.ndim == 1:
                 n_classes = len(np.unique(self.y_true))
-                y_pred_one_hot = np.eye(n_classes)[self.y_pred]
+                y_pred_one_hot = np.eye(n_classes)[self.y_pred.astype(int)]
             else:
-                y_pred_one_hot = self.y_pred
+                y_pred_one_hot = self.y_pred.astype(int)
             return accuracy_score(self.y_true, y_pred_one_hot.argmax(axis=1))
         else:
             raise ValueError(f"Invalid problem type: {self.problem_type}")

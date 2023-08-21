@@ -156,6 +156,7 @@ class ResNetTrainer:
         elif self.problem_type == "multiclass_classification":
             labels = labels.long()
             _, predictions = torch.max(self.model(inputs), dim=1)
+            self.logger.debug(f"multiclass predictions {predictions[:10]}")
         else:
             raise ValueError(
                 "Invalid problem_type. Supported options: binary_classification, multiclass_classification"
