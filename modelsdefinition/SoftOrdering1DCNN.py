@@ -538,9 +538,9 @@ class SoftOrdering1DCNN:
 
                 elif self.problem_type == "multiclass_classification":
                     _, preds = torch.max(outputs, 1)
-                    preds = preds.numpy()
+                    preds = preds.cpu().numpy()
                 elif self.problem_type == "regression":
-                    preds = outputs.to("cpu").tolist()
+                    preds = outputs.cpu().numpy()
                 else:
                     raise ValueError(
                         "Invalid problem_type. Supported options: binary_classification, multiclass_classification, regression."

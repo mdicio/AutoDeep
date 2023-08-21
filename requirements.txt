@@ -168,4 +168,3 @@ Werkzeug==2.3.6
 widgetsnbextension==4.0.8
 xgboost==1.7.6
 yarl==1.9.2
-pytorch_tabular

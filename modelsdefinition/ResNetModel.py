@@ -17,7 +17,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from tqdm import tqdm
 import os
-import logging 
+import logging
 import inspect
 from evaluation.generalevaluator import *
 from modelutils.trainingutilities import (
@@ -583,8 +583,9 @@ class ResNetTrainer:
 
                 elif self.problem_type == "multiclass_classification":
                     _, preds = torch.max(outputs, 1)
+                    preds = preds.cpu().numpy()
                 elif self.problem_type == "regression":
-                    preds = outputs.numpy().reshape(-1)
+                    preds = outputs.cpu().numpy().reshape(-1)
                 else:
                     raise ValueError(
                         "Invalid problem_type. Supported options: binary_classification, multiclass_classification, regression."
@@ -601,6 +602,7 @@ class ResNetTrainer:
             return predictions, probabilities
         else:
             return predictions
+
 
 class CustomDataset(Dataset):
     def __init__(

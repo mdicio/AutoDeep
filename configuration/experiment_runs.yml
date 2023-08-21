@@ -91,7 +91,7 @@
   best_params: {}
   param_grid:
     outer_params: &id022
-      hyperopt_evals: 10
+      hyperopt_evals: 2
       num_epochs: 1000
       early_stopping: true
       early_stopping_patience: 5
@@ -117,7 +117,7 @@
   best_params: {}
   param_grid:
     outer_params: &id027
-      hyperopt_evals: 30
+      hyperopt_evals: 2
       num_epochs: 1000
       early_stopping: true
       shuffle: true
@@ -919,7 +919,7 @@
   best_params: {}
   param_grid:
     outer_params: &id137
-      hyperopt_evals: 10
+      hyperopt_evals: 2
       num_epochs: 1000
       early_stopping: true
       early_stopping_patience: 5
@@ -943,7 +943,7 @@
   best_params: {}
   param_grid:
     outer_params: &id142
-      hyperopt_evals: 10
+      hyperopt_evals: 2
       num_epochs: 1000
       early_stopping: true
       shuffle: true
@@ -1253,16 +1253,16 @@
     - 0.0
     - 0.3
     embedding_dropout: &id199
-    - 0.05
+    - 0.0
     - 0.3
     optimizer_fn: &id200
       Adam:
         weight_decay:
-        - 0.0001
+        - 0.0
         - 0.01
       AdamW:
         weight_decay:
-        - 0.0001
+        - 0.0
         - 0.01
     scheduler_fn: &id201
       ReduceLROnPlateau:
@@ -1270,7 +1270,7 @@
         - 0.1
         - 0.9
         patience:
-        - 7
+        - 5
         - 10
       ExponentialLR:
         gamma:
@@ -1278,8 +1278,8 @@
         - 0.99
       StepLR:
         step_size:
+        - 5
         - 10
-        - 30
         gamma:
         - 0.9
         - 0.99
