@@ -87,7 +87,7 @@
     - 64
     - 128
 - dataset: titanic
-  model: resnet
+  model: resnet18
   best_params: {}
   param_grid:
     outer_params: &id022
@@ -692,7 +692,7 @@
     beta_2: *id020
     batch_size: *id021
 - dataset: iris
-  model: resnet
+  model: resnet18
   best_params: {}
   param_grid:
     outer_params: *id022
@@ -915,7 +915,7 @@
     - 1024
     - 2048
 - dataset: housing
-  model: resnet
+  model: resnet18
   best_params: {}
   param_grid:
     outer_params: &id137
@@ -1521,7 +1521,7 @@
     beta_2: *id135
     batch_size: *id136
 - dataset: adult
-  model: resnet
+  model: resnet18
   best_params: {}
   param_grid:
     outer_params: *id137

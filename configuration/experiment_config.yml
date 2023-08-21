@@ -8,7 +8,7 @@ include_models:
   #- TabNet  # TabNet Classifier 
   #- GATE 
   - resnet18
-  - S1DCNN
+  #- S1DCNN
   #- CategoryEmbedding
   #- FTTransformer
   #- GANDALF
