@@ -81,6 +81,7 @@ class CatBoostTrainer(BaseModel):
             catboost_model = CatBoostClassifier(
                 od_type="Iter",
                 od_wait=20,
+                task_type=self.device,
                 **params,
             )
         elif self.problem_type == "multiclass_classification":
@@ -91,6 +92,7 @@ class CatBoostTrainer(BaseModel):
                 classes_count=self.num_classes,
                 od_type="Iter",
                 od_wait=20,
+                task_type=self.device,
                 **params,
             )
 
@@ -99,6 +101,7 @@ class CatBoostTrainer(BaseModel):
             catboost_model = CatBoostRegressor(
                 od_type="Iter",
                 od_wait=20,
+                task_type=self.device,
                 **params,
             )
         else:
@@ -120,7 +123,6 @@ class CatBoostTrainer(BaseModel):
             early_stopping_rounds=early_stopping_rounds,
             verbose=verbose,
             eval_set=eval_set,
-            task_type=self.device,
         )
 
         self.model = catboost_model
@@ -201,7 +203,7 @@ class CatBoostTrainer(BaseModel):
 
             if self.problem_type == "binary_classification":
                 catboost_model = CatBoostClassifier(
-                    od_type="Iter", od_wait=20, **params
+                    od_type="Iter", od_wait=20, task_type=self.device, **params
                 )
             elif self.problem_type == "multiclass_classification":
                 params.pop("scale_pos_weight", None)
@@ -210,11 +212,14 @@ class CatBoostTrainer(BaseModel):
                     classes_count=self.num_classes,
                     od_type="Iter",
                     od_wait=20,
+                    task_type=self.device,
                     **params,
                 )
             elif self.problem_type == "regression":
                 params.pop("scale_pos_weight", None)
-                catboost_model = CatBoostRegressor(od_type="Iter", od_wait=20, **params)
+                catboost_model = CatBoostRegressor(
+                    od_type="Iter", od_wait=20, task_type=self.device, **params
+                )
             else:
                 raise ValueError(
                     "Problem type must be binary_classification, multiclass_classification, or regression"
@@ -226,7 +231,6 @@ class CatBoostTrainer(BaseModel):
                 early_stopping_rounds=early_stopping_rounds,
                 verbose=verbose,
                 eval_set=eval_set,
-                task_type=self.device,
             )
 
             y_pred = catboost_model.predict(X_val).squeeze()
