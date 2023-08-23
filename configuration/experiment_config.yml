@@ -3,17 +3,18 @@ retrain: True
 # List of models to include in the experiment
 include_models:
   #- XGB  # Extreme Gradient Boosting
-  - CatBoost
-  - MLP  # Multi-Layer Perceptron
-  - TabNet  # TabNet Classifier 
+  #- CatBoost
+  - LightGBM
+  #- MLP  # Multi-Layer Perceptron
+  #- TabNet  # TabNet Classifier 
   #- GATE 
-  - resnet18
-  - S1DCNN
-  - CategoryEmbedding
-  - FTTransformer
-  - GANDALF
-  - Node
-  - TabTransformer
+  #- resnet18
+  #- S1DCNN
+  #- CategoryEmbedding
+  #- FTTransformer
+  #- GANDALF
+  #- Node
+  #- TabTransformer
   #- AutoInt
   ###- squeezenet
 
@@ -24,11 +25,11 @@ include_datasets:
   #- titanic
   #- bufix
   #- breastcancer 
-  #- housing
+  - housing
   #- ageconditions
   #- adult
-  - heloc
-  - covertype
+  #- heloc
+  #- covertype
 
 model_configs:
 
@@ -36,6 +37,13 @@ model_configs:
     execution_mode: hyperopt
     normalize_features: mean_std
     encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+    retrain: False
+  
+  lightgbm:
+    execution_mode: hyperopt
+    normalize_features: mean_std
+    encode_categorical: True  #for dataloader 
     return_extra_info: True # for dataloader
     retrain: False
 
