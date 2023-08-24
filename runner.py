@@ -99,6 +99,7 @@ for run in runs:
                 param_grid=run["param_grid"],
                 metric=dmetric,
                 problem_type=dataset_task,
+                extra_info=extra_info,
             )
 
         elif execution_mode == "hyperopt":
@@ -129,6 +130,7 @@ for run in runs:
             # Use the default hyperparameters
             best_params = run["best_params"]
             best_score = ""
+            model.train(X_train, y_train, best_params, extra_info)
 
         if retrain:
             print(f"RETRAINING {model_name} on {dataset_name}")

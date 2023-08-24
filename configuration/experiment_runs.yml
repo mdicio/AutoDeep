@@ -651,46 +651,58 @@
     - 2.0
 - dataset: titanic
   model: lightgbm
-  best_params: {}
-  param_grid:
+  best_params:
     outer_params: &id114
       hyperopt_evals: 32
       validation_fraction: 0.2
       early_stopping_rounds: 100
       verbose: false
-    num_leaves: &id115
-    - 4
-    - 16
-    max_depth: &id116
-    - 4
+    num_leaves: 31
+    max_depth: 6
+    learning_rate: 0.1
+    n_estimators: 10
+    min_child_weight: 0.001
+    min_child_samples: 4
+    subsample: 0.8
+    colsample_bytree: 0.8
+    reg_alpha: 0.1
+    reg_lambda: 0.1
+  param_grid:
+    outer_params: &id115
+      hyperopt_evals: 32
+      validation_fraction: 0.2
+      early_stopping_rounds: 100
+      verbose: false
+    num_iterations: &id116
+    - 100
+    - 500
+    num_leaves: &id117
+    - 28
+    - 31
+    max_depth: &id118
+    - 6
     - 10
-    learning_rate: &id117
+    learning_rate: &id119
     - 0.1
     - 0.2
-    n_estimators: &id118
-    - 2
-    - 3
-    min_child_weight: &id119
+    n_estimators: &id120
+    - 10
+    - 50
+    min_child_weight: &id121
     - 0.001
     - 0.01
-    min_child_samples: &id120
+    min_child_samples: &id122
+    - 10
     - 20
-    - 50
-    subsample: &id121
+    subsample: &id123
     - 0.8
     - 1.0
-    colsample_bytree: &id122
-    - 0.8
-    - 1.0
-    reg_alpha: &id123
+    reg_alpha: &id124
     - 0.0
     - 5.0
-    reg_lambda: &id124
+    reg_lambda: &id125
     - 0.0
     - 5.0
-    suckondeez: &id125
-    - 1
-    - 2
 - dataset: iris
   model: xgb
   best_params: {}
@@ -858,20 +870,30 @@
     bagging_temperature: *id113
 - dataset: iris
   model: lightgbm
-  best_params: {}
-  param_grid:
+  best_params:
     outer_params: *id114
-    num_leaves: *id115
-    max_depth: *id116
-    learning_rate: *id117
-    n_estimators: *id118
-    min_child_weight: *id119
-    min_child_samples: *id120
-    subsample: *id121
-    colsample_bytree: *id122
-    reg_alpha: *id123
-    reg_lambda: *id124
-    suckondeez: *id125
+    num_leaves: 31
+    max_depth: 6
+    learning_rate: 0.1
+    n_estimators: 10
+    min_child_weight: 0.001
+    min_child_samples: 4
+    subsample: 0.8
+    colsample_bytree: 0.8
+    reg_alpha: 0.1
+    reg_lambda: 0.1
+  param_grid:
+    outer_params: *id115
+    num_iterations: *id116
+    num_leaves: *id117
+    max_depth: *id118
+    learning_rate: *id119
+    n_estimators: *id120
+    min_child_weight: *id121
+    min_child_samples: *id122
+    subsample: *id123
+    reg_alpha: *id124
+    reg_lambda: *id125
 - dataset: housing
   model: xgb
   best_params: {}
@@ -1544,20 +1566,30 @@
     bagging_temperature: *id113
 - dataset: housing
   model: lightgbm
-  best_params: {}
-  param_grid:
+  best_params:
     outer_params: *id114
-    num_leaves: *id115
-    max_depth: *id116
-    learning_rate: *id117
-    n_estimators: *id118
-    min_child_weight: *id119
-    min_child_samples: *id120
-    subsample: *id121
-    colsample_bytree: *id122
-    reg_alpha: *id123
-    reg_lambda: *id124
-    suckondeez: *id125
+    num_leaves: 31
+    max_depth: 6
+    learning_rate: 0.1
+    n_estimators: 10
+    min_child_weight: 0.001
+    min_child_samples: 4
+    subsample: 0.8
+    colsample_bytree: 0.8
+    reg_alpha: 0.1
+    reg_lambda: 0.1
+  param_grid:
+    outer_params: *id115
+    num_iterations: *id116
+    num_leaves: *id117
+    max_depth: *id118
+    learning_rate: *id119
+    n_estimators: *id120
+    min_child_weight: *id121
+    min_child_samples: *id122
+    subsample: *id123
+    reg_alpha: *id124
+    reg_lambda: *id125
 - dataset: adult
   model: xgb
   best_params: {}

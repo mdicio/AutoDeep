@@ -9,10 +9,18 @@ from modelsdefinition.CommonStructure import BaseModel
 import time
 from hyperopt import fmin, hp, space_eval, STATUS_OK, tpe, Trials
 from hyperopt.pyll import scope
+from sklearn.metrics import accuracy_score, roc_auc_score, precision_score, recall_score
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import f1_score, average_precision_score
+from sklearn.model_selection import KFold
+
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.metrics import make_scorer
 
 from modelutils.trainingutilities import (
     infer_hyperopt_space,
     stop_on_perfect_lossCondition,
+    infer_cv_space_lightgbm,
 )
 
 
@@ -74,6 +82,8 @@ class LightGBMTrainer(BaseModel):
 
         # Define the hyperparameter search space
         self.outer_params = params["outer_params"]
+        params.pop("outer_params", NotImplementedError)
+        self.extra_info = extra_info
         self.cat_features = self.extra_info["cat_col_names"]
         early_stopping_rounds = self.outer_params.get("early_stopping_rounds", 100)
         early_stopping_callback = lgb.early_stopping(
@@ -112,6 +122,63 @@ class LightGBMTrainer(BaseModel):
 
         self.model = lgb_model
         self.logger.debug("Training completed successfully")
+
+    def cross_validate(self, X, y, param_grid, metric, problem_type, extra_info):
+        self.logger.info("Starting cross-validation")
+        self.problem_type = problem_type
+        self.outer_params = param_grid["outer_params"]
+        param_grid.pop("outer_params", None)
+        n_splits = self.outer_params.get("cv_size", 5)
+        cv_iter = self.outer_params.get("cv_iter", 10)
+        # fixed_params = {}
+        if self.problem_type == "binary_classification":
+            self.objective = "binary"
+            scorer = "roc_auc"
+            model = lgb.LGBMClassifier(objective=self.objective)
+        elif self.problem_type == "multiclass_classification":
+            self.objective = "multiclass"
+            scorer = "accuracy"
+            self.num_classes = len(np.unique(y))
+            model = lgb.LGBMClassifier(
+                objective=self.objective, num_classes=self.num_classes
+            )
+        elif self.problem_type == "regression":
+            scorer = "neg_mean_squared_error"
+            model = lgb.LGBMRegressor()
+        else:
+            raise ValueError("Unsupported problem type")
+
+        # Initialize KFold cross-validator
+        kfold = KFold(n_splits=n_splits, shuffle=True, random_state=self.random_state)
+
+        param_dist = infer_cv_space_lightgbm(param_grid)
+        print(param_dist)
+        # Fixed parameters
+        # fixed_params["objective"] =  self.objective
+
+        # param_dist = infer_cv_space_lightgbm(param_grid)
+        # Merge fixed and variable parameters
+        # param_dist.update(fixed_params)
+
+        # Initialize RandomizedSearchCV
+        randomized_search = RandomizedSearchCV(
+            estimator=model,
+            param_distributions=param_dist,
+            scoring=scorer,
+            cv=kfold,
+            n_iter=cv_iter,
+            random_state=self.random_state,
+            verbose=2,
+            n_jobs=-1,
+        )
+
+        randomized_search.fit(X, y)
+
+        self.logger.info("Randomized search completed")
+        self.logger.info(f"Best score: {randomized_search.best_score_:.4f}")
+        self.logger.info(f"Best parameters: {randomized_search.best_params_}")
+
+        return randomized_search.best_estimator_, randomized_search.best_params_
 
     def hyperopt_search(
         self,

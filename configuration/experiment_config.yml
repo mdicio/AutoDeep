@@ -4,7 +4,7 @@ retrain: True
 include_models:
   #- XGB  # Extreme Gradient Boosting
   #- CatBoost
-  - LightGBM
+  ####- LightGBM
   #- MLP  # Multi-Layer Perceptron
   #- TabNet  # TabNet Classifier 
   #- GATE 
@@ -16,7 +16,7 @@ include_models:
   #- Node
   #- TabTransformer
   #- AutoInt
-  ###- squeezenet
+  ####- squeezenet
 
 # List of datasets to include in the experiment
 include_datasets:
@@ -41,7 +41,7 @@ model_configs:
     retrain: False
   
   lightgbm:
-    execution_mode: hyperopt
+    execution_mode: cv
     normalize_features: mean_std
     encode_categorical: True  #for dataloader 
     return_extra_info: True # for dataloader

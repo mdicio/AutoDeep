@@ -4,6 +4,8 @@ from typing import Dict
 import numpy as np
 from torch.optim import Adam, SGD, AdamW
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau, ExponentialLR
+from scipy.stats import randint, uniform
+import random
 
 
 def remainder_equal_one(batch_size, virtual_batch_size_ratio):
@@ -11,14 +13,16 @@ def remainder_equal_one(batch_size, virtual_batch_size_ratio):
     remainder = batch_size % virtual_batch_size
     return remainder == 1
 
+
 def handle_rogue_batch_size(train, batch_size):
-    #pytorch doesnt like batch sizes of 1, and it happens if the last batch is 1 and drop_last batch is false.
-    if len(train)%batch_size == 1:
+    # pytorch doesnt like batch sizes of 1, and it happens if the last batch is 1 and drop_last batch is false.
+    if len(train) % batch_size == 1:
         return train.iloc[:-1]
 
     else:
         return train
-    
+
+
 def stop_on_perfect_lossCondition(x, threshold, *kwargs):
     best_loss = x.best_trial["result"]["loss"]
     stop = best_loss <= threshold
@@ -60,6 +64,23 @@ def calculate_possible_fold_sizes(n_samples, k):
 
     possible_train_sizes = set([n_samples - f for f in fold_sizes])
     return list(possible_train_sizes)
+
+
+def infer_cv_space_lightgbm(param_grid):
+    param_dist = {}
+    for param_name, param_values in param_grid.items():
+        if isinstance(param_values, list):
+            if all(isinstance(val, int) for val in param_values):
+                param_dist[param_name] = randint(min(param_values), max(param_values))
+            elif all(isinstance(val, float) for val in param_values):
+                param_dist[param_name] = uniform(min(param_values), max(param_values))
+            elif all(isinstance(val, str) for val in param_values):
+                param_dist[param_name] = random.choice(param_values)
+            else:
+                raise ValueError(f"Unsupported type for parameter {param_name}")
+        else:
+            param_dist[param_name] = param_values
+    return param_dist
 
 
 def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
@@ -104,30 +125,35 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
                         if min_value == max_value:
                             space[newname] = min_value
                         else:
-    
                             if min_value == 0.0:
                                 space[newname] = scope.float(
                                     hp.uniform(newname, min_value, max_value)
                                 )
                             else:
                                 space[newname] = scope.float(
-                                    hp.loguniform(newname, np.log(min_value), np.log(max_value))
+                                    hp.loguniform(
+                                        newname, np.log(min_value), np.log(max_value)
+                                    )
                                 )
-        elif (isinstance(param_values[0], (str, bool))) or (
-            param_name in ["virtual_batch_size_ratio", "batch_size", "weights", "num_trees"]
-        ) or any(value is None for value in param_values):
-            
+        elif (
+            (isinstance(param_values[0], (str, bool)))
+            or (
+                param_name
+                in ["virtual_batch_size_ratio", "batch_size", "weights", "num_trees"]
+            )
+            or any(value is None for value in param_values)
+        ):
             if param_name in ["batch_size", "weights"]:
                 space[param_name] = scope.int(hp.choice(param_name, param_values))
 
-            else:# If the parameter values are strings, use hp.choice
+            else:  # If the parameter values are strings, use hp.choice
                 space[param_name] = hp.choice(param_name, param_values)
 
         elif isinstance(param_values[0], int):
             min_value = min(param_values)
             max_value = max(param_values)
             # If the parameter values are integers, use hp.quniform or scope.int
-            if (min_value == max_value):
+            if min_value == max_value:
                 space[param_name] = min_value
             else:
                 space[param_name] = scope.int(
@@ -176,9 +202,9 @@ def infer_hyperopt_space_s1dcnn(param_grid: Dict):
                 space[param_name] = min_value
             else:
                 if min_value == 0.0:
-                                space[param_name] = scope.float(
-                                    hp.uniform(param_name, min_value, max_value)
-                                )
+                    space[param_name] = scope.float(
+                        hp.uniform(param_name, min_value, max_value)
+                    )
                 else:
                     space[param_name] = scope.float(
                         hp.loguniform(param_name, np.log(min_value), np.log(max_value))
