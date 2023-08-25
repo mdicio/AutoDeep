@@ -13,7 +13,7 @@ import os
 import time
 
 
-output_results_filename = "lightgbmcatboost"
+output_results_filename = "autoint"
 DEFAULT = False
 with open("./configuration/experiment_config.yml", "r") as f:
     config = yaml.safe_load(f)

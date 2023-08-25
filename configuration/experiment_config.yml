@@ -15,7 +15,7 @@ include_models:
   #- GANDALF
   #- Node
   #- TabTransformer
-  #- AutoInt
+  - AutoInt
   ####- squeezenet
 
 # List of datasets to include in the experiment

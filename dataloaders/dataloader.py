@@ -28,7 +28,7 @@ class DataLoader:
         self.encode_categorical = encode_categorical
         self.random_state = random_state
         self.num_targets = num_targets
-        # Construct the path to the CSV data file using pathlib
+        # Construct the path to the CSV data file using pathlib]
         self.script_path = Path(__file__).resolve()
         self.data_path = f"{self.script_path.parents[1]}/data/"
         self.igtd_path = f"{self.script_path.parents[1]}/modelsdefinition/IGTD/"
@@ -267,9 +267,6 @@ class BufixDataLoader(DataLoader):
             .reset_index(drop=True)
         )
 
-        # Get the categorical and numerical columns
-        input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
-        ###
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
         X_test = df_test.drop(columns=[self.target_column])
@@ -348,10 +345,6 @@ class TitanicDataLoader(DataLoader):
             random_state=self.random_state,
             stratify=df[self.target_column],
         )
-        # Get the categorical and numerical columns
-        input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
-        # Check if encoding is disabled and there are no categorical columns
-        ###
 
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
@@ -411,10 +404,6 @@ class BreastCancerDataLoader(DataLoader):
             random_state=self.random_state,
             stratify=df[self.target_column],
         )
-
-        # Get the categorical and numerical columns
-        input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
-        ###
 
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
@@ -479,10 +468,6 @@ class CreditDataLoader(DataLoader):
         df_train.reset_index(drop=True, inplace=True)
         df_test.reset_index(drop=True, inplace=True)
 
-        # Get the categorical and numerical columns
-        input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
-        ###
-
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
         y_train = df_train[self.target_column]
@@ -543,10 +528,6 @@ class IrisDataLoader(DataLoader):
             stratify=df[self.target_column],
         )
 
-        # Get the categorical and numerical columns
-        input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
-        ###
-
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
         y_train = df_train[self.target_column]
@@ -605,10 +586,6 @@ class CaliforniaHousingDataLoader(DataLoader):
         df_train, df_test = train_test_split(
             df, test_size=self.test_size, random_state=self.random_state
         )
-
-        # Get the categorical and numerical columns
-        input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
-        ###
 
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
@@ -718,10 +695,6 @@ class AdultDataLoader(DataLoader):
             stratify=df[self.target_column],
         )
 
-        # Get the categorical and numerical columns
-        input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
-        ###
-
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
         y_train = df_train[self.target_column]
@@ -781,10 +754,6 @@ class CoverTypeDataLoader(DataLoader):
         df_train, df_test = train_test_split(
             df, test_size=self.test_size, random_state=self.random_state
         )
-
-        # Get the categorical and numerical columns
-        input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
-        ###
 
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
