@@ -78,6 +78,7 @@ class GandalfTrainer(BaseModel):
         self.extra_info = None
         self.save_path = None
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.logger.info(f"Device {self.device} is available")
         self.task = [
             "regression" if self.problem_type == "regression" else "classification"
         ][0]
@@ -227,7 +228,7 @@ class GandalfTrainer(BaseModel):
         if self.task == "regression":
             valid_params["target_range"] = self.target_range
 
-        self.logger.debug(f"valid parameters: {valid_params})
+        self.logger.debug(f"valid parameters: {valid_params}")
         model_config = GANDALFConfig(task=self.task, **valid_params)
         # override if we want to use default parameters
         if default:

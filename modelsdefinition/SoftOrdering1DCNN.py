@@ -311,6 +311,7 @@ class SoftOrdering1DCNN:
         patience = outer_params.get("early_stopping_patience", 5)
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.logger.info(f"Device {self.device} is available")
         self.num_features = extra_info["num_features"]
         self.hidden_size = params.get("hidden_size", 4096)
 
@@ -405,6 +406,7 @@ class SoftOrdering1DCNN:
             # Split the train data into training and validation sets
 
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.logger.info(f"Device {self.device} is available")
             self._set_loss_function(y)
 
             self.model = self.build_model(

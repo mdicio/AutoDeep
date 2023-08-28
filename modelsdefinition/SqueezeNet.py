@@ -68,6 +68,7 @@ class SqueezeNetTrainer:
         **kwargs,
     ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.logger.info(f"Device {self.device} is available")
         self.problem_type = problem_type
         self.num_targets = num_targets
         self.pretrained = pretrained
