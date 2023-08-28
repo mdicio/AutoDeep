@@ -168,3 +168,4 @@ Werkzeug==2.3.6
 widgetsnbextension==4.0.8
 xgboost==1.7.6
 yarl==1.9.2
+git+https://github.com/manujosephv/pytorch_tabular.git

@@ -209,7 +209,7 @@ class FTTransformerTrainer(BaseModel):
         if self.task == "regression":
             valid_params["target_range"] = self.target_range
 
-        self.logger.debug("valid parameters", valid_params)
+        self.logger.debug(f"valid parameters: {valid_params})
         model_config = FTTransformerConfig(task=self.task, **valid_params)
 
         # override if we want to use default parameters
