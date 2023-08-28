@@ -277,11 +277,12 @@ class SoftOrdering1DCNN:
             dataset, [num_train_samples, num_val_samples]
         )
 
+
         train_loader = DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=True, drop_last=False
+            train_dataset, batch_size=batch_size, shuffle=True, drop_last=False, num_workers = self.num_workers, pin_memory = True
         )
         val_loader = DataLoader(
-            val_dataset, batch_size=batch_size, shuffle=False, drop_last=False
+            val_dataset, batch_size=batch_size, shuffle=False, drop_last=False, num_workers = self.num_workers, pin_memory = True
         )
 
         return train_loader, val_loader
@@ -534,8 +535,8 @@ class SoftOrdering1DCNN:
             transform=None,
         )
 
-        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers = self.num_workers, pin_memory = True)
+        
         predictions = []
         probabilities = []
         with torch.no_grad():
