@@ -377,8 +377,9 @@ class CategoryEmbeddingtTrainer(BaseModel):
             self.evaluator.y_pred = predictions
 
             score = self.evaluator.evaluate_metric(metric_name=metric)
-
+            self.logger.debug(f"metric {metric}, score {score}")
             if self.evaluator.maximize[metric][0]:
+                self.logger.debug("times -1")
                 score = -1 * score
 
             # Return the negative score (to minimize)

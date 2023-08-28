@@ -87,8 +87,7 @@ class ResNetTrainer:
         problem_type="binary_classification",
         **kwargs,
     ):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.logger.info(f"Device {self.device} is available")
+        
         self.problem_type = problem_type
         self.num_targets = num_targets
         self.batch_size = 512
@@ -126,6 +125,11 @@ class ResNetTrainer:
         self.random_state = 4200
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.logger.info(f"Device {self.device} is available")
+        # Get the number of available CPU cores
+        num_cpu_cores = os.cpu_count()
+        # Calculate the num_workers value as number of cores - 2
+        self.num_workers = max(1, num_cpu_cores - 2)
+
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -269,10 +273,10 @@ class ResNetTrainer:
         )
 
         train_loader = DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=True, drop_last=False
+            train_dataset, batch_size=batch_size, shuffle=True, drop_last=False, num_workers = self.num_workers, pin_memory = True
         )
         val_loader = DataLoader(
-            val_dataset, batch_size=batch_size, shuffle=False, drop_last=False
+            val_dataset, batch_size=batch_size, shuffle=False, drop_last=False, num_workers = self.num_workers, pin_memory = True
         )
 
         return train_loader, val_loader
@@ -514,7 +518,10 @@ class ResNetTrainer:
             self.evaluator.y_prob = probabilities
             score = self.evaluator.evaluate_metric(metric_name=metric)
 
+            score = self.evaluator.evaluate_metric(metric_name=metric)
+            self.logger.debug(f"metric {metric}, score {score}")
             if self.evaluator.maximize[metric][0]:
+                self.logger.debug("times -1")
                 score = -1 * score
 
             # Return the negative score (to minimize)
@@ -579,7 +586,7 @@ class ResNetTrainer:
             transform=self.transformation,
         )
 
-        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers = self.num_workers, pin_memory = True)
 
         predictions = []
         probabilities = []

@@ -8,20 +8,20 @@ include_models:
   #- MLP  # Multi-Layer Perceptron
   #- TabNet  # TabNet Classifier 
   #- GATE 
-  #- resnet18
+  - resnet18
   #- S1DCNN
-  #- CategoryEmbedding
+  - CategoryEmbedding
   #- FTTransformer
   #- GANDALF
   #- Node
   #- TabTransformer
-  - AutoInt
+  #- AutoInt
   ####- squeezenet
 
 # List of datasets to include in the experiment
 include_datasets:
   #- creditcard  # Credit card fraud dataset
-  #- iris        # Iris flower dataset
+  - iris        # Iris flower dataset
   #- titanic
   #- bufix
   #- breastcancer 
