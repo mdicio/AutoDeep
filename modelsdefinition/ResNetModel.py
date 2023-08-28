@@ -124,6 +124,8 @@ class ResNetTrainer:
             self.logger.addHandler(file_handler)
 
         self.random_state = 4200
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.logger.info(f"Device {self.device} is available")
 
     def _load_best_model(self):
         """Load a trained model from a given path"""

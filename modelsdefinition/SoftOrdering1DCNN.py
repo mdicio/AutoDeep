@@ -139,9 +139,6 @@ class SoftOrdering1DCNN:
 
         self.batch_size = 512
         self.save_path = None
-        self.device = params.get(
-            "device", torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        )
         self.transformation = None
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
@@ -170,6 +167,8 @@ class SoftOrdering1DCNN:
             self.logger.addHandler(file_handler)
 
         self.random_state = 4200
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.logger.info(f"Device {self.device} is available")
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -405,8 +404,7 @@ class SoftOrdering1DCNN:
             self.logger.info(f"Training with hyperparameters: {params}")
             # Split the train data into training and validation sets
 
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.logger.info(f"Device {self.device} is available")
+            
             self._set_loss_function(y)
 
             self.model = self.build_model(
