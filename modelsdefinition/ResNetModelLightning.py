@@ -1,15 +1,19 @@
+import torchvision.transforms as transforms
+from torchvision.models import resnet18, resnet34, resnet50
 import warnings
+from abc import ABC, abstractmethod
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 import pandas as pd
 from typing import Dict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
+from hyperopt import STATUS_OK, Trials, fmin, hp, space_eval, tpe
+from hyperopt.pyll import scope
+from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
 from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from tqdm import tqdm
 import os
@@ -21,123 +25,75 @@ from modelutils.trainingutilities import (
     stop_on_perfect_lossCondition,
 )
 import os
+from modelsdefinition.CommonStructure import BaseModel
+import pytorch_lightning as pl
 
-warnings.filterwarnings("ignore")
-
-
-class Model(nn.Module):
-    def __init__(self, num_features, num_targets, hidden_size=4196):
-        super(Model, self).__init__()
-        cha_1 = 256
-        cha_2 = 512
-        cha_3 = 512
-        self.num_targets = num_targets
-        cha_1_reshape = int(hidden_size / cha_1)
-        cha_po_1 = int(hidden_size / cha_1 / 2)
-        cha_po_2 = int(hidden_size / cha_1 / 2 / 2) * cha_3
-
-        self.cha_1 = cha_1
-        self.cha_2 = cha_2
-        self.cha_3 = cha_3
-        self.cha_1_reshape = cha_1_reshape
-        self.cha_po_1 = cha_po_1
-        self.cha_po_2 = cha_po_2
-
-        self.batch_norm1 = nn.BatchNorm1d(num_features)
-        self.dropout1 = nn.Dropout(0.1)
-        self.dense1 = nn.utils.weight_norm(nn.Linear(num_features, hidden_size))
-
-        self.batch_norm_c1 = nn.BatchNorm1d(cha_1)
-        self.dropout_c1 = nn.Dropout(0.1)
-        self.conv1 = nn.utils.weight_norm(
-            nn.Conv1d(cha_1, cha_2, kernel_size=5, stride=1, padding=2, bias=False),
-            dim=None,
-        )
-
-        self.ave_po_c1 = nn.AdaptiveAvgPool1d(output_size=cha_po_1)
-
-        self.batch_norm_c2 = nn.BatchNorm1d(cha_2)
-        self.dropout_c2 = nn.Dropout(0.1)
-        self.conv2 = nn.utils.weight_norm(
-            nn.Conv1d(cha_2, cha_2, kernel_size=3, stride=1, padding=1, bias=True),
-            dim=None,
-        )
-
-        self.batch_norm_c2_1 = nn.BatchNorm1d(cha_2)
-        self.dropout_c2_1 = nn.Dropout(0.3)
-        self.conv2_1 = nn.utils.weight_norm(
-            nn.Conv1d(cha_2, cha_2, kernel_size=3, stride=1, padding=1, bias=True),
-            dim=None,
-        )
-
-        self.batch_norm_c2_2 = nn.BatchNorm1d(cha_2)
-        self.dropout_c2_2 = nn.Dropout(0.2)
-        self.conv2_2 = nn.utils.weight_norm(
-            nn.Conv1d(cha_2, cha_3, kernel_size=5, stride=1, padding=2, bias=True),
-            dim=None,
-        )
-
-        self.max_po_c2 = nn.MaxPool1d(kernel_size=4, stride=2, padding=1)
-
-        self.flt = nn.Flatten()
-
-        self.batch_norm3 = nn.BatchNorm1d(cha_po_2)
-        self.dropout3 = nn.Dropout(0.2)
-        self.dense3 = nn.utils.weight_norm(nn.Linear(cha_po_2, num_targets))
-
-    def forward(self, x):
-        x = self.batch_norm1(x)
-        x = self.dropout1(x)
-        x = F.celu(self.dense1(x), alpha=0.06)
-
-        x = x.reshape(x.shape[0], self.cha_1, self.cha_1_reshape)
-
-        x = self.batch_norm_c1(x)
-        x = self.dropout_c1(x)
-        x = F.relu(self.conv1(x))
-
-        x = self.ave_po_c1(x)
-
-        x = self.batch_norm_c2(x)
-        x = self.dropout_c2(x)
-        x = F.relu(self.conv2(x))
-        x_s = x
-
-        x = self.batch_norm_c2_1(x)
-        x = self.dropout_c2_1(x)
-        x = F.relu(self.conv2_1(x))
-
-        x = self.batch_norm_c2_2(x)
-        x = self.dropout_c2_2(x)
-        x = F.relu(self.conv2_2(x))
-        x = x * x_s
-
-        x = self.max_po_c2(x)
-
-        x = self.flt(x)
-
-        x = self.batch_norm3(x)
-        x = self.dropout3(x)
-        x = self.dense3(x)
-
-        return x
-
-
-class SoftOrdering1DCNN:
+class ResNetModel(nn.Module):
     def __init__(
         self,
         problem_type="binary_classification",
-        num_targets=1,
-        **params,
+        num_classes=1,
+        depth="resnet18",
+        pretrained=True,
+        **kwargs,
     ):
-        self.num_features = 42
-        self.hidden_size = 4096
+        super(ResNetModel, self).__init__()
+
+        self.pretrained = pretrained
+        self.problem_type = problem_type
+        self.num_classes = num_classes
+        self.depth = depth
+
+        if depth == "resnet18":
+            self.resnet = resnet18(pretrained=self.pretrained)
+        elif depth == "resnet34":
+            self.resnet = resnet34(pretrained=self.pretrained)
+        elif depth == "resnet50":
+            self.resnet = resnet50(pretrained=self.pretrained)
+        else:
+            raise ValueError(
+                "Invalid depth. Supported options: resnet18, resnet34, resnet50."
+            )
+
+        self.num_features = self.resnet.fc.in_features
+
+        if self.problem_type == "binary_classification":
+            self.classifier = nn.Linear(self.num_features, 1)
+        elif self.problem_type == "multiclass_classification":
+            self.classifier = nn.Linear(self.num_features, self.num_classes)
+        elif self.problem_type == "regression":
+            self.classifier = nn.Linear(self.num_features, 1)
+        else:
+            raise ValueError(
+                "Invalid problem_type. Supported options: binary_classification, multiclass_classification, regression."
+            )
+
+        self.resnet.fc = nn.Identity()
+
+    def forward(self, x):
+        features = self.resnet(x)
+        x = self.classifier(features)
+        return x
+
+
+class ResNetTrainer(pl.LightningModule):
+    def __init__(
+        self,
+        num_targets=1,
+        depth="resnet18",
+        pretrained=True,
+        batch_size=64,
+        learning_rate=0.001,
+        problem_type="binary_classification",
+        **kwargs,
+    ):
+        
         self.problem_type = problem_type
         self.num_targets = num_targets
-
-        self.scaler = StandardScaler()  # Initialize the scaler for scaling y values
-
         self.batch_size = 512
+        self.pretrained = pretrained
+        self.problem_type = problem_type
+        self.depth = depth
         self.save_path = None
         self.transformation = None
         self.logger = logging.getLogger(__name__)
@@ -169,26 +125,27 @@ class SoftOrdering1DCNN:
         self.random_state = 4200
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.logger.info(f"Device {self.device} is available")
-
         # Get the number of available CPU cores
         num_cpu_cores = os.cpu_count()
         # Calculate the num_workers value as number of cores - 2
-        self.num_workers = max(1, num_cpu_cores - 4)
+        self.num_workers = max(1, num_cpu_cores - 2)
+
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
         self.logger.info(f"Loading model")
-        self.logger.debug("Model loaded successfully")
         self.model = self.best_model
+        self.logger.debug("Model loaded successfully")
 
-    def build_model(self, num_features, num_targets, hidden_size):
-        model = Model(num_features, num_targets, hidden_size)
+    def build_model(self, problem_type, num_classes, depth):
+        model = ResNetModel(problem_type, num_classes, depth)
         return model
 
-    def process_inputs_labels(self, inputs, labels):
+    def process_inputs_labels_training(self, inputs, labels):
         inputs, labels = inputs.to(self.device), labels.to(self.device)
         if self.problem_type == "binary_classification":
-            outputs = torch.sigmoid(self.model(inputs)).reshape(-1)
+            # outputs = torch.sigmoid(self.model(inputs)).reshape(-1)
+            outputs = self.model(inputs).reshape(-1)
             labels = labels.float()
         elif self.problem_type == "regression":
             outputs = self.model(inputs).reshape(-1)
@@ -203,11 +160,39 @@ class SoftOrdering1DCNN:
 
         return outputs, labels
 
+    def process_inputs_labels_prediction(self, inputs, labels):
+        inputs, labels = inputs.to(self.device), labels.to(self.device)
+        probabilities = None
+        if self.problem_type == "binary_classification":
+            probabilities = torch.sigmoid(self.model(inputs)).reshape(-1)
+            predictions = (probabilities >= 0.5).float()
+            probabilities = probabilities.cpu().numpy()
+            labels = labels.float()
+        elif self.problem_type == "regression":
+            predictions = self.model(inputs).reshape(-1)
+            labels = labels.float()
+        elif self.problem_type == "multiclass_classification":
+            labels = labels.long()
+            _, predictions = torch.max(self.model(inputs), dim=1)
+            self.logger.debug(f"multiclass predictions {predictions[:10]}")
+        else:
+            raise ValueError(
+                "Invalid problem_type. Supported options: binary_classification, multiclass_classification"
+            )
+
+        return (
+            predictions.cpu().numpy(),
+            labels.cpu().numpy(),
+            probabilities,
+        )
+
     def train_step(self, train_loader):
         running_loss = 0.0
         for i, (inputs, labels) in enumerate(train_loader):
+            # print("inputs, labels", inputs.shape, labels.shape)
+            outputs, labels = self.process_inputs_labels_training(inputs, labels)
 
-            outputs, labels = self.process_inputs_labels(inputs, labels)
+            # print("inputs, labels, outputs", inputs.shape, labels.shape, outputs.shape)
 
             self.optimizer.zero_grad()
             loss = self.loss_fn(outputs, labels)
@@ -225,7 +210,7 @@ class SoftOrdering1DCNN:
 
         with torch.no_grad():
             for inputs, labels in validation_loader:
-                outputs, labels = self.process_inputs_labels(inputs, labels)
+                outputs, labels = self.process_inputs_labels_training(inputs, labels)
 
                 loss = self.loss_fn(outputs, labels)
                 val_loss += loss.item() * inputs.size(0)
@@ -256,42 +241,51 @@ class SoftOrdering1DCNN:
                 "Invalid problem_type. Supported values are 'binary', 'multiclass', and 'regression'."
             )
 
-    def _pandas_to_torch_datasets(
-        self, X_train, y_train, validation_fraction
-    ):
-        X_train_tensor = torch.tensor(X_train.values, dtype=torch.float)
-        y_train_tensor = torch.tensor(
-            y_train.values,
-            dtype=torch.float if self.problem_type == "regression" else torch.long,
-        )
-
-        dataset = TensorDataset(X_train_tensor, y_train_tensor)
+    def _pandas_to_torch_image_dataset(
+        self,
+        X_train,
+        y_train,
         
+        img_rows,
+        img_columns,
+        transform,
+    ):
+        dataset = CustomDataset(
+            data=X_train,
+            labels=pd.DataFrame(y_train),
+            img_rows=img_rows,
+            img_columns=img_columns,
+            transform=transform,
+        )
+        return dataset 
+    
+    def _torch_image_dataset_to_dataloaders(self, dataset, batch_size,
+        validation_fraction):
         num_samples = len(dataset)
 
         num_train_samples = int((1 - validation_fraction) * num_samples)
         num_val_samples = num_samples - num_train_samples
 
+        if num_train_samples%batch_size == 1:
+            num_train_samples -=1
+            num_val_samples +=1
+
         train_dataset, val_dataset = random_split(
             dataset, [num_train_samples, num_val_samples]
         )
-        return train_dataset, val_dataset
-    
-    def _torch_datasets_to_dataloaders(
-        self, train_dataset, val_dataset, batch_size
-    ):
+        
 
         train_loader = DataLoader(
             train_dataset, batch_size=batch_size, shuffle=True, drop_last=False, num_workers = self.num_workers, pin_memory = True
         )
+
         val_loader = DataLoader(
             val_dataset, batch_size=batch_size, shuffle=False, drop_last=False, num_workers = self.num_workers, pin_memory = True
         )
 
         return train_loader, val_loader
 
-
-    def load_model(self, model_path):
+    def _load_model(self, model_path):
         """Load a trained model from a given path"""
         if not os.path.isfile(model_path):
             raise FileNotFoundError(f"Model file not found at {model_path}")
@@ -300,29 +294,53 @@ class SoftOrdering1DCNN:
         self.model.eval()
         print(f"Model loaded successfully from {model_path}")
 
-    def save_model(self, model_dir, model_name):
+    def _save_model(self, model_dir, model_name):
         """Save the trained model to a given directory with the specified name"""
         save_path = os.path.join(model_dir, model_name)
         torch.save(self.model.state_dict(), save_path)
         print(f"Model saved successfully at {save_path}")
 
+    def train_dataloader(self):
+        dataset = self._pandas_to_torch_image_dataset(
+            X_train,
+            y_train,
+            self.hparams.img_rows,
+            self.hparams.img_columns,
+            self.transformation,
+        )
+        return self._torch_image_dataset_to_dataloaders(dataset, self.hparams.batch_size, self.hparams.validation_fraction)[0]
+
+    def val_dataloader(self):
+        dataset = self._pandas_to_torch_image_dataset(
+            X_train,
+            y_train,
+            self.hparams.img_rows,
+            self.hparams.img_columns,
+            self.transformation,
+        )
+        return self._torch_image_dataset_to_dataloaders(dataset, self.hparams.batch_size, self.hparams.validation_fraction)[1]
+    
     def train(self, X_train, y_train, params: Dict, extra_info: Dict):
         outer_params = params["outer_params"]
         validation_fraction = outer_params.get("validation_fraction", 0.2)
         num_epochs = outer_params.get("num_epochs", 3)
         batch_size = params.get("batch_size", 32)
         early_stopping = outer_params.get("early_stopping", True)
-        patience = outer_params.get("early_stopping_patience", 5)
+        patience = params.get("early_stopping_patience", 5)
 
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.logger.info(f"Device {self.device} is available")
+        # IGTD_ORDERING
+        index_ordering = extra_info["column_ordering"]
+        self.img_rows = extra_info["img_rows"]
+        self.img_columns = extra_info["img_columns"]
+        # Assuming you have a DataFrame named 'df' with the original column order
+        original_columns = X_train.columns
+        # Reindex the DataFrame with the new column order
+        self.new_column_ordering = [original_columns[i] for i in index_ordering]
+        X_train = X_train.reindex(columns=self.new_column_ordering)
+
         self.num_features = extra_info["num_features"]
-        self.hidden_size = params.get("hidden_size", 4096)
 
-        self.model = self.build_model(
-            self.num_features, self.num_targets, self.hidden_size
-        )
-
+        self.model = self.build_model(self.problem_type, self.num_targets, self.depth)
         self.optimizer = optim.Adam(self.model.parameters(), lr=params["learning_rate"])
         self.scheduler = ReduceLROnPlateau(
             self.optimizer,
@@ -333,11 +351,21 @@ class SoftOrdering1DCNN:
         )
         self._set_loss_function(y_train)
 
-        train_dataset, val_dataset = self._pandas_to_torch_datasets(
-            X_train, y_train, validation_fraction
+        self.transformation = transforms.Compose(
+            [
+                transforms.ToTensor(),
+            ]
+        )
+        dataset = self._pandas_to_torch_image_dataset(
+            X_train,
+            y_train,
+            self.img_rows,
+            self.img_columns,
+            self.transformation,
         )
 
-        train_loader, val_loader = self._torch_datasets_to_dataloaders(train_dataset, val_dataset, params["batch_size"])
+        train_loader, val_loader = self._torch_image_dataset_to_dataloaders(dataset, batch_size,
+        validation_fraction)
 
         self.model.to(self.device)
         self.model.train()
@@ -397,16 +425,35 @@ class SoftOrdering1DCNN:
         num_epochs = self.outer_params.get("num_epochs", 3)
         early_stopping = self.outer_params.get("early_stopping", True)
         patience = self.outer_params.get("early_stopping_patience", 5)
-        space = infer_hyperopt_space_s1dcnn(param_grid)
         validation_fraction = self.outer_params.get("validation_fraction", 0.2)
-        self.num_features = extra_info["num_features"]
 
+        self.logger.debug(f"Training on {self.device}")
+        space = infer_hyperopt_space_s1dcnn(param_grid)
+        # IGTD_ORDERING
+        self.extra_info = extra_info
+        index_ordering = extra_info["column_ordering"]
+        self.img_rows = extra_info["img_rows"]
+        self.img_columns = extra_info["img_columns"]
+        original_columns = X.columns
+        # Reindex the DataFrame with the new column order
+        self.new_column_ordering = [original_columns[i] for i in index_ordering]
+        X = X.reindex(columns=self.new_column_ordering)
 
         self._set_loss_function(y)
-        self.logger.debug(f"Training on {self.device}")
 
-        train_dataset, val_dataset = self._pandas_to_torch_datasets(
-            X, y, validation_fraction
+        self.num_features = extra_info["num_features"]
+        self.transformation = transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                ]
+            )
+            
+        dataset = self._pandas_to_torch_image_dataset(
+            X,
+            y,
+            self.img_rows,
+            self.img_columns,
+            self.transformation,
         )
 
         # Define the objective function for hyperopt search
@@ -414,13 +461,12 @@ class SoftOrdering1DCNN:
             self.logger.info(f"Training with hyperparameters: {params}")
             # Split the train data into training and validation sets
 
-            train_loader, val_loader = self._torch_datasets_to_dataloaders(train_dataset, val_dataset, params["batch_size"])
-            
+            train_loader, val_loader = self._torch_image_dataset_to_dataloaders(dataset, params["batch_size"],
+        validation_fraction)
 
             self.model = self.build_model(
-                self.num_features, self.num_targets, params["hidden_size"]
+                self.problem_type, self.num_targets, self.depth
             )
-
             self.optimizer = optim.Adam(
                 self.model.parameters(), lr=params["learning_rate"]
             )
@@ -456,7 +502,6 @@ class SoftOrdering1DCNN:
                             current_patience = 0
                             # Save the state dict of the best model
                             best_model_state_dict = self.model.state_dict()
-
                         else:
                             current_patience += 1
 
@@ -465,34 +510,39 @@ class SoftOrdering1DCNN:
                             f"Train Loss: {epoch_loss:.4f},"
                             f"Val Loss: {val_loss:.4f}"
                         )
-                        if current_patience >= patience:
-                            print(
-                                f"Early stopping triggered at epoch {epoch+1} with best epoch {best_epoch+1}"
-                            )
-                            break
 
-                pbar.update(1)
+                        if current_patience >= patience:
+                            print(f"Early stopping triggered at epoch {epoch+1}")
+                            break
 
             # Load the best model state dict
             if best_model_state_dict is not None:
                 self.model.load_state_dict(best_model_state_dict)
                 print(f"Best model loaded from epoch {best_epoch+1}")
 
-            # Assuming you have a PyTorch DataLoader object for the validation set called `val_loader`
-            # Convert dataloader to pandas DataFrames
-            X_val, y_val = pd.DataFrame(), pd.DataFrame()
-            for X_batch, y_batch in val_loader:
-                X_val = pd.concat([X_val, pd.DataFrame(X_batch.numpy())])
-                y_val = pd.concat([y_val, pd.DataFrame(y_batch.numpy())])
+                pbar.update(1)
 
-            y_pred, y_prob = self.predict(X_val, predict_proba=True)
+            self.model.eval()
+            y_pred = np.array([])
+            y_true = np.array([])
+            y_prob = np.array([])
+            with torch.no_grad():
+                for inputs, labels in val_loader:
+                    (
+                        predictions,
+                        labels,
+                        probabilities,
+                    ) = self.process_inputs_labels_prediction(inputs, labels)
+                    y_true = np.append(y_pred, labels)
+                    y_pred = np.append(y_pred, predictions)
+                    y_prob = np.append(y_prob, probabilities)
+
             # Calculate the score using the specified metric
+            self.evaluator.y_true = np.array(y_true).reshape(-1)
+            self.evaluator.y_pred = np.array(y_pred).reshape(-1)
+            self.evaluator.y_prob = probabilities
 
-            self.evaluator.y_true = y_val
-            self.evaluator.y_pred = y_pred
-            self.evaluator.y_prob = y_prob
             score = self.evaluator.evaluate_metric(metric_name=metric)
-
             if self.evaluator.maximize[metric][0]:
                 score = -1 * score
 
@@ -521,7 +571,6 @@ class SoftOrdering1DCNN:
             early_stop_fn=lambda x: stop_on_perfect_lossCondition(x, threshold),
         )
 
-        # Get the best hyperparameters and corresponding score
         best_params = space_eval(space, best)
         best_params["outer_params"] = self.outer_params
 
@@ -543,13 +592,24 @@ class SoftOrdering1DCNN:
         self.model.to(self.device)
         self.model.eval()
 
+        index_ordering = self.extra_info["column_ordering"]
+        self.img_rows = self.extra_info["img_rows"]
+        self.img_columns = self.extra_info["img_columns"]
+        original_columns = X_test.columns
+        # Reindex the DataFrame with the new column order
+        self.new_column_ordering = [original_columns[i] for i in index_ordering]
+        X_test = X_test.reindex(columns=self.new_column_ordering)
+
         test_dataset = CustomDataset(
             data=X_test,
-            transform=None,
+            labels=None,
+            img_rows=self.img_rows,
+            img_columns=self.img_columns,
+            transform=self.transformation,
         )
 
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers = self.num_workers, pin_memory = True)
-        
+
         predictions = []
         probabilities = []
         with torch.no_grad():
@@ -579,6 +639,7 @@ class SoftOrdering1DCNN:
         probabilities = np.array(probabilities)
 
         self.logger.debug("Model predicting success")
+
         if predict_proba:
             return predictions, probabilities
         else:
@@ -586,15 +647,33 @@ class SoftOrdering1DCNN:
 
 
 class CustomDataset(Dataset):
-    def __init__(self, data, transform=None):
+    def __init__(
+        self,
+        data,
+        img_rows,
+        img_columns,
+        transform=None,
+        labels=None,
+    ):
         self.data = data
+        self.labels = labels
+        self.img_rows = img_rows
+        self.img_columns = img_columns
         self.transform = transform
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, index):
-        x = self.data.iloc[index].values.astype(np.float32)  # Convert to float32
-        if self.transform:
+        if self.labels is not None:
+            x = self.data.iloc[index].values.reshape(self.img_rows, self.img_columns)
+            x = np.stack([x] * 3, axis=-1).astype(np.float32)  # Convert to float32
             x = self.transform(x)
-        return x
+            # self.labels = pd.DataFrame(self.labels)
+            y = self.labels.iloc[index].values.squeeze()
+            return x, y
+        else:
+            x = self.data.iloc[index].values.reshape(self.img_rows, self.img_columns)
+            x = np.stack([x] * 3, axis=-1).astype(np.float32)  # Convert to float32
+            x = self.transform(x)
+            return x

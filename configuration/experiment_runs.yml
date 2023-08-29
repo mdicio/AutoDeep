@@ -1257,16 +1257,15 @@
   best_params: {}
   param_grid:
     outer_params: &id161
-      hyperopt_evals: 32
+      hyperopt_evals: 2
       num_epochs: 1000
       early_stopping: true
       early_stopping_patience: 6
-      validation_fraction: 0.2
+      validation_fraction: 0.15
     learning_rate: &id162
     - 0.0001
     - 0.001
     batch_size: &id163
-    - 256
     - 512
     - 1024
     - 2048
@@ -1281,7 +1280,7 @@
   best_params: {}
   param_grid:
     outer_params: &id166
-      hyperopt_evals: 100
+      hyperopt_evals: 2
       num_epochs: 1000
       early_stopping: true
       shuffle: true

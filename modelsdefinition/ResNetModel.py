@@ -189,8 +189,6 @@ class ResNetTrainer:
     def train_step(self, train_loader):
         running_loss = 0.0
         for i, (inputs, labels) in enumerate(train_loader):
-            if len(labels) < 2:
-                continue
             # print("inputs, labels", inputs.shape, labels.shape)
             outputs, labels = self.process_inputs_labels_training(inputs, labels)
 
@@ -212,8 +210,6 @@ class ResNetTrainer:
 
         with torch.no_grad():
             for inputs, labels in validation_loader:
-                if len(labels) < 2:
-                    continue
                 outputs, labels = self.process_inputs_labels_training(inputs, labels)
 
                 loss = self.loss_fn(outputs, labels)
@@ -245,12 +241,11 @@ class ResNetTrainer:
                 "Invalid problem_type. Supported values are 'binary', 'multiclass', and 'regression'."
             )
 
-    def _pandas_to_torch_dataloaders(
+    def _pandas_to_torch_image_dataset(
         self,
         X_train,
         y_train,
-        batch_size,
-        validation_fraction,
+        
         img_rows,
         img_columns,
         transform,
@@ -262,19 +257,28 @@ class ResNetTrainer:
             img_columns=img_columns,
             transform=transform,
         )
-
+        return dataset 
+    
+    def _torch_image_dataset_to_dataloaders(self, dataset, batch_size,
+        validation_fraction):
         num_samples = len(dataset)
 
         num_train_samples = int((1 - validation_fraction) * num_samples)
         num_val_samples = num_samples - num_train_samples
 
+        if num_train_samples%batch_size == 1:
+            num_train_samples -=1
+            num_val_samples +=1
+
         train_dataset, val_dataset = random_split(
             dataset, [num_train_samples, num_val_samples]
         )
+        
 
         train_loader = DataLoader(
             train_dataset, batch_size=batch_size, shuffle=True, drop_last=False, num_workers = self.num_workers, pin_memory = True
         )
+
         val_loader = DataLoader(
             val_dataset, batch_size=batch_size, shuffle=False, drop_last=False, num_workers = self.num_workers, pin_memory = True
         )
@@ -332,15 +336,16 @@ class ResNetTrainer:
                 transforms.ToTensor(),
             ]
         )
-        train_loader, val_loader = self._pandas_to_torch_dataloaders(
+        dataset = self._pandas_to_torch_image_dataset(
             X_train,
             y_train,
-            batch_size,
-            validation_fraction,
             self.img_rows,
             self.img_columns,
             self.transformation,
         )
+
+        train_loader, val_loader = self._torch_image_dataset_to_dataloaders(dataset, batch_size,
+        validation_fraction)
 
         self.model.to(self.device)
         self.model.train()
@@ -417,11 +422,27 @@ class ResNetTrainer:
         self._set_loss_function(y)
 
         self.num_features = extra_info["num_features"]
+        self.transformation = transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                ]
+            )
+            
+        dataset = self._pandas_to_torch_image_dataset(
+            X,
+            y,
+            self.img_rows,
+            self.img_columns,
+            self.transformation,
+        )
 
         # Define the objective function for hyperopt search
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")
             # Split the train data into training and validation sets
+
+            train_loader, val_loader = self._torch_image_dataset_to_dataloaders(dataset, params["batch_size"],
+        validation_fraction)
 
             self.model = self.build_model(
                 self.problem_type, self.num_targets, self.depth
@@ -437,27 +458,13 @@ class ResNetTrainer:
                 verbose=True,
             )
 
-            self.transformation = transforms.Compose(
-                [
-                    transforms.ToTensor(),
-                ]
-            )
-            train_loader, val_loader = self._pandas_to_torch_dataloaders(
-                X,
-                y,
-                params["batch_size"],
-                validation_fraction,
-                self.img_rows,
-                self.img_columns,
-                self.transformation,
-            )
-
             self.model.to(self.device)
             self.model.train()
 
             best_val_loss = float("inf")
             best_epoch = 0
             current_patience = 0
+            best_model_state_dict = None
 
             with tqdm(
                 total=num_epochs, desc="Training", unit="epoch", ncols=80
@@ -473,11 +480,8 @@ class ResNetTrainer:
                             best_val_loss = val_loss
                             best_epoch = epoch
                             current_patience = 0
-
-                            if self.save_path is not None:
-                                torch.save(
-                                    self.model.state_dict(), self.save_path + "_checkpt"
-                                )
+                            # Save the state dict of the best model
+                            best_model_state_dict = self.model.state_dict()
                         else:
                             current_patience += 1
 
@@ -491,12 +495,14 @@ class ResNetTrainer:
                             print(f"Early stopping triggered at epoch {epoch+1}")
                             break
 
-                if self.save_path is not None:
-                    print(f"Best model weights saved at epoch {best_epoch+1}")
-                    self.model.load_state_dict(torch.load(self.save_path + "_checkpt"))
+            
 
                 pbar.update(1)
-
+            # Load the best model state dict
+            if best_model_state_dict is not None:
+                self.model.load_state_dict(best_model_state_dict)
+                print(f"Best model loaded from epoch {best_epoch+1}")
+                
             self.model.eval()
             y_pred = np.array([])
             y_true = np.array([])
@@ -516,12 +522,9 @@ class ResNetTrainer:
             self.evaluator.y_true = np.array(y_true).reshape(-1)
             self.evaluator.y_pred = np.array(y_pred).reshape(-1)
             self.evaluator.y_prob = probabilities
-            score = self.evaluator.evaluate_metric(metric_name=metric)
 
             score = self.evaluator.evaluate_metric(metric_name=metric)
-            self.logger.debug(f"metric {metric}, score {score}")
             if self.evaluator.maximize[metric][0]:
-                self.logger.debug("times -1")
                 score = -1 * score
 
             # Return the negative score (to minimize)
