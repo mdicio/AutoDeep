@@ -11,10 +11,9 @@ from factory import (
 )
 import os
 import time
-from torch.profiler import profile, record_function, ProfilerActivity
 
 
-output_results_filename = "autoint"
+output_results_filename = "3060"
 DEFAULT = False
 with open("./configuration/experiment_config.yml", "r") as f:
     config = yaml.safe_load(f)
@@ -105,19 +104,16 @@ for run in runs:
 
         elif execution_mode == "hyperopt":
             max_evals = run["param_grid"]["outer_params"]["hyperopt_evals"]
-            with profile(activities=[
-                    ProfilerActivity.CPU, ProfilerActivity.CUDA], record_shapes=True, profile_memory=True,
-                    with_stack=True,) as prof:
-                best_params, best_score = model.hyperopt_search(
-                    X_train,
-                    y_train,
-                    param_grid=run["param_grid"],
-                    metric=dmetric,
-                    max_evals=max_evals,
-                    problem_type=dataset_task,
-                    extra_info=extra_info,
-                )
-            prof.export_chrome_trace("profile_results.json")
+
+            best_params, best_score = model.hyperopt_search(
+                X_train,
+                y_train,
+                param_grid=run["param_grid"],
+                metric=dmetric,
+                max_evals=max_evals,
+                problem_type=dataset_task,
+                extra_info=extra_info,
+            )
 
         elif execution_mode == "hyperopt_kfold":
             max_evals = run["param_grid"]["outer_params"]["hyperopt_evals"]

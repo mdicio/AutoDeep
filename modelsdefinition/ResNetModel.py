@@ -26,6 +26,7 @@ from modelutils.trainingutilities import (
 )
 import os
 from modelsdefinition.CommonStructure import BaseModel
+from torch.profiler import profile, record_function, ProfilerActivity
 
 
 class ResNetModel(nn.Module):
@@ -87,7 +88,6 @@ class ResNetTrainer:
         problem_type="binary_classification",
         **kwargs,
     ):
-        
         self.problem_type = problem_type
         self.num_targets = num_targets
         self.batch_size = 512
@@ -129,7 +129,6 @@ class ResNetTrainer:
         num_cpu_cores = os.cpu_count()
         # Calculate the num_workers value as number of cores - 2
         self.num_workers = max(1, num_cpu_cores - 2)
-
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -245,7 +244,6 @@ class ResNetTrainer:
         self,
         X_train,
         y_train,
-        
         img_rows,
         img_columns,
         transform,
@@ -257,30 +255,31 @@ class ResNetTrainer:
             img_columns=img_columns,
             transform=transform,
         )
-        return dataset 
-    
-    def _torch_image_dataset_to_dataloaders(self, dataset, batch_size,
-        validation_fraction):
-        num_samples = len(dataset)
+        return dataset
 
-        num_train_samples = int((1 - validation_fraction) * num_samples)
-        num_val_samples = num_samples - num_train_samples
-
-        if num_train_samples%batch_size == 1:
-            num_train_samples -=1
-            num_val_samples +=1
-
-        train_dataset, val_dataset = random_split(
-            dataset, [num_train_samples, num_val_samples]
+    def _torch_image_dataset_to_dataloaders(
+        self, dataset, batch_size, validation_fraction
+    ):
+        train_dataset, val_dataset = train_test_split(
+            dataset, test_size=validation_fraction
         )
-        
 
         train_loader = DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=True, drop_last=False, num_workers = self.num_workers, pin_memory = True
+            train_dataset,
+            batch_size=batch_size,
+            shuffle=True,
+            drop_last=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
         )
 
         val_loader = DataLoader(
-            val_dataset, batch_size=batch_size, shuffle=False, drop_last=False, num_workers = self.num_workers, pin_memory = True
+            val_dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            drop_last=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
         )
 
         return train_loader, val_loader
@@ -344,8 +343,9 @@ class ResNetTrainer:
             self.transformation,
         )
 
-        train_loader, val_loader = self._torch_image_dataset_to_dataloaders(dataset, batch_size,
-        validation_fraction)
+        train_loader, val_loader = self._torch_image_dataset_to_dataloaders(
+            dataset, batch_size, validation_fraction
+        )
 
         self.model.to(self.device)
         self.model.train()
@@ -423,11 +423,11 @@ class ResNetTrainer:
 
         self.num_features = extra_info["num_features"]
         self.transformation = transforms.Compose(
-                [
-                    transforms.ToTensor(),
-                ]
-            )
-            
+            [
+                transforms.ToTensor(),
+            ]
+        )
+
         dataset = self._pandas_to_torch_image_dataset(
             X,
             y,
@@ -441,8 +441,9 @@ class ResNetTrainer:
             self.logger.info(f"Training with hyperparameters: {params}")
             # Split the train data into training and validation sets
 
-            train_loader, val_loader = self._torch_image_dataset_to_dataloaders(dataset, params["batch_size"],
-        validation_fraction)
+            train_loader, val_loader = self._torch_image_dataset_to_dataloaders(
+                dataset, params["batch_size"], validation_fraction
+            )
 
             self.model = self.build_model(
                 self.problem_type, self.num_targets, self.depth
@@ -495,14 +496,13 @@ class ResNetTrainer:
                             print(f"Early stopping triggered at epoch {epoch+1}")
                             break
 
-            
-
                 pbar.update(1)
+
             # Load the best model state dict
             if best_model_state_dict is not None:
                 self.model.load_state_dict(best_model_state_dict)
                 print(f"Best model loaded from epoch {best_epoch+1}")
-                
+
             self.model.eval()
             y_pred = np.array([])
             y_true = np.array([])
@@ -589,7 +589,13 @@ class ResNetTrainer:
             transform=self.transformation,
         )
 
-        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers = self.num_workers, pin_memory = True)
+        test_loader = DataLoader(
+            test_dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
+        )
 
         predictions = []
         probabilities = []
@@ -616,8 +622,8 @@ class ResNetTrainer:
                 predictions.extend(preds)
 
         self.logger.debug("Model predicting success")
-        predictions = np.array(predictions)
-        probabilities = np.array(probabilities)
+        predictions = np.array(predictions).squeeze()
+        probabilities = np.array(probabilities).squeeze()
 
         self.logger.debug("Model predicting success")
 
