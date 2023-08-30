@@ -6,16 +6,19 @@ include_models:
   #- CatBoost
 
   #- MLP  # Multi-Layer Perceptron
-  #- TabNet  # TabNet Classifier 
-  #- GATE 
+  - TabNet  # TabNet Classifier 
+  - GATE 
+  - Node
+
   #- resnet18
   #- S1DCNN
   #- CategoryEmbedding
   #- FTTransformer
   #- GANDALF
-  - Node
   #- TabTransformer
   #- AutoInt
+
+  
   ####- squeezenet
   ####- LightGBM
 
