@@ -3,17 +3,17 @@ retrain: True
 # List of models to include in the experiment
 include_models:
   #- XGB  # Extreme Gradient Boosting
-  - CatBoost
+  #- CatBoost
 
   #- MLP  # Multi-Layer Perceptron
   - TabNet  # TabNet Classifier 
-  - GATE 
-  - resnet18
+  #- GATE 
+  #- resnet18
   - S1DCNN
   - CategoryEmbedding
   - FTTransformer
   - GANDALF
-  - Node
+  #- Node
   - TabTransformer
   - AutoInt
   ####- squeezenet
@@ -21,11 +21,11 @@ include_models:
 
 # List of datasets to include in the experiment
 include_datasets:
-  - creditcard  # Credit card fraud dataset
-  - heloc
+  #- creditcard  # Credit card fraud dataset
+  #- heloc
   - covertype
-  - adult
-  - housing
+  #- adult
+  #- housing
   #- iris        # Iris flower dataset
   #- titanic
   #- bufix
@@ -78,7 +78,7 @@ model_configs:
     return_extra_info: True # for dataloader
     retrain: False
 
-  tabransformer:
+  tabtransformer:
     execution_mode: hyperopt
     normalize_features: mean_std
     encode_categorical: False  #for dataloader 
@@ -186,7 +186,7 @@ dataset_configs:
       - f1
       
   covertype: 
-    num_targets: 3
+    num_targets: 7
     test_size: 0.25
     problem_type: multiclass_classification
     eval_metrics:

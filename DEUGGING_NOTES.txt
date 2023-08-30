@@ -1,0 +1,3 @@
+FTT Transformer num_attn_blocks 10 caused out of memory error
+ResNet on Adult dataset causes incoherent shapes error
+GATE and Node test parameters which cause out of memory errors

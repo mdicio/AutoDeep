@@ -240,13 +240,8 @@ class ResNetTrainer:
                 "Invalid problem_type. Supported values are 'binary', 'multiclass', and 'regression'."
             )
 
-    def _pandas_to_torch_image_dataset(
-        self,
-        X_train,
-        y_train,
-        img_rows,
-        img_columns,
-        transform,
+    def _pandas_to_torch_image_datasets(
+        self, X_train, y_train, img_rows, img_columns, transform, validation_fraction
     ):
         dataset = CustomDataset(
             data=X_train,
@@ -255,15 +250,20 @@ class ResNetTrainer:
             img_columns=img_columns,
             transform=transform,
         )
-        return dataset
 
-    def _torch_image_dataset_to_dataloaders(
-        self, dataset, batch_size, validation_fraction
-    ):
-        train_dataset, val_dataset = train_test_split(
-            dataset, test_size=validation_fraction
+        num_samples = len(dataset)
+
+        num_train_samples = int((1 - validation_fraction) * num_samples)
+        num_val_samples = num_samples - num_train_samples
+
+        train_dataset, val_dataset = random_split(
+            dataset, [num_train_samples, num_val_samples]
         )
+        return train_dataset, val_dataset
 
+    def _torch_image_datasets_to_dataloaders(
+        self, train_dataset, val_dataset, batch_size
+    ):
         train_loader = DataLoader(
             train_dataset,
             batch_size=batch_size,
@@ -335,16 +335,17 @@ class ResNetTrainer:
                 transforms.ToTensor(),
             ]
         )
-        dataset = self._pandas_to_torch_image_dataset(
+        train_dataset, val_dataset = self._pandas_to_torch_image_datasets(
             X_train,
             y_train,
             self.img_rows,
             self.img_columns,
             self.transformation,
+            validation_fraction,
         )
 
-        train_loader, val_loader = self._torch_image_dataset_to_dataloaders(
-            dataset, batch_size, validation_fraction
+        train_loader, val_loader = self._torch_image_datasets_to_dataloaders(
+            train_dataset, val_dataset, batch_size
         )
 
         self.model.to(self.device)
@@ -428,12 +429,13 @@ class ResNetTrainer:
             ]
         )
 
-        dataset = self._pandas_to_torch_image_dataset(
+        train_dataset, val_dataset = self._pandas_to_torch_image_datasets(
             X,
             y,
             self.img_rows,
             self.img_columns,
             self.transformation,
+            validation_fraction,
         )
 
         # Define the objective function for hyperopt search
@@ -441,8 +443,8 @@ class ResNetTrainer:
             self.logger.info(f"Training with hyperparameters: {params}")
             # Split the train data into training and validation sets
 
-            train_loader, val_loader = self._torch_image_dataset_to_dataloaders(
-                dataset, params["batch_size"], validation_fraction
+            train_loader, val_loader = self._torch_image_datasets_to_dataloaders(
+                train_dataset, val_dataset, params["batch_size"]
             )
 
             self.model = self.build_model(

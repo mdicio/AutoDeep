@@ -137,13 +137,10 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
                                 )
         elif (
             (isinstance(param_values[0], (str, bool)))
-            or (
-                param_name
-                in ["virtual_batch_size_ratio", "batch_size", "weights", "num_trees"]
-            )
+            or (param_name in ["virtual_batch_size_ratio", "weights", "num_trees"])
             or any(value is None for value in param_values)
         ):
-            if param_name in ["batch_size", "weights"]:
+            if param_name in ["weights"]:
                 space[param_name] = scope.int(hp.choice(param_name, param_values))
 
             else:  # If the parameter values are strings, use hp.choice

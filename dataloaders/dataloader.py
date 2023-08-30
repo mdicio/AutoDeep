@@ -710,8 +710,8 @@ class AdultDataLoader(DataLoader):
         if self.return_extra_info:
             extra_info = self.create_extra_info(
                 X_train,
-                img_rows=3,
-                img_columns=3,
+                img_rows=9,
+                img_columns=12,
                 igtd_path=f"{self.igtd_path}results/adult_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 

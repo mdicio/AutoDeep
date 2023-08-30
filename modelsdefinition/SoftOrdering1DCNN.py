@@ -242,12 +242,14 @@ class SoftOrdering1DCNN:
         elif self.problem_type == "multiclass_classification":
             y_train_tensor = torch.tensor(y_train.values, dtype=torch.long).flatten()
             classes = torch.unique(y_train_tensor)
+            print("CLASSES", classes)
             class_weights = compute_class_weight(
                 "balanced", classes=np.array(classes), y=y_train.values
             )
             class_weights = torch.tensor(class_weights, dtype=torch.float32).to(
                 self.device
             )
+            print(class_weights)
             self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, reduction="mean")
         elif self.problem_type == "regression":
             self.loss_fn = nn.MSELoss()
