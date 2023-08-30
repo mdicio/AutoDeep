@@ -149,14 +149,14 @@ class NodeTrainer(BaseModel):
         )
 
         trainer_config = TrainerConfig(
-            auto_lr_find=self.outer_params[
+            auto_lr_find=outer_params[
                 "auto_lr_find"
             ],  # Runs the LRFinder to automatically derive a learning rate
             batch_size=params["batch_size"],
-            max_epochs=self.outer_params["max_epochs"],
+            max_epochs=outer_params["max_epochs"],
             early_stopping="valid_loss",  # Monitor valid_loss for early stopping
             early_stopping_mode="min",  # Set the mode as min because for val_loss, lower is better
-            early_stopping_patience=self.outer_params[
+            early_stopping_patience=outer_params[
                 "early_stopping_patience"
             ],  # No. of epochs of degradation training will wait before terminating
             checkpoints="valid_loss",
@@ -274,9 +274,7 @@ class NodeTrainer(BaseModel):
         self.model = self.prepare_tabular_model(
             params, params["outer_params"], default=self.default
         )
-        self.logger.debug(
-            "WARNING ROGUE BATCH SIZE, REMOVING ONE OBSERVATION FROM TRAIN DATASET TO AVOID ERROR OF BATCH SIZE == 1"
-        )
+
         self.train_df = handle_rogue_batch_size(self.train_df, params["batch_size"])
 
         self.model.fit(

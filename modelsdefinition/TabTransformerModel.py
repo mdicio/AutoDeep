@@ -150,14 +150,14 @@ class TabTransformerTrainer(BaseModel):
         )
 
         trainer_config = TrainerConfig(
-            auto_lr_find=self.outer_params[
+            auto_lr_find=outer_params[
                 "auto_lr_find"
             ],  # Runs the LRFinder to automatically derive a learning rate
             batch_size=params["batch_size"],
-            max_epochs=self.outer_params["max_epochs"],
+            max_epochs=outer_params["max_epochs"],
             early_stopping="valid_loss",  # Monitor valid_loss for early stopping
             early_stopping_mode="min",  # Set the mode as min because for val_loss, lower is better
-            early_stopping_patience=self.outer_params[
+            early_stopping_patience=outer_params[
                 "early_stopping_patience"
             ],  # No. of epochs of degradation training will wait before terminating
             checkpoints="valid_loss",
