@@ -633,27 +633,8 @@ class AdultDataLoader(DataLoader):
 
     def load_data(self):
         # Load the Adult dataset from UCI Machine Learning Repository
-        data_url = (
-            "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
-        )
-        data_columns = [
-            "age",
-            "workclass",
-            "fnlwgt",
-            "education",
-            "education-num",
-            "marital-status",
-            "occupation",
-            "relationship",
-            "race",
-            "sex",
-            "capital-gain",
-            "capital-loss",
-            "hours-per-week",
-            "native-country",
-            "income",
-        ]
-        df = pd.read_csv(data_url, names=data_columns)
+
+        df = pd.read_csv(r"/home/boom/sdev/WTabRun/data/adult/adult.csv")
         # Create the "target_income" column by replacing values in the "income" column
         df["target"] = df["income"].str.strip().replace({">50K": 1, "<=50K": 0})
         df.drop(columns=["income"], inplace=True)

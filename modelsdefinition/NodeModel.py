@@ -264,6 +264,9 @@ class NodeTrainer(BaseModel):
             random_state=self.random_state,
         )
 
+        self.logger.debug(
+            f"Train and val shapes {X_train.shape}, {X_val.shape}, batch size {params['batch_size']}"
+        )
         # Merge X_train and y_train
         self.train_df = pd.concat([X_train, y_train], axis=1)
 
@@ -275,7 +278,9 @@ class NodeTrainer(BaseModel):
             params, params["outer_params"], default=self.default
         )
 
-        self.train_df = handle_rogue_batch_size(self.train_df, params["batch_size"])
+        self.train_df, self.validation_df = handle_rogue_batch_size(
+            self.train_df, self.validation_df, params["batch_size"]
+        )
 
         self.model.fit(
             train=self.train_df,
@@ -351,7 +356,10 @@ class NodeTrainer(BaseModel):
             # Opened issue on pytorch tabular for this DEBUG
             params["optimizer_params"].pop("lr", None)
 
-            self.train_df = handle_rogue_batch_size(self.train_df, params["batch_size"])
+            self.train_df, self.validation_df = handle_rogue_batch_size(
+                self.train_df, self.validation_df, params["batch_size"]
+            )
+
             model.fit(
                 train=self.train_df,
                 validation=self.validation_df,

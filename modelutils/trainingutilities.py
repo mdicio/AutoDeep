@@ -6,6 +6,7 @@ from torch.optim import Adam, SGD, AdamW
 from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau, ExponentialLR
 from scipy.stats import randint, uniform
 import random
+import pandas as pd
 
 
 def remainder_equal_one(batch_size, virtual_batch_size_ratio):
@@ -14,16 +15,35 @@ def remainder_equal_one(batch_size, virtual_batch_size_ratio):
     return remainder == 1
 
 
-def handle_rogue_batch_size(train, batch_size):
-    # pytorch doesnt like batch sizes of 1, and it happens if the last batch is 1 and drop_last batch is false.
-    if len(train) % batch_size == 1:
-        print(
-            "WARNING ROGUE BATCH SIZE, REMOVING ONE OBSERVATION FROM TRAIN DATASET TO AVOID ERROR OF BATCH SIZE == 1"
-        )
-        return train.iloc[:-1]
-
+def handle_rogue_batch_size(train, val, batch_size):
+    num_rows_to_adjust = 1
+    if len(train) % batch_size != 1 and len(val) % batch_size != 1:
+        return train, val
     else:
-        return train
+        num_rows_to_adjust = 0
+        for i in range(100):
+            print(i)
+            if len(train) % batch_size == 1:
+                num_rows_to_adjust += 1
+                removed_rows = train.iloc[
+                    -num_rows_to_adjust:
+                ]  # Select rows as a DataFrame
+                train = train.iloc[:-num_rows_to_adjust]
+                val = pd.concat([val, removed_rows], axis=0)
+                print("train c1", train.shape, val.shape)
+
+            if len(val) % batch_size == 1:
+                num_rows_to_adjust += 1
+                removed_rows = val.iloc[
+                    -num_rows_to_adjust:
+                ]  # Select rows as a DataFrame
+                val = val.iloc[:-num_rows_to_adjust]
+                train = pd.concat([train, removed_rows], axis=0)
+                print("val c1", train.shape, val.shape)
+
+            if (len(train) % batch_size != 1) and (len(val) % batch_size != 1):
+                break
+        return train, val
 
 
 def stop_on_perfect_lossCondition(x, threshold, *kwargs):

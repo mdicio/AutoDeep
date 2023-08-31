@@ -7,7 +7,7 @@ include_models:
 
   #- MLP  # Multi-Layer Perceptron
   - TabNet  # TabNet Classifier 
-  - GATE 
+  #- GATE 
   - Node
 
   #- resnet18
@@ -24,11 +24,11 @@ include_models:
 
 # List of datasets to include in the experiment
 include_datasets:
-  #- creditcard  # Credit card fraud dataset
-  #- heloc
-  #- covertype
-  #- adult
-  - housing
+  - creditcard  # Credit card fraud dataset
+  - heloc
+  - covertype
+  - adult
+  #- housing
   #- iris        # Iris flower dataset
   #- titanic
   #- bufix

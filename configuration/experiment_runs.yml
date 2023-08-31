@@ -1,228 +1,4 @@
 - dataset: housing
-  model: xgb
-  best_params: {}
-  param_grid:
-    outer_params: &id014
-      hyperopt_evals: 10
-      validation_fraction: 0.15
-      early_stopping_rounds: 30
-      verbose: false
-    n_estimators: &id015
-    - 100
-    - 5000
-    max_bin: &id016
-    - 256
-    - 32
-    tree_method: &id017
-    - auto
-    - hist
-    max_depth: &id018
-    - 4
-    - 10
-    learning_rate: &id019
-    - 0.1
-    - 0.33
-    subsample: &id020
-    - 0.7
-    - 1.0
-    colsample_bytree: &id021
-    - 0.5
-    - 1.0
-    min_child_weight: &id022
-    - 1
-    - 10
-    alpha: &id023
-    - 0.0
-    - 5.0
-    gamma: &id024
-    - 0.0
-    - 5.0
-    lambda: &id025
-    - 0.0
-    - 5.0
-- dataset: housing
-  model: mlp
-  best_params: {}
-  param_grid:
-    outer_params: &id026
-      cv_iterations: 10
-      early_stopping: true
-      cv_size: 5
-      validation_fraction: 0.15
-      n_iter_no_change: 6
-      max_iter: 1000
-    hidden_layer_sizes: &id027
-    - - 16
-      - 32
-    - - 16
-      - 8
-    - - 32
-      - 16
-    - - 128
-      - 64
-      - 32
-    activation: &id028
-    - relu
-    - tanh
-    - logistic
-    solver: &id029
-    - adam
-    - lbfgs
-    alpha: &id030
-    - 0.0001
-    - 0.001
-    - 0.01
-    learning_rate_init: &id031
-    - 0.001
-    - 0.01
-    - 0.1
-    beta_1: &id032
-    - 0.9
-    - 0.99
-    - 0.8
-    beta_2: &id033
-    - 0.999
-    - 0.9
-    batch_size: &id034
-    - 512
-    - 1024
-    - 2048
-    - 4096
-- dataset: housing
-  model: tabnet
-  best_params: {}
-  param_grid:
-    outer_params: &id035
-      hyperopt_evals: 100
-      auto_lr_find: false
-      max_epochs: 1000
-      val_size: 0.15
-      early_stopping_patience: 6
-    virtual_batch_size_ratio: &id036
-    - 0.125
-    - 0.25
-    - 0.5
-    - 1.0
-    batch_size: &id037
-    - 512
-    - 1024
-    - 2048
-    weights: &id038
-    - 0
-    - 1
-    mask_type: &id039
-    - sparsemax
-    - entmax
-    n_d: &id040
-    - 6
-    - 32
-    n_steps: &id041
-    - 1
-    - 6
-    gamma: &id042
-    - 1.0
-    - 2.0
-    n_independent: &id043
-    - 1
-    - 3
-    n_shared: &id044
-    - 1
-    - 3
-    optimizer_fn: &id045
-      Adam:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-      AdamW:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-    scheduler_fn: &id046
-      ReduceLROnPlateau:
-        factor:
-        - 0.1
-        - 0.9
-        patience:
-        - 3
-        - 5
-      ExponentialLR:
-        gamma:
-        - 0.9
-        - 0.99
-      StepLR:
-        step_size:
-        - 5
-        - 30
-        gamma:
-        - 0.9
-        - 0.99
-- dataset: housing
-  model: gate
-  best_params: {}
-  param_grid:
-    outer_params: &id047
-      hyperopt_evals: 100
-      auto_lr_find: true
-      max_epochs: 1000
-      val_size: 0.15
-      early_stopping_patience: 6
-    batch_size: &id048
-    - 512
-    - 1024
-    - 2048
-    tree_depth: &id049
-    - 4
-    - 7
-    num_trees: &id050
-    - 4
-    - 16
-    chain_trees: &id051
-    - false
-    - true
-    gflu_stages: &id052
-    - 3
-    - 8
-    gflu_dropout: &id053
-    - 0.0
-    - 0.01
-    tree_dropout: &id054
-    - 0.0
-    - 0.01
-    tree_wise_attention_dropout: &id055
-    - 0.0
-    - 0.01
-    embedding_dropout: &id056
-    - 0
-    - 0.2
-    optimizer_fn: &id057
-      Adam:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-      AdamW:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-    scheduler_fn: &id058
-      ReduceLROnPlateau:
-        factor:
-        - 0.1
-        - 0.9
-        patience:
-        - 3
-        - 5
-      ExponentialLR:
-        gamma:
-        - 0.9
-        - 0.99
-      StepLR:
-        step_size:
-        - 5
-        - 30
-        gamma:
-        - 0.9
-        - 0.99
-- dataset: housing
   model: node
   best_params: {}
   param_grid:
@@ -294,6 +70,74 @@
         - 0.9
         - 0.99
 - dataset: adult
+  model: tabnet
+  best_params: {}
+  param_grid:
+    outer_params: &id014
+      hyperopt_evals: 100
+      auto_lr_find: false
+      max_epochs: 1000
+      val_size: 0.15
+      early_stopping_patience: 6
+    virtual_batch_size_ratio: &id015
+    - 0.125
+    - 0.25
+    - 0.5
+    - 1.0
+    batch_size: &id016
+    - 512
+    - 1024
+    - 2048
+    weights: &id017
+    - 0
+    - 1
+    mask_type: &id018
+    - sparsemax
+    - entmax
+    n_d: &id019
+    - 6
+    - 32
+    n_steps: &id020
+    - 1
+    - 6
+    gamma: &id021
+    - 1.0
+    - 2.0
+    n_independent: &id022
+    - 1
+    - 3
+    n_shared: &id023
+    - 1
+    - 3
+    optimizer_fn: &id024
+      Adam:
+        weight_decay:
+        - 0.0001
+        - 1.0e-05
+      AdamW:
+        weight_decay:
+        - 0.0001
+        - 1.0e-05
+    scheduler_fn: &id025
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        - 0.9
+        patience:
+        - 3
+        - 5
+      ExponentialLR:
+        gamma:
+        - 0.9
+        - 0.99
+      StepLR:
+        step_size:
+        - 5
+        - 30
+        gamma:
+        - 0.9
+        - 0.99
+- dataset: adult
   model: node
   best_params: {}
   param_grid:
@@ -310,6 +154,22 @@
     embed_categorical: *id011
     optimizer_fn: *id012
     scheduler_fn: *id013
+- dataset: heloc
+  model: tabnet
+  best_params: {}
+  param_grid:
+    outer_params: *id014
+    virtual_batch_size_ratio: *id015
+    batch_size: *id016
+    weights: *id017
+    mask_type: *id018
+    n_d: *id019
+    n_steps: *id020
+    gamma: *id021
+    n_independent: *id022
+    n_shared: *id023
+    optimizer_fn: *id024
+    scheduler_fn: *id025
 - dataset: heloc
   model: node
   best_params: {}
@@ -331,116 +191,227 @@
   model: xgb
   best_params: {}
   param_grid:
-    outer_params: *id014
-    n_estimators: *id015
-    max_bin: *id016
-    tree_method: *id017
-    max_depth: *id018
-    learning_rate: *id019
-    subsample: *id020
-    colsample_bytree: *id021
-    min_child_weight: *id022
-    alpha: *id023
-    gamma: *id024
-    lambda: *id025
+    outer_params: &id026
+      hyperopt_evals: 10
+      validation_fraction: 0.15
+      early_stopping_rounds: 30
+      verbose: false
+    n_estimators: &id027
+    - 100
+    - 5000
+    max_bin: &id028
+    - 256
+    - 32
+    tree_method: &id029
+    - auto
+    - hist
+    max_depth: &id030
+    - 4
+    - 10
+    learning_rate: &id031
+    - 0.1
+    - 0.33
+    subsample: &id032
+    - 0.7
+    - 1.0
+    colsample_bytree: &id033
+    - 0.5
+    - 1.0
+    min_child_weight: &id034
+    - 1
+    - 10
+    alpha: &id035
+    - 0.0
+    - 5.0
+    gamma: &id036
+    - 0.0
+    - 5.0
+    lambda: &id037
+    - 0.0
+    - 5.0
 - dataset: covertype
   model: mlp
   best_params: {}
   param_grid:
-    outer_params: *id026
-    hidden_layer_sizes: *id027
-    activation: *id028
-    solver: *id029
-    alpha: *id030
-    learning_rate_init: *id031
-    beta_1: *id032
-    beta_2: *id033
-    batch_size: *id034
+    outer_params: &id038
+      cv_iterations: 10
+      early_stopping: true
+      cv_size: 5
+      validation_fraction: 0.15
+      n_iter_no_change: 6
+      max_iter: 1000
+    hidden_layer_sizes: &id039
+    - - 16
+      - 32
+    - - 16
+      - 8
+    - - 32
+      - 16
+    - - 128
+      - 64
+      - 32
+    activation: &id040
+    - relu
+    - tanh
+    - logistic
+    solver: &id041
+    - adam
+    - lbfgs
+    alpha: &id042
+    - 0.0001
+    - 0.001
+    - 0.01
+    learning_rate_init: &id043
+    - 0.001
+    - 0.01
+    - 0.1
+    beta_1: &id044
+    - 0.9
+    - 0.99
+    - 0.8
+    beta_2: &id045
+    - 0.999
+    - 0.9
+    batch_size: &id046
+    - 512
+    - 1024
+    - 2048
+    - 4096
 - dataset: covertype
   model: resnet18
   best_params: {}
   param_grid:
-    outer_params: &id059
+    outer_params: &id047
       hyperopt_evals: 10
       num_epochs: 1000
       early_stopping: true
       early_stopping_patience: 6
       validation_fraction: 0.15
-    learning_rate: &id060
+    learning_rate: &id048
     - 0.0001
     - 0.001
-    batch_size: &id061
+    batch_size: &id049
     - 512
     - 1024
     - 2048
     - 4096
-    scheduler_factor: &id062
+    scheduler_factor: &id050
     - 0.1
     - 0.9
-    scheduler_patience: &id063
+    scheduler_patience: &id051
     - 3
     - 5
 - dataset: covertype
   model: s1dcnn
   best_params: {}
   param_grid:
-    outer_params: &id064
+    outer_params: &id052
       hyperopt_evals: 10
       num_epochs: 1000
       early_stopping: true
       shuffle: true
       validation_fraction: 0.15
       early_stopping_patience: 6
-    batch_size: &id065
+    batch_size: &id053
     - 512
     - 1024
     - 2048
     - 4096
-    learning_rate: &id066
+    learning_rate: &id054
     - 0.01
     - 0.0001
-    hidden_size: &id067
+    hidden_size: &id055
     - 1024
     - 2048
     - 4096
-    scheduler_factor: &id068
+    scheduler_factor: &id056
     - 0.1
     - 0.9
-    scheduler_patience: &id069
+    scheduler_patience: &id057
     - 4
     - 7
 - dataset: covertype
   model: tabnet
   best_params: {}
   param_grid:
-    outer_params: *id035
-    virtual_batch_size_ratio: *id036
-    batch_size: *id037
-    weights: *id038
-    mask_type: *id039
-    n_d: *id040
-    n_steps: *id041
-    gamma: *id042
-    n_independent: *id043
-    n_shared: *id044
-    optimizer_fn: *id045
-    scheduler_fn: *id046
+    outer_params: *id014
+    virtual_batch_size_ratio: *id015
+    batch_size: *id016
+    weights: *id017
+    mask_type: *id018
+    n_d: *id019
+    n_steps: *id020
+    gamma: *id021
+    n_independent: *id022
+    n_shared: *id023
+    optimizer_fn: *id024
+    scheduler_fn: *id025
 - dataset: covertype
   model: gate
   best_params: {}
   param_grid:
-    outer_params: *id047
-    batch_size: *id048
-    tree_depth: *id049
-    num_trees: *id050
-    chain_trees: *id051
-    gflu_stages: *id052
-    gflu_dropout: *id053
-    tree_dropout: *id054
-    tree_wise_attention_dropout: *id055
-    embedding_dropout: *id056
-    optimizer_fn: *id057
-    scheduler_fn: *id058
+    outer_params: &id058
+      hyperopt_evals: 100
+      auto_lr_find: true
+      max_epochs: 1000
+      val_size: 0.15
+      early_stopping_patience: 6
+    batch_size: &id059
+    - 512
+    - 1024
+    - 2048
+    tree_depth: &id060
+    - 4
+    - 7
+    num_trees: &id061
+    - 4
+    - 12
+    chain_trees: &id062
+    - false
+    - true
+    gflu_stages: &id063
+    - 3
+    - 8
+    gflu_dropout: &id064
+    - 0.0
+    - 0.01
+    tree_dropout: &id065
+    - 0.0
+    - 0.01
+    tree_wise_attention_dropout: &id066
+    - 0.0
+    - 0.01
+    embedding_dropout: &id067
+    - 0
+    - 0.2
+    optimizer_fn: &id068
+      Adam:
+        weight_decay:
+        - 0.0001
+        - 1.0e-05
+      AdamW:
+        weight_decay:
+        - 0.0001
+        - 1.0e-05
+    scheduler_fn: &id069
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        - 0.9
+        patience:
+        - 3
+        - 5
+      ExponentialLR:
+        gamma:
+        - 0.9
+        - 0.99
+      StepLR:
+        step_size:
+        - 5
+        - 30
+        gamma:
+        - 0.9
+        - 0.99
 - dataset: covertype
   model: fttransformer
   best_params: {}
@@ -851,82 +822,82 @@
   model: xgb
   best_params: {}
   param_grid:
-    outer_params: *id014
-    n_estimators: *id015
-    max_bin: *id016
-    tree_method: *id017
-    max_depth: *id018
-    learning_rate: *id019
-    subsample: *id020
-    colsample_bytree: *id021
-    min_child_weight: *id022
-    alpha: *id023
-    gamma: *id024
-    lambda: *id025
+    outer_params: *id026
+    n_estimators: *id027
+    max_bin: *id028
+    tree_method: *id029
+    max_depth: *id030
+    learning_rate: *id031
+    subsample: *id032
+    colsample_bytree: *id033
+    min_child_weight: *id034
+    alpha: *id035
+    gamma: *id036
+    lambda: *id037
 - dataset: creditcard
   model: mlp
   best_params: {}
   param_grid:
-    outer_params: *id026
-    hidden_layer_sizes: *id027
-    activation: *id028
-    solver: *id029
-    alpha: *id030
-    learning_rate_init: *id031
-    beta_1: *id032
-    beta_2: *id033
-    batch_size: *id034
+    outer_params: *id038
+    hidden_layer_sizes: *id039
+    activation: *id040
+    solver: *id041
+    alpha: *id042
+    learning_rate_init: *id043
+    beta_1: *id044
+    beta_2: *id045
+    batch_size: *id046
 - dataset: creditcard
   model: resnet18
   best_params: {}
   param_grid:
-    outer_params: *id059
-    learning_rate: *id060
-    batch_size: *id061
-    scheduler_factor: *id062
-    scheduler_patience: *id063
+    outer_params: *id047
+    learning_rate: *id048
+    batch_size: *id049
+    scheduler_factor: *id050
+    scheduler_patience: *id051
 - dataset: creditcard
   model: s1dcnn
   best_params: {}
   param_grid:
-    outer_params: *id064
-    batch_size: *id065
-    learning_rate: *id066
-    hidden_size: *id067
-    scheduler_factor: *id068
-    scheduler_patience: *id069
+    outer_params: *id052
+    batch_size: *id053
+    learning_rate: *id054
+    hidden_size: *id055
+    scheduler_factor: *id056
+    scheduler_patience: *id057
 - dataset: creditcard
   model: tabnet
   best_params: {}
   param_grid:
-    outer_params: *id035
-    virtual_batch_size_ratio: *id036
-    batch_size: *id037
-    weights: *id038
-    mask_type: *id039
-    n_d: *id040
-    n_steps: *id041
-    gamma: *id042
-    n_independent: *id043
-    n_shared: *id044
-    optimizer_fn: *id045
-    scheduler_fn: *id046
+    outer_params: *id014
+    virtual_batch_size_ratio: *id015
+    batch_size: *id016
+    weights: *id017
+    mask_type: *id018
+    n_d: *id019
+    n_steps: *id020
+    gamma: *id021
+    n_independent: *id022
+    n_shared: *id023
+    optimizer_fn: *id024
+    scheduler_fn: *id025
 - dataset: creditcard
   model: gate
   best_params: {}
   param_grid:
-    outer_params: *id047
-    batch_size: *id048
-    tree_depth: *id049
-    num_trees: *id050
-    chain_trees: *id051
-    gflu_stages: *id052
-    gflu_dropout: *id053
-    tree_dropout: *id054
-    tree_wise_attention_dropout: *id055
-    embedding_dropout: *id056
-    optimizer_fn: *id057
-    scheduler_fn: *id058
+    outer_params: *id058
+    batch_size: *id059
+    tree_depth: *id060
+    num_trees: *id061
+    chain_trees: *id062
+    gflu_stages: *id063
+    gflu_dropout: *id064
+    tree_dropout: *id065
+    tree_wise_attention_dropout: *id066
+    embedding_dropout: *id067
+    optimizer_fn: *id068
+    scheduler_fn: *id069
 - dataset: creditcard
   model: fttransformer
   best_params: {}

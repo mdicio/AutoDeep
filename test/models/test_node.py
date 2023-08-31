@@ -40,7 +40,7 @@ included_models = [i.lower() for i in config["include_models"]]
 included_datasets = [i.lower() for i in config["include_datasets"]]
 
 model_name = "node"
-dataset_name = "housing"
+dataset_name = "adult"
 
 model_configs = config["model_configs"][model_name]
 encode_categorical = model_configs["encode_categorical"]
@@ -85,12 +85,12 @@ node_large_param_grid = {
         "val_size": 0.15,
         "early_stopping_patience": 6,
     },
-    "learning_rate": 0.1,
-    "batch_size": 1024,
-    "num_trees": 32,
-    "num_layers": 2,
-    "additional_tree_output_dim": 4,
-    "depth": 6,
+    # "learning_rate": 0.1,
+    "batch_size": 1831,
+    "num_trees": 84,
+    "num_layers": 1,
+    "additional_tree_output_dim": 2,
+    "depth": 5,
     "choice_function": "entmax15",
     "bin_function": "entmoid15",
     "input_dropout": 0.0,
@@ -102,7 +102,6 @@ node_large_param_grid = {
     "ReduceLROnPlateau_factor": 0.1,
     "ReduceLROnPlateau_patience": 3,
 }
-
 
 print(node_large_param_grid)
 
