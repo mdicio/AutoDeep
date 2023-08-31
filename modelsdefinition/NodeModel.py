@@ -378,7 +378,7 @@ class NodeTrainer(BaseModel):
                 self.evaluator.y_prob = probabilities
 
             # Calculate the score using the specified metric
-            self.evaluator.y_true = y_val
+            self.evaluator.y_true = pred_df["target"].values
             self.evaluator.y_pred = predictions
 
             score = self.evaluator.evaluate_metric(metric_name=metric)

@@ -206,7 +206,6 @@ class SoftOrdering1DCNN:
     def train_step(self, train_loader):
         running_loss = 0.0
         for i, (inputs, labels) in enumerate(train_loader):
-
             outputs, labels = self.process_inputs_labels(inputs, labels)
 
             self.optimizer.zero_grad()
@@ -258,9 +257,7 @@ class SoftOrdering1DCNN:
                 "Invalid problem_type. Supported values are 'binary', 'multiclass', and 'regression'."
             )
 
-    def _pandas_to_torch_datasets(
-        self, X_train, y_train, validation_fraction
-    ):
+    def _pandas_to_torch_datasets(self, X_train, y_train, validation_fraction):
         X_train_tensor = torch.tensor(X_train.values, dtype=torch.float)
         y_train_tensor = torch.tensor(
             y_train.values,
@@ -268,7 +265,7 @@ class SoftOrdering1DCNN:
         )
 
         dataset = TensorDataset(X_train_tensor, y_train_tensor)
-        
+
         num_samples = len(dataset)
 
         num_train_samples = int((1 - validation_fraction) * num_samples)
@@ -278,20 +275,26 @@ class SoftOrdering1DCNN:
             dataset, [num_train_samples, num_val_samples]
         )
         return train_dataset, val_dataset
-    
-    def _torch_datasets_to_dataloaders(
-        self, train_dataset, val_dataset, batch_size
-    ):
 
+    def _torch_datasets_to_dataloaders(self, train_dataset, val_dataset, batch_size):
         train_loader = DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=True, drop_last=False, num_workers = self.num_workers, pin_memory = True
+            train_dataset,
+            batch_size=batch_size,
+            shuffle=True,
+            drop_last=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
         )
         val_loader = DataLoader(
-            val_dataset, batch_size=batch_size, shuffle=False, drop_last=False, num_workers = self.num_workers, pin_memory = True
+            val_dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            drop_last=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
         )
 
         return train_loader, val_loader
-
 
     def load_model(self, model_path):
         """Load a trained model from a given path"""
@@ -339,7 +342,9 @@ class SoftOrdering1DCNN:
             X_train, y_train, validation_fraction
         )
 
-        train_loader, val_loader = self._torch_datasets_to_dataloaders(train_dataset, val_dataset, params["batch_size"])
+        train_loader, val_loader = self._torch_datasets_to_dataloaders(
+            train_dataset, val_dataset, params["batch_size"]
+        )
 
         self.model.to(self.device)
         self.model.train()
@@ -403,7 +408,6 @@ class SoftOrdering1DCNN:
         validation_fraction = self.outer_params.get("validation_fraction", 0.2)
         self.num_features = extra_info["num_features"]
 
-
         self._set_loss_function(y)
         self.logger.debug(f"Training on {self.device}")
 
@@ -416,8 +420,9 @@ class SoftOrdering1DCNN:
             self.logger.info(f"Training with hyperparameters: {params}")
             # Split the train data into training and validation sets
 
-            train_loader, val_loader = self._torch_datasets_to_dataloaders(train_dataset, val_dataset, params["batch_size"])
-            
+            train_loader, val_loader = self._torch_datasets_to_dataloaders(
+                train_dataset, val_dataset, params["batch_size"]
+            )
 
             self.model = self.build_model(
                 self.num_features, self.num_targets, params["hidden_size"]
@@ -490,7 +495,7 @@ class SoftOrdering1DCNN:
             y_pred, y_prob = self.predict(X_val, predict_proba=True)
             # Calculate the score using the specified metric
 
-            self.evaluator.y_true = y_val
+            self.evaluator.y_true = pred_df["target"].values
             self.evaluator.y_pred = y_pred
             self.evaluator.y_prob = y_prob
             score = self.evaluator.evaluate_metric(metric_name=metric)
@@ -550,8 +555,14 @@ class SoftOrdering1DCNN:
             transform=None,
         )
 
-        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers = self.num_workers, pin_memory = True)
-        
+        test_loader = DataLoader(
+            test_dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
+        )
+
         predictions = []
         probabilities = []
         with torch.no_grad():

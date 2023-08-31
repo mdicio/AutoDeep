@@ -272,9 +272,7 @@ class TabTransformerTrainer(BaseModel):
         self.model = self.prepare_tabular_model(
             params, params["outer_params"], default=self.default
         )
-        self.logger.debug(
-            "WARNING ROGUE BATCH SIZE, REMOVING ONE OBSERVATION FROM TRAIN DATASET TO AVOID ERROR OF BATCH SIZE == 1"
-        )
+
         self.train_df, self.validation_df = handle_rogue_batch_size(
             self.train_df, self.validation_df, params["batch_size"]
         )
@@ -375,7 +373,7 @@ class TabTransformerTrainer(BaseModel):
                 self.evaluator.y_prob = probabilities
 
             # Calculate the score using the specified metric
-            self.evaluator.y_true = y_val
+            self.evaluator.y_true = pred_df["target"].values
             self.evaluator.y_pred = predictions
 
             score = self.evaluator.evaluate_metric(metric_name=metric)

@@ -578,6 +578,8 @@ class CaliforniaHousingDataLoader(DataLoader):
 
         # Convert the dataset to a DataFrame
         df = pd.DataFrame(data.data, columns=data.feature_names)
+        df.to_csv(r"/home/boom/sdev/WTabRun/data/housing/cal_housing.csv")
+        # df = pd.read_csv(r"/home/boom/sdev/WTabRun/data/housing/cal_housing.csv")
         df[self.target_column] = data.target
 
         df["pop_density"] = df["Population"] / df["AveRooms"]
