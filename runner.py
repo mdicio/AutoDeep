@@ -13,7 +13,7 @@ import os
 import time
 
 
-output_results_filename = "3060"
+output_results_filename = "sanity_check"
 DEFAULT = False
 with open("./configuration/experiment_config.yml", "r") as f:
     config = yaml.safe_load(f)

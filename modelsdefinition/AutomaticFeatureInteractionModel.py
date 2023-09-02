@@ -201,16 +201,28 @@ class AutoIntTrainer(BaseModel):
             lr_scheduler_monitor_metric="valid_loss",
         )
 
-        valid_params = {
-            param: value
-            for param, value in params.items()
-            if param in inspect.signature(AutoIntConfig).parameters
-        }
-        if self.task == "regression":
-            valid_params["target_range"] = self.target_range
+        iedm = params.get(
+            "attn_embed_dim",
+            int(params["attn_embed_dim_multiplier"] * params["num_heads"]),
+        )
+        params["attn_embed_dim"] = iedm
 
-        self.logger.debug(f"valid parameters: {valid_params}")
-        model_config = AutoIntConfig(task=self.task, **valid_params)
+        valid_params = inspect.signature(AutoIntConfig).parameters
+        compatible_params = {
+            param: value for param, value in params.items() if param in valid_params
+        }
+        invalid_params = {
+            param: value for param, value in params.items() if param not in valid_params
+        }
+        self.logger.warning(
+            f"You are passing some invalid parameters to the model {invalid_params}"
+        )
+        if self.task == "regression":
+            compatible_params["target_range"] = self.target_range
+
+        self.logger.debug(f"valid parameters: {compatible_params}")
+
+        model_config = AutoIntConfig(task=self.task, **compatible_params)
         # override if we want to use default parameters
         if default:
             model_config = AutoIntConfig(task=self.task)

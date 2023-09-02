@@ -208,19 +208,25 @@ class FTTransformerTrainer(BaseModel):
         )
         params["input_embed_dim"] = iedm
 
-        params["attn_feature_imporetance"] = outer_params.get(
+        params["attn_feature_importance"] = outer_params.get(
             "attn_feature_importance", False
         )
-        valid_params = {
-            param: value
-            for param, value in params.items()
-            if param in inspect.signature(FTTransformerConfig).parameters
-        }
-        if self.task == "regression":
-            valid_params["target_range"] = self.target_range
 
-        self.logger.debug(f"valid parameters: {valid_params}")
-        model_config = FTTransformerConfig(task=self.task, **valid_params)
+        valid_params = inspect.signature(FTTransformerConfig).parameters
+        compatible_params = {
+            param: value for param, value in params.items() if param in valid_params
+        }
+        invalid_params = {
+            param: value for param, value in params.items() if param not in valid_params
+        }
+        self.logger.warning(
+            f"You are passing some invalid parameters to the model {invalid_params}"
+        )
+        if self.task == "regression":
+            compatible_params["target_range"] = self.target_range
+
+        self.logger.debug(f"valid parameters: {compatible_params}")
+        model_config = FTTransformerConfig(task=self.task, **compatible_params)
 
         # override if we want to use default parameters
         if default:

@@ -14,9 +14,9 @@ include_models:
   - CategoryEmbedding
   - FTTransformer
   - TabTransformer
+  - GANDALF
+  - AutoInt
 
-  #- GANDALF
-  #- AutoInt
   ####- squeezenet
   ####- LightGBM
 
@@ -24,10 +24,10 @@ include_models:
 include_datasets:
   #- creditcard  # Credit card fraud dataset
   #- heloc
-  #- covertype
+  - covertype
   - adult
   - housing
-  - iris        # Iris flower dataset
+  #- iris        # Iris flower dataset
   #- titanic
   #- bufix
   #- breastcancer

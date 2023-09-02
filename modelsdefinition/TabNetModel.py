@@ -207,17 +207,21 @@ class TabNetTrainer(BaseModel):
             lr_scheduler_monitor_metric="valid_loss",
         )
 
-        valid_params = {
-            param: value
-            for param, value in params.items()
-            if param in inspect.signature(TabNetModelConfig).parameters
+        valid_params = inspect.signature(TabNetModelConfig).parameters
+        compatible_params = {
+            param: value for param, value in params.items() if param in valid_params
         }
-
+        invalid_params = {
+            param: value for param, value in params.items() if param not in valid_params
+        }
+        self.logger.warning(
+            f"You are passing some invalid parameters to the model {invalid_params}"
+        )
         if self.task == "regression":
-            valid_params["target_range"] = self.target_range
+            compatible_params["target_range"] = self.target_range
 
-        self.logger.debug(f"valid parameters: {valid_params}")
-        model_config = TabNetModelConfig(task=self.task, **valid_params)
+        self.logger.debug(f"valid parameters: {compatible_params}")
+        model_config = TabNetModelConfig(task=self.task, **compatible_params)
 
         # override if we want to use default parameters
         if default:
