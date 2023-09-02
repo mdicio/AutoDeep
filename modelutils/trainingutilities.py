@@ -160,7 +160,10 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
                                 )
         elif (
             (isinstance(param_values[0], (str, bool)))
-            or (param_name in ["virtual_batch_size_ratio", "weights"])
+            or (
+                param_name
+                in ["virtual_batch_size_ratio", "weights", "input_embed_dim_multiplier"]
+            )
             or any(value is None for value in param_values)
         ):
             if param_name in ["weights"]:
@@ -198,7 +201,99 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
     return space
 
 
-def infer_hyperopt_space_s1dcnn(param_grid: Dict):
+def infer_hyperopt_space_pytorch_custom(param_grid: Dict):
+    # Define the hyperparameter search space
+    space = {}
+    param_grid.pop("outer_params", None)
+
+    for param_name, param_values in param_grid.items():
+        print(param_name, param_values)
+        if isinstance(param_values, dict):
+            print(param_values.keys())
+            if param_name == "optimizer_fn":
+                space[param_name] = hp.choice(
+                    param_name,
+                    [map_optimizer_str_to_class(i) for i in param_values.keys()],
+                )
+            if param_name == "scheduler_fn":
+                space[param_name] = hp.choice(
+                    param_name,
+                    [map_scheduler_str_to_class(i) for i in param_values.keys()],
+                )
+            for sparam, svalue in param_values.items():
+                print(sparam, svalue)
+                for subsparam, subvalue in svalue.items():
+                    print(subsparam, subvalue)
+                    min_value = min(subvalue)
+                    max_value = max(subvalue)
+                    newname = f"{sparam}_{subsparam.lower()}"
+                    if isinstance(subvalue[0], (str, bool)):
+                        # If the parameter values are strings, use hp.choice
+                        space[newname] = hp.choice(newname, subvalue)
+                    elif isinstance(subvalue[0], int):
+                        # If the parameter values are integers, use hp.quniform or scope.int
+                        if min_value == max_value:
+                            space[newname] = min_value
+                        else:
+                            space[newname] = scope.int(
+                                hp.quniform(newname, min_value, max_value, 1)
+                            )
+                    else:
+                        # If the parameter values are floats, use hp.loguniform or scope.float
+                        if min_value == max_value:
+                            space[newname] = min_value
+                        else:
+                            if min_value == 0.0:
+                                space[newname] = scope.float(
+                                    hp.uniform(newname, min_value, max_value)
+                                )
+                            else:
+                                space[newname] = scope.float(
+                                    hp.loguniform(
+                                        newname, np.log(min_value), np.log(max_value)
+                                    )
+                                )
+        elif (
+            (isinstance(param_values[0], (str, bool)))
+            or (param_name in ["hidden_size"])
+            or any(value is None for value in param_values)
+        ):
+            if param_name in ["weights"]:
+                space[param_name] = scope.int(hp.choice(param_name, param_values))
+
+            else:  # If the parameter values are strings, use hp.choice
+                space[param_name] = hp.choice(param_name, param_values)
+
+        elif isinstance(param_values[0], int):
+            min_value = min(param_values)
+            max_value = max(param_values)
+            # If the parameter values are integers, use hp.quniform or scope.int
+            if min_value == max_value:
+                space[param_name] = min_value
+            else:
+                space[param_name] = scope.int(
+                    hp.quniform(param_name, min_value, max_value, 1)
+                )
+        else:
+            # If the parameter values are floats, use hp.loguniform or scope.float
+            min_value = min(param_values)
+            max_value = max(param_values)
+            if min_value == max_value:
+                space[param_name] = min_value
+            else:
+                if min_value == 0.0:
+                    space[param_name] = scope.float(
+                        hp.uniform(param_name, min_value, max_value)
+                    )
+                else:
+                    space[param_name] = scope.float(
+                        hp.loguniform(param_name, np.log(min_value), np.log(max_value))
+                    )
+
+    return space
+
+
+def infer_hyperopt_space_pytorch_custom_old(param_grid: Dict):
     # Define the hyperparameter search space
     space = {}
     param_grid.pop("outer_params", None)

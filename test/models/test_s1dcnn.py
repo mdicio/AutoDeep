@@ -39,8 +39,8 @@ seed_everything(random_state)
 included_models = [i.lower() for i in config["include_models"]]
 included_datasets = [i.lower() for i in config["include_datasets"]]
 
-model_name = "node"
-dataset_name = "covertype"
+model_name = "s1dcnn"
+dataset_name = "housing"
 
 model_configs = config["model_configs"][model_name]
 encode_categorical = model_configs["encode_categorical"]
@@ -71,39 +71,30 @@ model = create_model(
     random_state=random_state,
     problem_type=dataset_task,
     num_classes=dataset_num_classes,
+    save_path=f"./output/modelsaves/{dataset_name}/{model_name}/testing/",
 )
-model.save_path = f"./output/modelsaves/{dataset_name}/{model_name}/testing/"
-
 
 # Notes
 # Learning rate
 node_large_param_grid = {
     "outer_params": {
         "hyperopt_evals": 10,
-        "auto_lr_find": False,
+        "auto_lr_find": True,
         "max_epochs": 1000,
         "val_size": 0.15,
         "early_stopping_patience": 6,
     },
-    "learning_rate": 0.1,
-    "batch_size": 4096,
-    "num_trees": 84,
-    "num_layers": 1,
-    "additional_tree_output_dim": 2,
-    "depth": 5,
-    "choice_function": "entmax15",
-    "bin_function": "entmoid15",
-    "input_dropout": 0.0,
-    "embedding_dropout": 0.0,
-    "embed_categorical": False,
+    "hidden_size": 1024,
+    "batch_size": 512,
     "optimizer_fn": AdamW,
+    "AdamW_learning_rate": 0.001,
     "AdamW_weight_decay": 0.0001,
     "scheduler_fn": ReduceLROnPlateau,
     "ReduceLROnPlateau_factor": 0.1,
     "ReduceLROnPlateau_patience": 3,
 }
-
 print(node_large_param_grid)
+model.default = False
 
 model.train(X_train, y_train, node_large_param_grid, extra_info)
 

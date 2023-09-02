@@ -21,7 +21,7 @@ import logging
 import inspect
 from evaluation.generalevaluator import *
 from modelutils.trainingutilities import (
-    infer_hyperopt_space_s1dcnn,
+    infer_hyperopt_space_pytorch_custom,
     stop_on_perfect_lossCondition,
 )
 import os
@@ -350,7 +350,7 @@ class SqueezeNetTrainer:
         num_epochs = self.outer_params.get("num_epochs", 3)
         early_stopping = self.outer_params.get("early_stopping", True)
         patience = self.outer_params["early_stopping_patience"]
-        space = infer_hyperopt_space_s1dcnn(param_grid)
+        space = infer_hyperopt_space_pytorch_custom(param_grid)
         # IGTD_ORDERING
         self.extra_info = extra_info
         index_ordering = extra_info["column_ordering"]

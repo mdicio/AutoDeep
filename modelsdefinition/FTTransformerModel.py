@@ -202,6 +202,15 @@ class FTTransformerTrainer(BaseModel):
             lr_scheduler_monitor_metric="valid_loss",
         )
 
+        iedm = params.get(
+            "input_embed_dim",
+            int(params["input_embed_dim_multiplier"] * params["num_heads"]),
+        )
+        params["input_embed_dim"] = iedm
+
+        params["attn_feature_imporetance"] = outer_params.get(
+            "attn_feature_importance", False
+        )
         valid_params = {
             param: value
             for param, value in params.items()

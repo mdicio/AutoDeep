@@ -39,8 +39,8 @@ seed_everything(random_state)
 included_models = [i.lower() for i in config["include_models"]]
 included_datasets = [i.lower() for i in config["include_datasets"]]
 
-model_name = "node"
-dataset_name = "covertype"
+model_name = "fttransformer"
+dataset_name = "housing"
 
 model_configs = config["model_configs"][model_name]
 encode_categorical = model_configs["encode_categorical"]
@@ -73,37 +73,42 @@ model = create_model(
     num_classes=dataset_num_classes,
 )
 model.save_path = f"./output/modelsaves/{dataset_name}/{model_name}/testing/"
-
+model.default = False
 
 # Notes
 # Learning rate
 node_large_param_grid = {
     "outer_params": {
         "hyperopt_evals": 10,
-        "auto_lr_find": False,
+        "auto_lr_find": True,
         "max_epochs": 1000,
         "val_size": 0.15,
-        "early_stopping_patience": 6,
+        "early_stopping_patience": 10,
     },
-    "learning_rate": 0.1,
-    "batch_size": 4096,
-    "num_trees": 84,
-    "num_layers": 1,
-    "additional_tree_output_dim": 2,
-    "depth": 5,
-    "choice_function": "entmax15",
-    "bin_function": "entmoid15",
-    "input_dropout": 0.0,
-    "embedding_dropout": 0.0,
-    "embed_categorical": False,
+    "input_embed_dim_multiplier": 6,
+    "attn_feature_importance": False,
+    "num_heads": 12,
+    "learning_rate": 0.0007179902919953625,
+    "batch_size": 2048,
+    "num_attn_blocks": 10,
+    "shared_embedding_fraction": 0.45,
+    "attn_dropout": 0.20163724049581883,
+    "add_norm_dropout": 0.0992106504569584,
+    "ff_dropout": 0.09808690887243214,
+    "ff_hidden_multiplier": 8,
+    "transformer_activation": "GEGLU",
+    "embedding_dropout": 0.056162111868724864,
+    "embedding_initialization": "kaiming_uniform",  # 'kaiming_normal']},
     "optimizer_fn": AdamW,
-    "AdamW_weight_decay": 0.0001,
+    "AdamW_weight_decay": 0.009146661940655405,
     "scheduler_fn": ReduceLROnPlateau,
-    "ReduceLROnPlateau_factor": 0.1,
+    "ReduceLROnPlateau_factor": 0.11738557751606361,
     "ReduceLROnPlateau_patience": 3,
 }
 
+
 print(node_large_param_grid)
+model.default = False
 
 model.train(X_train, y_train, node_large_param_grid, extra_info)
 

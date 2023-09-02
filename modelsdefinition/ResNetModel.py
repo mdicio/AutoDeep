@@ -4,7 +4,7 @@ import warnings
 from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
-from typing import Dict
+from typing import Dict, Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -21,7 +21,7 @@ import logging
 import inspect
 from evaluation.generalevaluator import *
 from modelutils.trainingutilities import (
-    infer_hyperopt_space_s1dcnn,
+    infer_hyperopt_space_pytorch_custom,
     stop_on_perfect_lossCondition,
 )
 import os
@@ -93,8 +93,17 @@ class ResNetTrainer:
         self.batch_size = 512
         self.pretrained = pretrained
         self.problem_type = problem_type
-        self.depth = depth
+        self.depth = None
         self.save_path = None
+        # Check if self.save_path is not None
+        if self.save_path is not None:
+            # Specify the directory path you want to create
+            directory_path = self.save_path
+
+            # Check if the directory does not exist, then create it
+            if not os.path.exists(directory_path):
+                os.makedirs(directory_path)
+                self.logger.info(f"Directory '{directory_path}' created successfully.")
         self.transformation = None
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
@@ -299,13 +308,57 @@ class ResNetTrainer:
         torch.save(self.model.state_dict(), save_path)
         print(f"Model saved successfully at {save_path}")
 
+    def _set_optimizer_schedulers(self, params, outer_params: Optional[Dict] = None):
+        if params["optimizer_fn"] == torch.optim.Adam:
+            self.optimizer = optim.Adam(
+                self.model.parameters(),
+                lr=params["Adam_learning_rate"],
+                weight_decay=params["Adam_weight_decay"],
+            )
+
+        elif params["optimizer_fn"] == torch.optim.SGD:
+            self.optimizer = optim.SGD(
+                self.model.parameters(),
+                lr=params["SGD_learning_rate"],
+                momentum=params["SGD_momentum"],
+            )
+        elif params["optimizer_fn"] == torch.optim.AdamW:
+            self.optimizer = torch.optim.AdamW(
+                self.model.parameters(),
+                lr=params["AdamW_learning_rate"],
+                weight_decay=params["AdamW_weight_decay"],
+            )
+        if params["scheduler_fn"] == torch.optim.lr_scheduler.StepLR:
+            self.scheduler = torch.optim.lr_scheduler.StepLR(
+                self.optimizer,
+                step_size=params["StepLR_step_size"],
+                gamma=params["StepLR_gamma"],
+            )
+
+        elif params["scheduler_fn"] == torch.optim.lr_scheduler.ExponentialLR:
+            self.scheduler = torch.optim.lr_scheduler.ExponentialLR(
+                self.optimizer, gamma=params["ExponentialLR_gamma"]
+            )
+
+        elif params["scheduler_fn"] == torch.optim.lr_scheduler.ReduceLROnPlateau:
+            self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                self.optimizer,
+                factor=params["ReduceLROnPlateau_factor"],
+                patience=params["ReduceLROnPlateau_patience"],
+                min_lr=0.0000001,
+                verbose=True,
+                mode="min",
+            )
+        return params
+
     def train(self, X_train, y_train, params: Dict, extra_info: Dict):
         outer_params = params["outer_params"]
         validation_fraction = outer_params.get("validation_fraction", 0.2)
-        num_epochs = outer_params.get("num_epochs", 3)
+        max_epochs = outer_params.get("max_epochs", 3)
         batch_size = params.get("batch_size", 32)
         early_stopping = outer_params.get("early_stopping", True)
         patience = params.get("early_stopping_patience", 5)
+        self.extra_info = extra_info
 
         # IGTD_ORDERING
         index_ordering = extra_info["column_ordering"]
@@ -319,15 +372,10 @@ class ResNetTrainer:
 
         self.num_features = extra_info["num_features"]
 
-        self.model = self.build_model(self.problem_type, self.num_targets, self.depth)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=params["learning_rate"])
-        self.scheduler = ReduceLROnPlateau(
-            self.optimizer,
-            mode="min",
-            factor=params["scheduler_factor"],
-            patience=params["scheduler_patience"],
-            verbose=True,
+        self.model = self.build_model(
+            self.problem_type, self.num_targets, depth=params["resnet_depth"]
         )
+        params = self._set_optimizer_schedulers(params)
         self._set_loss_function(y_train)
 
         self.transformation = transforms.Compose(
@@ -355,8 +403,8 @@ class ResNetTrainer:
         best_epoch = 0
         current_patience = 0
 
-        with tqdm(total=num_epochs, desc="Training", unit="epoch", ncols=80) as pbar:
-            for epoch in range(num_epochs):
+        with tqdm(total=max_epochs, desc="Training", unit="epoch", ncols=80) as pbar:
+            for epoch in range(max_epochs):
                 epoch_loss = self.train_step(train_loader)
 
                 if early_stopping and validation_fraction > 0:
@@ -376,7 +424,7 @@ class ResNetTrainer:
                         current_patience += 1
 
                     print(
-                        f"Epoch [{epoch+1}/{num_epochs}],"
+                        f"Epoch [{epoch+1}/{max_epochs}],"
                         f"Train Loss: {epoch_loss:.4f},"
                         f"Val Loss: {val_loss:.4f}"
                     )
@@ -403,13 +451,13 @@ class ResNetTrainer:
         *kwargs,
     ):
         self.outer_params = param_grid["outer_params"]
-        num_epochs = self.outer_params.get("num_epochs", 3)
+        max_epochs = self.outer_params.get("max_epochs", 3)
         early_stopping = self.outer_params.get("early_stopping", True)
         patience = self.outer_params.get("early_stopping_patience", 5)
         validation_fraction = self.outer_params.get("validation_fraction", 0.2)
 
         self.logger.debug(f"Training on {self.device}")
-        space = infer_hyperopt_space_s1dcnn(param_grid)
+        space = infer_hyperopt_space_pytorch_custom(param_grid)
         # IGTD_ORDERING
         self.extra_info = extra_info
         index_ordering = extra_info["column_ordering"]
@@ -448,19 +496,9 @@ class ResNetTrainer:
             )
 
             self.model = self.build_model(
-                self.problem_type, self.num_targets, self.depth
+                self.problem_type, self.num_targets, depth=params["resnet_depth"]
             )
-            self.optimizer = optim.Adam(
-                self.model.parameters(), lr=params["learning_rate"]
-            )
-            self.scheduler = ReduceLROnPlateau(
-                self.optimizer,
-                mode="min",
-                factor=params["scheduler_factor"],
-                patience=params["scheduler_patience"],
-                verbose=True,
-            )
-
+            params = self._set_optimizer_schedulers(params)
             self.model.to(self.device)
             self.model.train()
 
@@ -470,9 +508,9 @@ class ResNetTrainer:
             best_model_state_dict = None
 
             with tqdm(
-                total=num_epochs, desc="Training", unit="epoch", ncols=80
+                total=max_epochs, desc="Training", unit="epoch", ncols=80
             ) as pbar:
-                for epoch in range(num_epochs):
+                for epoch in range(max_epochs):
                     epoch_loss = self.train_step(train_loader)
 
                     if early_stopping and validation_fraction > 0:
@@ -489,7 +527,7 @@ class ResNetTrainer:
                             current_patience += 1
 
                         print(
-                            f"Epoch [{epoch+1}/{num_epochs}],"
+                            f"Epoch [{epoch+1}/{max_epochs}],"
                             f"Train Loss: {epoch_loss:.4f},"
                             f"Val Loss: {val_loss:.4f}"
                         )

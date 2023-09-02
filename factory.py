@@ -40,7 +40,7 @@ def create_model(model_name, problem_type, num_classes, **kwargs):
             return XGBoostRegressor()
         elif problem_type in ["binary_classification", "multiclass_classification"]:
             return XGBoostClassifier(problem_type, **kwargs)
-    elif mname in ["resnet18", "resnet32", "resnet50"]:
+    elif mname == "resnet":
         return ResNetTrainer(
             problem_type=problem_type, num_targets=num_classes, depth=mname, **kwargs
         )

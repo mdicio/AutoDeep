@@ -21,12 +21,13 @@ import logging
 import inspect
 from evaluation.generalevaluator import *
 from modelutils.trainingutilities import (
-    infer_hyperopt_space_s1dcnn,
+    infer_hyperopt_space_pytorch_custom,
     stop_on_perfect_lossCondition,
 )
 import os
 from modelsdefinition.CommonStructure import BaseModel
 import pytorch_lightning as pl
+
 
 class ResNetModel(nn.Module):
     def __init__(
@@ -87,7 +88,6 @@ class ResNetTrainer(pl.LightningModule):
         problem_type="binary_classification",
         **kwargs,
     ):
-        
         self.problem_type = problem_type
         self.num_targets = num_targets
         self.batch_size = 512
@@ -129,7 +129,6 @@ class ResNetTrainer(pl.LightningModule):
         num_cpu_cores = os.cpu_count()
         # Calculate the num_workers value as number of cores - 2
         self.num_workers = max(1, num_cpu_cores - 2)
-
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -245,7 +244,6 @@ class ResNetTrainer(pl.LightningModule):
         self,
         X_train,
         y_train,
-        
         img_rows,
         img_columns,
         transform,
@@ -257,30 +255,40 @@ class ResNetTrainer(pl.LightningModule):
             img_columns=img_columns,
             transform=transform,
         )
-        return dataset 
-    
-    def _torch_image_dataset_to_dataloaders(self, dataset, batch_size,
-        validation_fraction):
+        return dataset
+
+    def _torch_image_dataset_to_dataloaders(
+        self, dataset, batch_size, validation_fraction
+    ):
         num_samples = len(dataset)
 
         num_train_samples = int((1 - validation_fraction) * num_samples)
         num_val_samples = num_samples - num_train_samples
 
-        if num_train_samples%batch_size == 1:
-            num_train_samples -=1
-            num_val_samples +=1
+        if num_train_samples % batch_size == 1:
+            num_train_samples -= 1
+            num_val_samples += 1
 
         train_dataset, val_dataset = random_split(
             dataset, [num_train_samples, num_val_samples]
         )
-        
 
         train_loader = DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=True, drop_last=False, num_workers = self.num_workers, pin_memory = True
+            train_dataset,
+            batch_size=batch_size,
+            shuffle=True,
+            drop_last=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
         )
 
         val_loader = DataLoader(
-            val_dataset, batch_size=batch_size, shuffle=False, drop_last=False, num_workers = self.num_workers, pin_memory = True
+            val_dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            drop_last=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
         )
 
         return train_loader, val_loader
@@ -308,7 +316,9 @@ class ResNetTrainer(pl.LightningModule):
             self.hparams.img_columns,
             self.transformation,
         )
-        return self._torch_image_dataset_to_dataloaders(dataset, self.hparams.batch_size, self.hparams.validation_fraction)[0]
+        return self._torch_image_dataset_to_dataloaders(
+            dataset, self.hparams.batch_size, self.hparams.validation_fraction
+        )[0]
 
     def val_dataloader(self):
         dataset = self._pandas_to_torch_image_dataset(
@@ -318,8 +328,10 @@ class ResNetTrainer(pl.LightningModule):
             self.hparams.img_columns,
             self.transformation,
         )
-        return self._torch_image_dataset_to_dataloaders(dataset, self.hparams.batch_size, self.hparams.validation_fraction)[1]
-    
+        return self._torch_image_dataset_to_dataloaders(
+            dataset, self.hparams.batch_size, self.hparams.validation_fraction
+        )[1]
+
     def train(self, X_train, y_train, params: Dict, extra_info: Dict):
         outer_params = params["outer_params"]
         validation_fraction = outer_params.get("validation_fraction", 0.2)
@@ -364,8 +376,9 @@ class ResNetTrainer(pl.LightningModule):
             self.transformation,
         )
 
-        train_loader, val_loader = self._torch_image_dataset_to_dataloaders(dataset, batch_size,
-        validation_fraction)
+        train_loader, val_loader = self._torch_image_dataset_to_dataloaders(
+            dataset, batch_size, validation_fraction
+        )
 
         self.model.to(self.device)
         self.model.train()
@@ -428,7 +441,7 @@ class ResNetTrainer(pl.LightningModule):
         validation_fraction = self.outer_params.get("validation_fraction", 0.2)
 
         self.logger.debug(f"Training on {self.device}")
-        space = infer_hyperopt_space_s1dcnn(param_grid)
+        space = infer_hyperopt_space_pytorch_custom(param_grid)
         # IGTD_ORDERING
         self.extra_info = extra_info
         index_ordering = extra_info["column_ordering"]
@@ -443,11 +456,11 @@ class ResNetTrainer(pl.LightningModule):
 
         self.num_features = extra_info["num_features"]
         self.transformation = transforms.Compose(
-                [
-                    transforms.ToTensor(),
-                ]
-            )
-            
+            [
+                transforms.ToTensor(),
+            ]
+        )
+
         dataset = self._pandas_to_torch_image_dataset(
             X,
             y,
@@ -461,8 +474,9 @@ class ResNetTrainer(pl.LightningModule):
             self.logger.info(f"Training with hyperparameters: {params}")
             # Split the train data into training and validation sets
 
-            train_loader, val_loader = self._torch_image_dataset_to_dataloaders(dataset, params["batch_size"],
-        validation_fraction)
+            train_loader, val_loader = self._torch_image_dataset_to_dataloaders(
+                dataset, params["batch_size"], validation_fraction
+            )
 
             self.model = self.build_model(
                 self.problem_type, self.num_targets, self.depth
@@ -608,7 +622,13 @@ class ResNetTrainer(pl.LightningModule):
             transform=self.transformation,
         )
 
-        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers = self.num_workers, pin_memory = True)
+        test_loader = DataLoader(
+            test_dataset,
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=self.num_workers,
+            pin_memory=True,
+        )
 
         predictions = []
         probabilities = []

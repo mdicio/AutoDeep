@@ -2,7 +2,7 @@ import warnings
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
-from typing import Dict
+from typing import Optional, Dict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -17,7 +17,7 @@ import logging
 import inspect
 from evaluation.generalevaluator import *
 from modelutils.trainingutilities import (
-    infer_hyperopt_space_s1dcnn,
+    infer_hyperopt_space_pytorch_custom,
     stop_on_perfect_lossCondition,
 )
 import os
@@ -311,10 +311,53 @@ class SoftOrdering1DCNN:
         torch.save(self.model.state_dict(), save_path)
         print(f"Model saved successfully at {save_path}")
 
+    def _set_optimizer_schedulers(self, params, outer_params: Optional[Dict] = None):
+        if params["optimizer_fn"] == torch.optim.Adam:
+            self.optimizer = optim.Adam(
+                self.model.parameters(),
+                lr=params["Adam_learning_rate"],
+                weight_decay=params["Adam_weight_decay"],
+            )
+
+        elif params["optimizer_fn"] == torch.optim.SGD:
+            self.optimizer = optim.SGD(
+                self.model.parameters(),
+                lr=params["SGD_learning_rate"],
+                momentum=params["SGD_momentum"],
+            )
+        elif params["optimizer_fn"] == torch.optim.AdamW:
+            self.optimizer = torch.optim.AdamW(
+                self.model.parameters(),
+                lr=params["AdamW_learning_rate"],
+                weight_decay=params["AdamW_weight_decay"],
+            )
+        if params["scheduler_fn"] == torch.optim.lr_scheduler.StepLR:
+            self.scheduler = torch.optim.lr_scheduler.StepLR(
+                self.optimizer,
+                step_size=params["StepLR_step_size"],
+                gamma=params["StepLR_gamma"],
+            )
+
+        elif params["scheduler_fn"] == torch.optim.lr_scheduler.ExponentialLR:
+            self.scheduler = torch.optim.lr_scheduler.ExponentialLR(
+                self.optimizer, gamma=params["ExponentialLR_gamma"]
+            )
+
+        elif params["scheduler_fn"] == torch.optim.lr_scheduler.ReduceLROnPlateau:
+            self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                self.optimizer,
+                factor=params["ReduceLROnPlateau_factor"],
+                patience=params["ReduceLROnPlateau_patience"],
+                min_lr=0.0000001,
+                verbose=True,
+                mode="min",
+            )
+        return params
+
     def train(self, X_train, y_train, params: Dict, extra_info: Dict):
         outer_params = params["outer_params"]
         validation_fraction = outer_params.get("validation_fraction", 0.2)
-        num_epochs = outer_params.get("num_epochs", 3)
+        max_epochs = outer_params.get("max_epochs", 3)
         batch_size = params.get("batch_size", 32)
         early_stopping = outer_params.get("early_stopping", True)
         patience = outer_params.get("early_stopping_patience", 5)
@@ -328,14 +371,7 @@ class SoftOrdering1DCNN:
             self.num_features, self.num_targets, self.hidden_size
         )
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=params["learning_rate"])
-        self.scheduler = ReduceLROnPlateau(
-            self.optimizer,
-            mode="min",
-            factor=params["scheduler_factor"],
-            patience=params["scheduler_patience"],
-            verbose=True,
-        )
+        self._set_optimizer_schedulers(params)
         self._set_loss_function(y_train)
 
         train_dataset, val_dataset = self._pandas_to_torch_datasets(
@@ -353,8 +389,8 @@ class SoftOrdering1DCNN:
         best_epoch = 0
         current_patience = 0
 
-        with tqdm(total=num_epochs, desc="Training", unit="epoch", ncols=80) as pbar:
-            for epoch in range(num_epochs):
+        with tqdm(total=max_epochs, desc="Training", unit="epoch", ncols=80) as pbar:
+            for epoch in range(max_epochs):
                 epoch_loss = self.train_step(train_loader)
 
                 if early_stopping and validation_fraction > 0:
@@ -374,7 +410,7 @@ class SoftOrdering1DCNN:
                         current_patience += 1
 
                     print(
-                        f"Epoch [{epoch+1}/{num_epochs}],"
+                        f"Epoch [{epoch+1}/{max_epochs}],"
                         f"Train Loss: {epoch_loss:.4f},"
                         f"Val Loss: {val_loss:.4f}"
                     )
@@ -401,10 +437,10 @@ class SoftOrdering1DCNN:
         *kwargs,
     ):
         self.outer_params = param_grid["outer_params"]
-        num_epochs = self.outer_params.get("num_epochs", 3)
+        max_epochs = self.outer_params.get("max_epochs", 3)
         early_stopping = self.outer_params.get("early_stopping", True)
         patience = self.outer_params.get("early_stopping_patience", 5)
-        space = infer_hyperopt_space_s1dcnn(param_grid)
+        space = infer_hyperopt_space_pytorch_custom(param_grid)
         validation_fraction = self.outer_params.get("validation_fraction", 0.2)
         self.num_features = extra_info["num_features"]
 
@@ -428,17 +464,7 @@ class SoftOrdering1DCNN:
                 self.num_features, self.num_targets, params["hidden_size"]
             )
 
-            self.optimizer = optim.Adam(
-                self.model.parameters(), lr=params["learning_rate"]
-            )
-            self.scheduler = ReduceLROnPlateau(
-                self.optimizer,
-                mode="min",
-                factor=params["scheduler_factor"],
-                patience=params["scheduler_patience"],
-                verbose=True,
-            )
-
+            self._set_optimizer_schedulers(params)
             self.model.to(self.device)
             self.model.train()
 
@@ -448,9 +474,9 @@ class SoftOrdering1DCNN:
             best_model_state_dict = None
 
             with tqdm(
-                total=num_epochs, desc="Training", unit="epoch", ncols=80
+                total=max_epochs, desc="Training", unit="epoch", ncols=80
             ) as pbar:
-                for epoch in range(num_epochs):
+                for epoch in range(max_epochs):
                     epoch_loss = self.train_step(train_loader)
 
                     if early_stopping and validation_fraction > 0:
@@ -468,7 +494,7 @@ class SoftOrdering1DCNN:
                             current_patience += 1
 
                         print(
-                            f"Epoch [{epoch+1}/{num_epochs}],"
+                            f"Epoch [{epoch+1}/{max_epochs}],"
                             f"Train Loss: {epoch_loss:.4f},"
                             f"Val Loss: {val_loss:.4f}"
                         )
@@ -495,7 +521,7 @@ class SoftOrdering1DCNN:
             y_pred, y_prob = self.predict(X_val, predict_proba=True)
             # Calculate the score using the specified metric
 
-            self.evaluator.y_true = pred_df["target"].values
+            self.evaluator.y_true = y_val
             self.evaluator.y_pred = y_pred
             self.evaluator.y_prob = y_prob
             score = self.evaluator.evaluate_metric(metric_name=metric)
@@ -588,7 +614,7 @@ class SoftOrdering1DCNN:
                 predictions.extend(preds)
 
         self.logger.debug("Model predicting success")
-        predictions = np.array(predictions)
+        predictions = np.array(predictions).squeeze()
         probabilities = np.array(probabilities)
 
         self.logger.debug("Model predicting success")
