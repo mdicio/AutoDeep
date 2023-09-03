@@ -1,3 +1,114 @@
 FTT Transformer num_attn_blocks 10 caused out of memory error
 ResNet on Adult dataset causes incoherent shapes error
 GATE and Node test parameters which cause out of memory errors
+
+
+12. WE ARE IN RUN binary_classification for adult for model mlp
+2023-09-03 17:54:14,865 - INFO - MLP.py - Starting cross-validation maximising roc_auc metric
+Fitting 5 folds for each of 10 candidates, totalling 50 fits
+2023-09-03 18:23:14,256 - INFO - MLP.py - Best hyperparameters: {'solver': 'adam', 'learning_rate_init': 0.01, 'hidden_layer_sizes': [128, 64, 32, 16], 'beta_2': 0.9, 'beta_1': 0.8, 'batch_size': 2048, 'alpha': 0.001, 'activation': 'logistic', 'outer_params': {'cv_iterations': 10, 'early_stopping': True, 'cv_size': 5, 'validation_fraction': 0.15, 'n_iter_no_change': 6, 'max_iter': 1000}}
+2023-09-03 18:23:14,256 - INFO - MLP.py - Best score: 0.9044386172903829
+RETRAINING mlp on adult
+THESE PARAMS AFTER OPTIMIZATION GO INTO TRAIN METHOD: {'solver': 'adam', 'learning_rate_init': 0.01, 'hidden_layer_sizes': [128, 64, 32, 16], 'beta_2': 0.9, 'beta_1': 0.8, 'batch_size': 2048, 'alpha': 0.001, 'activation': 'logistic', 'outer_params': {'cv_iterations': 10, 'early_stopping': True, 'cv_size': 5, 'validation_fraction': 0.15, 'n_iter_no_change': 6, 'max_iter': 1000}}
+2023-09-03 18:23:14,256 - INFO - MLP.py - Starting training
+2023-09-03 18:23:18,320 - INFO - MLP.py - Computing predictions
+y_true.shape, y_pred.shape ((8141,), (8141,))
+13024    0
+20051    1
+27983    0
+28004    0
+20288    1
+14946    0
+4784     1
+7061     0
+28014    0
+4160     0
+Name: target, dtype: int64
+[0 1 0 0 1 0 1 0 0 0]
+Run time: 29.06 minutes
+### FINAL Metrics {'recall': 0.648469387755102, 'precision': 0.6975850713501647, 'accuracy': 0.8476845596364083, 'f1': 0.6721311475409836, 'auc': 0.9058062231525841, 'area_under_pr': 0.5369959015533748} #### 
+13. WE ARE IN RUN binary_classification for adult for model resnet
+2023-09-03 18:23:18,661 - INFO - ResNetModel.py - Device cuda is available
+batch_size [512, 1024, 2048]
+resnet_depth ['resnet18', 'resnet34', 'resnet50']
+optimizer_fn {'Adam': {'weight_decay': [1e-05, 0.001], 'learning_rate': [0.0001, 0.001]}, 'AdamW': {'weight_decay': [1e-05, 0.001], 'learning_rate': [0.0001, 0.001]}}
+dict_keys(['Adam', 'AdamW'])
+Adam {'weight_decay': [1e-05, 0.001], 'learning_rate': [0.0001, 0.001]}
+weight_decay [1e-05, 0.001]
+learning_rate [0.0001, 0.001]
+AdamW {'weight_decay': [1e-05, 0.001], 'learning_rate': [0.0001, 0.001]}
+weight_decay [1e-05, 0.001]
+learning_rate [0.0001, 0.001]
+scheduler_fn {'ReduceLROnPlateau': {'factor': [0.1, 0.9], 'patience': [3, 5]}, 'ExponentialLR': {'gamma': [0.9, 0.99]}, 'StepLR': {'step_size': [5, 10], 'gamma': [0.9, 0.99]}}
+dict_keys(['ReduceLROnPlateau', 'ExponentialLR', 'StepLR'])
+ReduceLROnPlateau {'factor': [0.1, 0.9], 'patience': [3, 5]}
+factor [0.1, 0.9]
+patience [3, 5]
+ExponentialLR {'gamma': [0.9, 0.99]}
+gamma [0.9, 0.99]
+StepLR {'step_size': [5, 10], 'gamma': [0.9, 0.99]}
+step_size [5, 10]
+gamma [0.9, 0.99]
+  0%|                                                                                                                                                                                            | 0/10 [00:00<?, ?trial/s, best loss=?]2023-09-03 18:23:18,681 - INFO - ResNetModel.py - Training with hyperparameters: {'AdamW_learning_rate': 0.00034240266638236504, 'AdamW_weight_decay': 0.00037382222549284846, 'Adam_learning_rate': 0.00014194472482598677, 'Adam_weight_decay': 3.49785527429041e-05, 'ExponentialLR_gamma': 0.9324635487474549, 'ReduceLROnPlateau_factor': 0.6639054607800692, 'ReduceLROnPlateau_patience': 3, 'StepLR_gamma': 0.9207662897302323, 'StepLR_step_size': 6, 'batch_size': 1201, 'optimizer_fn': <class 'torch.optim.adamw.AdamW'>, 'resnet_depth': 'resnet34', 'scheduler_fn': <class 'torch.optim.lr_scheduler.StepLR'>}
+Training:   0%|                                     | 0/1000 [00:00<?, ?epoch/s]
+Epoch [1/1000],Train Loss: 0.8804,Val Loss: 0.8670                                                                                                                                                                                      
+Epoch [2/1000],Train Loss: 0.7668,Val Loss: 0.6677                                                                                                                                                                                      
+Epoch [3/1000],Train Loss: 0.6575,Val Loss: 0.6495                                                                                                                                                                                      
+Epoch [4/1000],Train Loss: 0.6336,Val Loss: 0.6240                                                                                                                                                                                      
+Epoch [5/1000],Train Loss: 0.5958,Val Loss: 0.6392                                                                                                                                                                                      
+Epoch [6/1000],Train Loss: 0.5822,Val Loss: 0.6181                                                                                                                                                                                      
+Epoch [7/1000],Train Loss: 0.5614,Val Loss: 0.6516                                                                                                                                                                                      
+Epoch [8/1000],Train Loss: 0.5822,Val Loss: 0.6296                                                                                                                                                                                      
+Epoch [9/1000],Train Loss: 0.5423,Val Loss: 0.6649                                                                                                                                                                                      
+Epoch [10/1000],Train Loss: 0.5411,Val Loss: 0.6677                                                                                                                                                                                     
+Epoch [11/1000],Train Loss: 0.5226,Val Loss: 0.6656                                                                                                                                                                                     
+Epoch [12/1000],Train Loss: 0.5110,Val Loss: 0.6896                                                                                                                                                                                     
+Early stopping triggered at epoch 12                                                                                                                                                                                                    
+Training:   0%|                          | 1/1000 [00:37<10:19:41, 37.22s/epoch]                                                                                                                 | 0/10 [00:37<?, ?trial/s, best loss=?]
+Training:   0%|                          | 1/1000 [00:37<10:19:42, 37.22s/epoch]
+Best model loaded from epoch 6                                                                                                                                                                                                          
+  0%|                                                                                                                                                                                            | 0/10 [00:37<?, ?trial/s, best loss=?]job exception: Found input variables with inconsistent numbers of samples: [3663, 60]
+
+  0%|                                                                                                                                                                                            | 0/10 [00:38<?, ?trial/s, best loss=?]
+Traceback (most recent call last):
+  File "/home/boom/sdev/WTabRun/runner.py", line 108, in <module>
+    best_params, best_score = model.hyperopt_search(
+  File "/home/boom/sdev/WTabRun/modelsdefinition/ResNetModel.py", line 585, in hyperopt_search
+    best = fmin(
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/hyperopt/fmin.py", line 540, in fmin
+    return trials.fmin(
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/hyperopt/base.py", line 671, in fmin
+    return fmin(
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/hyperopt/fmin.py", line 586, in fmin
+    rval.exhaust()
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/hyperopt/fmin.py", line 364, in exhaust
+    self.run(self.max_evals - n_done, block_until_done=self.asynchronous)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/hyperopt/fmin.py", line 300, in run
+    self.serial_evaluate()
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/hyperopt/fmin.py", line 178, in serial_evaluate
+    result = self.domain.evaluate(spec, ctrl)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/hyperopt/base.py", line 892, in evaluate
+    rval = self.fn(pyll_rval)
+  File "/home/boom/sdev/WTabRun/modelsdefinition/ResNetModel.py", line 566, in objective
+    score = self.evaluator.evaluate_metric(metric_name=metric)
+  File "/home/boom/sdev/WTabRun/evaluation/generalevaluator.py", line 198, in evaluate_metric
+    return self.auc()
+  File "/home/boom/sdev/WTabRun/evaluation/generalevaluator.py", line 101, in auc
+    return roc_auc_score(self.y_true, self.y_prob)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/sklearn/utils/_param_validation.py", line 211, in wrapper
+    return func(*args, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/sklearn/metrics/_ranking.py", line 626, in roc_auc_score
+    return _average_binary_score(
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/sklearn/metrics/_base.py", line 75, in _average_binary_score
+    return binary_metric(y_true, y_score, sample_weight=sample_weight)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/sklearn/metrics/_ranking.py", line 386, in _binary_roc_auc_score
+    fpr, tpr, _ = roc_curve(y_true, y_score, sample_weight=sample_weight)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/sklearn/utils/_param_validation.py", line 184, in wrapper
+    return func(*args, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/sklearn/metrics/_ranking.py", line 1094, in roc_curve
+    fps, tps, thresholds = _binary_clf_curve(
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/sklearn/metrics/_ranking.py", line 805, in _binary_clf_curve
+    check_consistent_length(y_true, y_score, sample_weight)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/sklearn/utils/validation.py", line 409, in check_consistent_length
+    raise ValueError(
+ValueError: Found input variables with inconsistent numbers of samples: [3663, 60]

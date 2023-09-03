@@ -40,7 +40,7 @@ included_models = [i.lower() for i in config["include_models"]]
 included_datasets = [i.lower() for i in config["include_datasets"]]
 
 model_name = "autoint"
-dataset_name = "housing"
+dataset_name = "covertype"
 
 model_configs = config["model_configs"][model_name]
 encode_categorical = model_configs["encode_categorical"]
@@ -84,9 +84,10 @@ node_large_param_grid = {
         "max_epochs": 1000,
         "val_size": 0.15,
         "early_stopping_patience": 10,
+        "precision": 16,
     },
     "learning_rate": 0.0007179902919953625,
-    "batch_size": 512,
+    "batch_size": 4096,
     "num_heads": 8,
     "num_attn_blocks": 6,
     "attn_embed_dim_multiplier": 8,  # this (x) sets attn_embed_dim to be a multiple of num_heads * x

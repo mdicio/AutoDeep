@@ -149,6 +149,7 @@ class MLP(BaseModel):
         metric="accuracy",
         random_state=42,
         problem_type="binary_classification",
+        extra_info=None,
     ):
         """
         Method to perform randomized search cross-validation on the MLP model using input data.

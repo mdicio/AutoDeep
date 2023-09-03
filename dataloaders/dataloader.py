@@ -6,6 +6,9 @@ from sklearn.datasets import load_iris, fetch_california_housing, load_breast_ca
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import os
 from pathlib import Path
+from collections import Counter
+import pandas as pd
+from sklearn.utils import shuffle
 
 
 class DataLoader:
@@ -117,6 +120,40 @@ class DataLoader:
         df_0s = df[df[target_col] == 0].sample(num_0s_sampled, replace=True)
         df_1s = df[df[target_col] == 1]
         return pd.concat([df_0s, df_1s]).sample(frac=1)
+
+    def balance_multiclass_dataset(self, X, y):
+        """
+        Undersample the majority class to balance the dataset.
+
+        Args:
+            X (DataFrame): Feature matrix.
+            y (Series): Target variable.
+
+        Returns:
+            Balanced feature matrix (DataFrame) and target variable (Series).
+        """
+        # Count the occurrences of each class
+        class_counts = Counter(y)
+
+        # Determine the minimum class count
+        min_class_count = min(class_counts.values())
+
+        # Create a DataFrame with the same columns as X
+        balanced_X = pd.DataFrame(columns=X.columns)
+
+        # Undersample each class to have the same count as the minimum class count
+        for class_label in class_counts.keys():
+            class_indices = y[y == class_label].index
+            class_indices = shuffle(class_indices, random_state=self.random_state)
+            class_indices = class_indices[:min_class_count]
+            balanced_X = pd.concat([balanced_X, X.loc[class_indices]])
+
+        # Shuffle the balanced dataset
+        balanced_X, balanced_y = shuffle(
+            balanced_X, y.loc[balanced_X.index], random_state=self.random_state
+        )
+
+        return balanced_X, balanced_y
 
     def scale_features(self, X_train, X_test, mode="mean_std"):
         # Get the categorical and numerical columns
@@ -748,6 +785,9 @@ class CoverTypeDataLoader(DataLoader):
         X_train, X_test = self.scale_features(
             X_train, X_test, mode=self.normalize_features
         )
+
+        # Balance the training dataset
+        # X_train, y_train = self.balance_multiclass_dataset(X_train, y_train)
 
         extra_info = None
         if self.return_extra_info:

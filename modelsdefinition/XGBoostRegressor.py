@@ -182,7 +182,6 @@ class XGBoostRegressor(BaseModel):
 
         # Define the objective function to minimize
         def objective(params):
-            params.pop("validation_fraction")
             # Create an XGBoost model with the given hyperparameters
             model = xgb.XGBRegressor(**params)
 
