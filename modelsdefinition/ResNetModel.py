@@ -560,8 +560,11 @@ class ResNetTrainer:
 
             # Calculate the score using the specified metric
             self.evaluator.y_true = np.array(y_true).reshape(-1)
+            self.logger.debug(f"y_true, {y_true[:5]}")
             self.evaluator.y_pred = np.array(y_pred).reshape(-1)
-            self.evaluator.y_prob = probabilities
+            self.logger.debug(f"y_pred, {y_pred[:5]}")
+            self.evaluator.y_prob = y_prob
+            self.logger.debug(f"y_prob, {y_prob[:5]}, {y_prob.shape}")
 
             score = self.evaluator.evaluate_metric(metric_name=metric)
             if self.evaluator.maximize[metric][0]:

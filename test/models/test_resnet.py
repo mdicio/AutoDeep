@@ -40,7 +40,7 @@ included_models = [i.lower() for i in config["include_models"]]
 included_datasets = [i.lower() for i in config["include_datasets"]]
 
 model_name = "resnet"
-dataset_name = "housing"
+dataset_name = "heloc"
 
 model_configs = config["model_configs"][model_name]
 encode_categorical = model_configs["encode_categorical"]
@@ -80,14 +80,14 @@ node_large_param_grid = {
     "outer_params": {
         "hyperopt_evals": 10,
         "auto_lr_find": True,
-        "max_epochs": 1000,
+        "max_epochs": 2,
         "val_size": 0.15,
-        "early_stopping_patience": 6,
+        "early_stopping_patience": 2,
     },
-    "resnet_depth": "resnet50",
-    "batch_size": 512,
+    "resnet_depth": "resnet18",
+    "batch_size": 557,
     "optimizer_fn": AdamW,
-    "AdamW_learning_rate": 0.001,
+    "AdamW_learning_rate": 0.1,
     "AdamW_weight_decay": 0.0001,
     "scheduler_fn": ReduceLROnPlateau,
     "ReduceLROnPlateau_factor": 0.1,
