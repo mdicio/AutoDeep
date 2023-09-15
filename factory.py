@@ -16,6 +16,8 @@ from modelsdefinition.LightGBMModel import LightGBMTrainer
 from modelsdefinition.SoftOrdering1DCNN import SoftOrdering1DCNN
 from modelsdefinition.SqueezeNet import SqueezeNetTrainer
 from dataloaders.dataloader import *
+from dataloaders.fulldataloader import *
+
 import os
 import torch
 import numpy as np
@@ -111,5 +113,30 @@ def create_data_loader(dataset_name, test_size=0.2, **kwargs):
         return CoverTypeDataLoader(test_size=test_size, **kwargs)
     elif dname == "heloc":
         return HelocDataLoader(test_size=test_size, **kwargs)
+    else:
+        raise ValueError(f"Invalid dataset: {dataset_name}")
+
+
+def create_full_data_loader(dataset_name, test_size=0.2, **kwargs):
+    dname = dataset_name.lower().strip()
+
+    if dname == "iris":
+        return FullIrisDataLoader(test_size=test_size, **kwargs)
+    elif dname == "creditcard":
+        return FullCreditDataLoader(test_size=test_size, **kwargs)
+    elif dname == "housing":
+        return FullCaliforniaHousingDataLoader(test_size=test_size, **kwargs)
+    elif dname == "breastcancer":
+        return FullBreastCancerDataLoader(test_size=test_size, **kwargs)
+    elif dname == "titanic":
+        return FullTitanicDataLoader(test_size=test_size, **kwargs)
+    elif dname == "ageconditions":
+        return FullKaggleAgeConditionsLoader(test_size=test_size, **kwargs)
+    elif dname == "adult":
+        return FullAdultDataLoader(test_size=test_size, **kwargs)
+    elif dname == "covertype":
+        return FullCoverTypeDataLoader(test_size=test_size, **kwargs)
+    elif dname == "heloc":
+        return FullHelocDataLoader(test_size=test_size, **kwargs)
     else:
         raise ValueError(f"Invalid dataset: {dataset_name}")

@@ -1,26 +1,36 @@
-import os
 import logging
-import numpy as np
+import os
+import time
 from typing import Dict
+
 import lightgbm as lgb
-from sklearn.model_selection import train_test_split
+import numpy as np
+from hyperopt import STATUS_OK, Trials, fmin, hp, space_eval, tpe
+from hyperopt.pyll import scope
+from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    f1_score,
+    make_scorer,
+    mean_squared_error,
+    precision_score,
+    r2_score,
+    recall_score,
+    roc_auc_score,
+)
+from sklearn.model_selection import (
+    KFold,
+    RandomizedSearchCV,
+    StratifiedKFold,
+    train_test_split,
+)
+
 from evaluation.generalevaluator import Evaluator
 from modelsdefinition.CommonStructure import BaseModel
-import time
-from hyperopt import fmin, hp, space_eval, STATUS_OK, tpe, Trials
-from hyperopt.pyll import scope
-from sklearn.metrics import accuracy_score, roc_auc_score, precision_score, recall_score
-from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.metrics import f1_score, average_precision_score
-from sklearn.model_selection import KFold
-
-from sklearn.model_selection import RandomizedSearchCV
-from sklearn.metrics import make_scorer
-
 from modelutils.trainingutilities import (
+    infer_cv_space_lightgbm,
     infer_hyperopt_space,
     stop_on_perfect_lossCondition,
-    infer_cv_space_lightgbm,
 )
 
 

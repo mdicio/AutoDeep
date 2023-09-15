@@ -1,14 +1,21 @@
-import os
-import logging
 import inspect
-import numpy as np
+import logging
+import os
 from typing import Dict
-from hyperopt import fmin, hp, space_eval, STATUS_OK, tpe, Trials
-from hyperopt.pyll import scope
-from modelsdefinition.CommonStructure import BaseModel
-from sklearn.model_selection import RandomizedSearchCV, train_test_split
-from evaluation.generalevaluator import Evaluator
+
+import numpy as np
 import xgboost as xgb
+from hyperopt import STATUS_OK, Trials, fmin, hp, space_eval, tpe
+from hyperopt.pyll import scope
+from sklearn.model_selection import (
+    KFold,
+    RandomizedSearchCV,
+    StratifiedKFold,
+    train_test_split,
+)
+
+from evaluation.generalevaluator import Evaluator
+from modelsdefinition.CommonStructure import BaseModel
 from modelutils.trainingutilities import (
     infer_hyperopt_space,
     stop_on_perfect_lossCondition,
@@ -242,3 +249,153 @@ class XGBoostRegressor(BaseModel):
         )
 
         return best_params, best_score
+
+    def hyperopt_search_kfold(
+        self,
+        X,
+        y,
+        param_grid,
+        metric,
+        eval_metrics,
+        k_value=5,
+        max_evals=16,
+        problem_type="binary_classification",
+        extra_info=None,
+    ):
+        """
+        Method to perform hyperopt search cross-validation on the TabNet model using input data.
+
+        Parameters
+        ----------
+        X : ndarray
+            Input data for cross-validation.
+        y : ndarray
+            Labels for input data.
+        metric : str, optional
+            Scoring metric to use for cross-validation. Default is 'accuracy'.
+        n_iter : int, optional
+            Maximum number of evaluations of the objective function. Default is 10.
+        random_state : int, optional
+            Seed for reproducibility. Default is 42.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the best hyperparameters and corresponding score.
+        """
+
+        self.outer_params = param_grid["outer_params"]
+        # Set the number of boosting rounds (iterations) to default or use value from config
+        early_stopping_rounds = self.outer_params.get("early_stopping_rounds", 100)
+        verbose = self.outer_params.get("verbose", False)
+        param_grid.pop("outer_params")
+        # Define the hyperparameter search space
+        space = infer_hyperopt_space(param_grid)
+
+        # Define the objective function for hyperopt search
+        def objective(params):
+            self.logger.info(f"Training with hyperparameters: {params}")
+            # Create an XGBoost model with the given hyperparameters
+            model = xgb.XGBRegressor(**params)
+            # Fit the model on the training data
+            kf = KFold(n_splits=k_value, shuffle=True, random_state=42)
+
+            metric_dict = {}
+
+            for fold, (train_idx, val_idx) in enumerate(kf.split(X, y)):
+                print(f"Fold: {fold}")
+                X_train = X.iloc[train_idx]
+                y_train = y.iloc[train_idx]
+                X_val = X.iloc[val_idx]
+                y_val = y.iloc[val_idx]
+
+                eval_set = [(X_val, y_val)]
+
+                model.fit(
+                    X_train,
+                    y_train,
+                    early_stopping_rounds=early_stopping_rounds,
+                    verbose=verbose,
+                    eval_set=eval_set,
+                )
+
+                # Predict the labels of the validation data
+                y_pred = model.predict(X_val)
+
+                # Generate predictions using the XGBoost model
+                probabilities = None
+                if self.problem_type == "binary_classification":
+                    probabilities = np.array(model.predict_proba(X_val))[:, 1]
+
+                # Calculate the score using the specified metric
+                self.evaluator.y_true = y_val
+                self.evaluator.y_pred = y_pred
+                self.evaluator.y_prob = probabilities
+                self.evaluator.run_metrics = eval_metrics
+
+                # Iterate over the metric names and append values to the dictionary
+                metrics_for_fold = self.evaluator.evaluate_model()
+                for metric_name, metric_value in metrics_for_fold.items():
+                    if metric_name not in metric_dict:
+                        metric_dict[
+                            metric_name
+                        ] = []  # Initialize a list for this metric
+                    metric_dict[metric_name].append(metric_value)
+
+                print(f"Kfold {fold} scores {metric} = {metric_dict[metric_name]}")
+
+            # average score over the folds
+            score_average = np.average(metric_dict[metric_name])
+            score_std = np.std(metric_dict[metric_name])
+
+            print(f"Current score {score_average}")
+
+            if self.evaluator.maximize[metric][0]:
+                score_average = -1 * score_average
+
+            # Return the negative score (to minimize)
+            return {
+                "loss": score_average,
+                "params": params,
+                "status": STATUS_OK,
+                "trained_model": model,
+                "score_std": score_std,
+                "full_metrics": metric_dict,
+            }
+
+        # Define the trials object to keep track of the results
+        trials = Trials()
+        self.evaluator = Evaluator(problem_type=problem_type)
+        threshold = float(-1.0 * self.evaluator.maximize[metric][0])
+
+        # Run the hyperopt search
+        best = fmin(
+            objective,
+            space=space,
+            algo=tpe.suggest,
+            max_evals=max_evals,
+            trials=trials,
+            rstate=np.random.default_rng(self.random_state),
+            early_stop_fn=lambda x: stop_on_perfect_lossCondition(x, threshold),
+        )
+
+        # Get the best hyperparameters and corresponding score
+        best_params = space_eval(space, best)
+        best_params["outer_params"] = self.outer_params
+
+        best_trial = trials.best_trial
+
+        best_score = best_trial["result"]["loss"]
+        if self.evaluator.maximize[metric][0]:
+            best_score = -1 * best_score
+        score_std = best_trial["result"]["score_std"]
+        full_metrics = best_trial["result"]["full_metrics"]
+        self.best_model = best_trial["result"]["trained_model"]
+        self._load_best_model()
+
+        self.logger.info(f"Best hyperparameters: {best_params}")
+        self.logger.info(
+            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {-best_score}"
+        )
+
+        return best_params, best_score, score_std, full_metrics

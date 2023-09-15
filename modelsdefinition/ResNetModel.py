@@ -26,6 +26,7 @@ from modelutils.trainingutilities import (
 )
 import os
 from modelsdefinition.CommonStructure import BaseModel
+from sklearn.model_selection import KFold, StratifiedKFold
 from torch.profiler import profile, record_function, ProfilerActivity
 
 

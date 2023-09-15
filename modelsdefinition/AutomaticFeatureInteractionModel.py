@@ -1,36 +1,31 @@
-import os
-import logging
 import inspect
+import logging
+import os
+from typing import Dict
 
 import numpy as np
 import pandas as pd
-from typing import Dict
 import torch
 import torch.nn as nn
 from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
-from sklearn.model_selection import KFold
-
-from torch.optim import Adam, SGD
-from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau, ExponentialLR
 
 # pip install pytorch_tabular[extra]
 from pytorch_tabular import TabularModel
-from pytorch_tabular.config import (
-    DataConfig,  # ExperimentConfig,
-    OptimizerConfig,
-    TrainerConfig,
-)
+from pytorch_tabular.config import DataConfig  # ExperimentConfig,
+from pytorch_tabular.config import OptimizerConfig, TrainerConfig
 from pytorch_tabular.models import AutoIntConfig
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
 from sklearn.utils.class_weight import compute_class_weight
+from torch.optim import SGD, Adam
+from torch.optim.lr_scheduler import ExponentialLR, ReduceLROnPlateau, StepLR
 
 from evaluation.generalevaluator import Evaluator
 from modelsdefinition.CommonStructure import BaseModel
 from modelutils.trainingutilities import (
-    infer_hyperopt_space_pytorch_tabular,
-    stop_on_perfect_lossCondition,
     calculate_possible_fold_sizes,
     handle_rogue_batch_size,
+    infer_hyperopt_space_pytorch_tabular,
+    stop_on_perfect_lossCondition,
 )
 
 
@@ -438,6 +433,7 @@ class AutoIntTrainer(BaseModel):
         y,
         param_grid,
         metric,
+        eval_metrics,
         k_value=5,
         max_evals=16,
         problem_type="binary_classification",
@@ -464,11 +460,15 @@ class AutoIntTrainer(BaseModel):
         dict
             Dictionary containing the best hyperparameters and corresponding score.
         """
+
         self.logger.info(f"Starting hyperopt search maximising {metric} metric")
         self.extra_info = extra_info
         self.outer_params = param_grid["outer_params"]
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
+
+        if (self.problem_type == "regression") and not hasattr(self, "target_range"):
+            self.target_range = [(float(np.min(y) * 0.5), float(np.max(y) * 1.5))]
 
         # Merge X_train and y_train
         train = pd.concat([X, y], axis=1)
@@ -482,8 +482,11 @@ class AutoIntTrainer(BaseModel):
             model = self.prepare_tabular_model(
                 params, self.outer_params, default=self.default
             )
+            if self.problem_type == "regression":
+                kf = KFold(n_splits=k_value, shuffle=True, random_state=42)
 
-            kf = KFold(n_splits=k_value, shuffle=True, random_state=42)
+            else:
+                kf = StratifiedKFold(n_splits=k_value, shuffle=True, random_state=42)
 
             # Loop through each element in the list
             for fold_length in possible_fold_sizes:
@@ -497,8 +500,11 @@ class AutoIntTrainer(BaseModel):
                     train.drop(random_index, inplace=True)
                     break
 
-            aggregate_score = 0
-            for fold, (train_idx, val_idx) in enumerate(kf.split(train)):
+            metric_dict = {}
+
+            for fold, (train_idx, val_idx) in enumerate(
+                kf.split(train.drop(columns=["target"]), train["target"])
+            ):
                 print(f"Fold: {fold}")
                 train_fold = train.iloc[train_idx]
                 val_fold = train.iloc[val_idx]
@@ -516,9 +522,7 @@ class AutoIntTrainer(BaseModel):
                     validation=val_fold,
                     loss=self.loss_fn,
                     optimizer=params["optimizer_fn"],
-                    optimizer_params=params["optimizer_params"]
-                    # lr_scheduler=params["scheduler_fn"],
-                    # lr_scheduler_params=params["scheduler_params"],
+                    optimizer_params=params["optimizer_params"],
                 )
 
                 # Predict the labels of the validation data
@@ -531,24 +535,37 @@ class AutoIntTrainer(BaseModel):
                 # Calculate the score using the specified metric
                 self.evaluator.y_true = val_fold["target"].values
                 self.evaluator.y_pred = predictions
-                current_score = self.evaluator.evaluate_metric(metric_name=metric)
-                print(f"Kfold {fold} score {metric} = {current_score}")
-                aggregate_score += current_score
+                self.evaluator.run_metrics = eval_metrics
+
+                # Iterate over the metric names and append values to the dictionary
+                metrics_for_fold = self.evaluator.evaluate_model()
+                for metric_name, metric_value in metrics_for_fold.items():
+                    if metric_name not in metric_dict:
+                        metric_dict[
+                            metric_name
+                        ] = []  # Initialize a list for this metric
+                    metric_dict[metric_name].append(metric_value)
+
+                print(f"Kfold {fold} scores {metric} = {metric_dict[metric_name]}")
 
                 self.logger.info(f"Training with hyperparameters: {params}")
             # average score over the folds
-            score = aggregate_score / k_value
-            print(f"Current score {score}")
+            score_average = np.average(metric_dict[metric_name])
+            score_std = np.std(metric_dict[metric_name])
+
+            print(f"Current score {score_average}")
 
             if self.evaluator.maximize[metric][0]:
-                score = -1 * score
+                score_average = -1 * score_average
 
             # Return the negative score (to minimize)
             return {
-                "loss": score,
+                "loss": score_average,
                 "params": params,
                 "status": STATUS_OK,
                 "trained_model": model,
+                "score_std": score_std,
+                "full_metrics": metric_dict,
             }
 
         # Define the trials object to keep track of the results
@@ -572,7 +589,12 @@ class AutoIntTrainer(BaseModel):
         best_params["outer_params"] = self.outer_params
 
         best_trial = trials.best_trial
+
         best_score = best_trial["result"]["loss"]
+        if self.evaluator.maximize[metric][0]:
+            best_score = -1 * best_score
+        score_std = best_trial["result"]["score_std"]
+        full_metrics = best_trial["result"]["full_metrics"]
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
@@ -581,7 +603,7 @@ class AutoIntTrainer(BaseModel):
             f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {-best_score}"
         )
 
-        return best_params, best_score
+        return best_params, best_score, score_std, full_metrics
 
     def predict(self, X_test, predict_proba=False):
         """
