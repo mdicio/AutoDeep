@@ -83,6 +83,7 @@ class NodeTrainer(BaseModel):
         self.prediction_col = [
             "target_prediction" if self.problem_type == "regression" else "prediction"
         ][0]
+        self.default = False
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -477,9 +478,9 @@ class NodeTrainer(BaseModel):
 
         # Merge X_train and y_train
         train = pd.concat([X, y], axis=1)
+        train.reset_index(drop=True, inplace=True)
 
         self.logger.debug(f"Full df shape : {train.shape}")
-        possible_fold_sizes = calculate_possible_fold_sizes(len(X), k_value)
 
         # Define the objective function for hyperopt search
         def objective(params):
@@ -493,28 +494,23 @@ class NodeTrainer(BaseModel):
             else:
                 kf = StratifiedKFold(n_splits=k_value, shuffle=True, random_state=42)
 
-            # Loop through each element in the list
-            for fold_length in possible_fold_sizes:
-                if fold_length % params["batch_size"] == 1:
-                    self.logger.debug(
-                        "Fold size and virtual batch size would cause a problem, so removing one observation"
-                    )
-                    # Get a random index from the DataFrame
-                    random_index = train.sample().index
-                    # Remove the row with the random index
-                    train.drop(random_index, inplace=True)
-                    break
-
             metric_dict = {}
 
             for fold, (train_idx, val_idx) in enumerate(
                 kf.split(train.drop(columns=["target"]), train["target"])
             ):
-                print(f"Fold: {fold}")
+                self.logger.info(f"Fold: {fold}")
                 train_fold = train.iloc[train_idx]
                 val_fold = train.iloc[val_idx]
+                train_fold, val_fold = handle_rogue_batch_size(
+                    train_fold, val_fold, params["batch_size"]
+                )
                 self.logger.debug(f"Train fold shape : {train_fold.shape}")
                 self.logger.debug(f"Val fold shape : {val_fold.shape}")
+                self.logger.debug(
+                    f"Train fold target shape : {train_fold['target'].shape}"
+                )
+                self.logger.debug(f"Val fold target shape : {val_fold['target'].shape}")
                 # Initialize the tabular model
                 model = self.prepare_tabular_model(
                     params, self.outer_params, default=self.default
@@ -550,15 +546,11 @@ class NodeTrainer(BaseModel):
                             metric_name
                         ] = []  # Initialize a list for this metric
                     metric_dict[metric_name].append(metric_value)
-
-                print(f"Kfold {fold} scores {metric} = {metric_dict[metric_name]}")
-
-                self.logger.info(f"Training with hyperparameters: {params}")
             # average score over the folds
             score_average = np.average(metric_dict[metric_name])
             score_std = np.std(metric_dict[metric_name])
 
-            print(f"Current score {score_average}")
+            self.logger.info(f"Current hyperopt score {score_average}")
 
             if self.evaluator.maximize[metric][0]:
                 score_average = -1 * score_average

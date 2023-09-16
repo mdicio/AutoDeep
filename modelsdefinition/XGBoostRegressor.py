@@ -303,7 +303,7 @@ class XGBoostRegressor(BaseModel):
             metric_dict = {}
 
             for fold, (train_idx, val_idx) in enumerate(kf.split(X, y)):
-                print(f"Fold: {fold}")
+                self.logger.info(f"Fold: {fold}")
                 X_train = X.iloc[train_idx]
                 y_train = y.iloc[train_idx]
                 X_val = X.iloc[val_idx]
@@ -342,13 +342,11 @@ class XGBoostRegressor(BaseModel):
                         ] = []  # Initialize a list for this metric
                     metric_dict[metric_name].append(metric_value)
 
-                print(f"Kfold {fold} scores {metric} = {metric_dict[metric_name]}")
-
             # average score over the folds
             score_average = np.average(metric_dict[metric_name])
             score_std = np.std(metric_dict[metric_name])
 
-            print(f"Current score {score_average}")
+            self.logger.info(f"Current hyperopt score {score_average}")
 
             if self.evaluator.maximize[metric][0]:
                 score_average = -1 * score_average
