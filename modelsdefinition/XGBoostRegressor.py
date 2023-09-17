@@ -303,7 +303,6 @@ class XGBoostRegressor(BaseModel):
             metric_dict = {}
 
             for fold, (train_idx, val_idx) in enumerate(kf.split(X, y)):
-                self.logger.info(f"Fold: {fold}")
                 X_train = X.iloc[train_idx]
                 y_train = y.iloc[train_idx]
                 X_val = X.iloc[val_idx]
@@ -335,18 +334,20 @@ class XGBoostRegressor(BaseModel):
 
                 # Iterate over the metric names and append values to the dictionary
                 metrics_for_fold = self.evaluator.evaluate_model()
-                for metric_name, metric_value in metrics_for_fold.items():
-                    if metric_name not in metric_dict:
-                        metric_dict[
-                            metric_name
-                        ] = []  # Initialize a list for this metric
-                    metric_dict[metric_name].append(metric_value)
+                for metric_nm, metric_value in metrics_for_fold.items():
+                    if metric_nm not in metric_dict:
+                        metric_dict[metric_nm] = []  # Initialize a list for this metric
+                    metric_dict[metric_nm].append(metric_value)
+
+                self.logger.info(
+                    f"Fold: {fold +1} metrics {metric}: {metric_dict[metric]}"
+                )
 
             # average score over the folds
-            score_average = np.average(metric_dict[metric_name])
-            score_std = np.std(metric_dict[metric_name])
+            score_average = np.average(metric_dict[metric])
+            score_std = np.std(metric_dict[metric])
 
-            self.logger.info(f"Current hyperopt score {score_average}")
+            self.logger.info(f"Current hyperopt score {metric} = {score_average}")
 
             if self.evaluator.maximize[metric][0]:
                 score_average = -1 * score_average
