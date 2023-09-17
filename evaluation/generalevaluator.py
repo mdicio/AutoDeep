@@ -143,7 +143,7 @@ class Evaluator:
             results["mse"] = self.mse()
 
         if "mae" in self.run_metrics:
-            results["mse"] = self.mae()
+            results["mae"] = self.mae()
 
         if "rmse" in self.run_metrics:
             results["rmse"] = self.rmse()
@@ -158,13 +158,10 @@ class Evaluator:
             results["f1"] = self.f1()
 
         if "roc_auc" in self.run_metrics:
-            results["auc"] = self.auc()
+            results["roc_auc"] = self.auc()
 
         if "area_under_pr" in self.run_metrics:
             results["area_under_pr"] = self.area_under_pr()
-
-        if "confusion_matrix" in self.run_metrics:
-            results["confusion_matrix"] = self.confusion_matrix()
 
         return results
 
@@ -202,9 +199,5 @@ class Evaluator:
 
         if metric_name == "area_under_pr":
             return self.area_under_pr()
-
-        if metric_name == "confusion_matrix":
-            return self.confusion_matrix()
-
         else:
             raise ValueError(f"Invalid metric name: {metric_name}")

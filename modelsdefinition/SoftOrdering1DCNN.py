@@ -14,7 +14,7 @@ from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from tqdm import tqdm
 import os
 import logging
-import inspect
+from sklearn.model_selection import KFold, StratifiedKFold
 from evaluation.generalevaluator import *
 from modelutils.trainingutilities import (
     infer_hyperopt_space_pytorch_custom,
@@ -174,6 +174,8 @@ class SoftOrdering1DCNN:
         num_cpu_cores = os.cpu_count()
         # Calculate the num_workers value as number of cores - 2
         self.num_workers = max(1, num_cpu_cores - 4)
+        # set  to 0 if not causes error with kfold on macos
+        self.num_workers = 0
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -275,6 +277,17 @@ class SoftOrdering1DCNN:
             dataset, [num_train_samples, num_val_samples]
         )
         return train_dataset, val_dataset
+
+    def _single_pandas_to_torch_image_dataset(self, X_train, y_train):
+        X_train_tensor = torch.tensor(X_train.values, dtype=torch.float)
+        y_train_tensor = torch.tensor(
+            y_train.values,
+            dtype=torch.float if self.problem_type == "regression" else torch.long,
+        )
+
+        dataset = TensorDataset(X_train_tensor, y_train_tensor)
+
+        return dataset
 
     def _torch_datasets_to_dataloaders(self, train_dataset, val_dataset, batch_size):
         train_loader = DataLoader(
@@ -571,6 +584,217 @@ class SoftOrdering1DCNN:
         )
 
         return best_params, best_score
+
+    def hyperopt_search_kfold(
+        self,
+        X,
+        y,
+        param_grid,
+        metric,
+        eval_metrics,
+        k_value=5,
+        max_evals=16,
+        problem_type="binary_classification",
+        extra_info=None,
+    ):
+        """
+        Method to perform hyperopt search cross-validation on the TabNet model using input data.
+
+        Parameters
+        ----------
+        X : ndarray
+            Input data for cross-validation.
+        y : ndarray
+            Labels for input data.
+        metric : str, optional
+            Scoring metric to use for cross-validation. Default is 'accuracy'.
+        n_iter : int, optional
+            Maximum number of evaluations of the objective function. Default is 10.
+        random_state : int, optional
+            Seed for reproducibility. Default is 42.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the best hyperparameters and corresponding score.
+        """
+
+        self.outer_params = param_grid["outer_params"]
+        max_epochs = self.outer_params.get("max_epochs", 3)
+        early_stopping = self.outer_params.get("early_stopping", True)
+        patience = self.outer_params.get("early_stopping_patience", 5)
+        space = infer_hyperopt_space_pytorch_custom(param_grid)
+        validation_fraction = self.outer_params.get("validation_fraction", 0.2)
+        self.num_features = extra_info["num_features"]
+
+        self._set_loss_function(y)
+        self.logger.debug(f"Training on {self.device}")
+
+        self.torch_dataset = self._single_pandas_to_torch_image_dataset(X, y)
+
+        # Define the objective function for hyperopt search
+        def objective(params):
+            self.logger.info(f"Training with hyperparameters: {params}")
+            if self.problem_type == "regression":
+                kf = KFold(n_splits=k_value, shuffle=True, random_state=42)
+
+            else:
+                kf = StratifiedKFold(n_splits=k_value, shuffle=True, random_state=42)
+
+            metric_dict = {}
+
+            for fold, (train_idx, val_idx) in enumerate(kf.split(X, y)):
+                train_subsampler = torch.utils.data.SubsetRandomSampler(train_idx)
+                test_subsampler = torch.utils.data.SubsetRandomSampler(val_idx)
+
+                train_loader = torch.utils.data.DataLoader(
+                    self.torch_dataset,
+                    batch_size=params["batch_size"],
+                    sampler=train_subsampler,
+                    drop_last=False,
+                    num_workers=self.num_workers,
+                    pin_memory=True,
+                )
+                val_loader = torch.utils.data.DataLoader(
+                    self.torch_dataset,
+                    batch_size=params["batch_size"],
+                    sampler=test_subsampler,
+                    drop_last=False,
+                    num_workers=self.num_workers,
+                    pin_memory=True,
+                )
+
+                self.model = self.build_model(
+                    self.num_features, self.num_targets, params["hidden_size"]
+                )
+
+                self._set_optimizer_schedulers(params)
+                self.model.to(self.device)
+                self.model.train()
+
+                best_val_loss = float("inf")
+                best_epoch = 0
+                current_patience = 0
+                best_model_state_dict = None
+
+                with tqdm(
+                    total=max_epochs, desc="Training", unit="epoch", ncols=80
+                ) as pbar:
+                    for epoch in range(max_epochs):
+                        epoch_loss = self.train_step(train_loader)
+
+                        if early_stopping and validation_fraction > 0:
+                            val_loss = self.validate_step(val_loader)
+                            self.scheduler.step(val_loss)
+
+                            if val_loss < best_val_loss:
+                                best_val_loss = val_loss
+                                best_epoch = epoch
+                                current_patience = 0
+                                # Save the state dict of the best model
+                                best_model_state_dict = self.model.state_dict()
+
+                            else:
+                                current_patience += 1
+
+                            print(
+                                f"Epoch [{epoch+1}/{max_epochs}],"
+                                f"Train Loss: {epoch_loss:.4f},"
+                                f"Val Loss: {val_loss:.4f}"
+                            )
+                            if current_patience >= patience:
+                                print(
+                                    f"Early stopping triggered at epoch {epoch+1} with best epoch {best_epoch+1}"
+                                )
+                                break
+
+                    pbar.update(1)
+
+                # Load the best model state dict
+                if best_model_state_dict is not None:
+                    self.model.load_state_dict(best_model_state_dict)
+                    print(f"Best model loaded from epoch {best_epoch+1}")
+
+                # Assuming you have a PyTorch DataLoader object for the validation set called `val_loader`
+                # Convert dataloader to pandas DataFrames
+                X_val, y_val = pd.DataFrame(), pd.DataFrame()
+                for X_batch, y_batch in val_loader:
+                    X_val = pd.concat([X_val, pd.DataFrame(X_batch.numpy())])
+                    y_val = pd.concat([y_val, pd.DataFrame(y_batch.numpy())])
+
+                y_pred, y_prob = self.predict(X_val, predict_proba=True)
+                # Calculate the score using the specified metric
+
+                self.evaluator.y_true = y_val
+                self.evaluator.y_pred = y_pred
+                self.evaluator.y_prob = y_prob
+                self.evaluator.run_metrics = eval_metrics
+
+                # Iterate over the metric names and append values to the dictionary
+                metrics_for_fold = self.evaluator.evaluate_model()
+                for metric_nm, metric_value in metrics_for_fold.items():
+                    if metric_nm not in metric_dict:
+                        metric_dict[metric_nm] = []  # Initialize a list for this metric
+                    metric_dict[metric_nm].append(metric_value)
+
+                self.logger.info(
+                    f"Fold: {fold +1} metrics {metric}: {metric_dict[metric]}"
+                )
+            # average score over the folds
+            score_average = np.average(metric_dict[metric])
+            score_std = np.std(metric_dict[metric])
+
+            self.logger.info(f"Current hyperopt score {metric} = {score_average}")
+
+            if self.evaluator.maximize[metric][0]:
+                score_average = -1 * score_average
+
+            # Return the negative score (to minimize)
+            return {
+                "loss": score_average,
+                "params": params,
+                "status": STATUS_OK,
+                "trained_model": self.model,
+                "score_std": score_std,
+                "full_metrics": metric_dict,
+            }
+
+        # Define the trials object to keep track of the results
+        trials = Trials()
+        self.evaluator = Evaluator(problem_type=problem_type)
+        threshold = float(-1.0 * self.evaluator.maximize[metric][0])
+
+        # Run the hyperopt search
+        best = fmin(
+            objective,
+            space=space,
+            algo=tpe.suggest,
+            max_evals=max_evals,
+            trials=trials,
+            rstate=np.random.default_rng(self.random_state),
+            early_stop_fn=lambda x: stop_on_perfect_lossCondition(x, threshold),
+        )
+
+        # Get the best hyperparameters and corresponding score
+        best_params = space_eval(space, best)
+        best_params["outer_params"] = self.outer_params
+
+        best_trial = trials.best_trial
+
+        best_score = best_trial["result"]["loss"]
+        if self.evaluator.maximize[metric][0]:
+            best_score = -1 * best_score
+        score_std = best_trial["result"]["score_std"]
+        full_metrics = best_trial["result"]["full_metrics"]
+        self.best_model = best_trial["result"]["trained_model"]
+        self._load_best_model()
+
+        self.logger.info(f"Best hyperparameters: {best_params}")
+        self.logger.info(
+            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {-best_score}"
+        )
+
+        return best_params, best_score, score_std, full_metrics
 
     def predict(self, X_test, predict_proba=False, batch_size=4096):
         self.model.to(self.device)

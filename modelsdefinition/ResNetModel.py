@@ -138,7 +138,8 @@ class ResNetTrainer:
         # Get the number of available CPU cores
         num_cpu_cores = os.cpu_count()
         # Calculate the num_workers value as number of cores - 2
-        self.num_workers = max(1, num_cpu_cores - 2)
+        self.num_workers = max(1, num_cpu_cores - 4)
+        self.num_workers = 0
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -818,7 +819,7 @@ class ResNetTrainer:
                 "loss": score_average,
                 "params": params,
                 "status": STATUS_OK,
-                "trained_model": model,
+                "trained_model": self.model,
                 "score_std": score_std,
                 "full_metrics": metric_dict,
             }
