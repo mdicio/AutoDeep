@@ -5,15 +5,15 @@ include_models:
   #- XGB  # Extreme Gradient Boosting
   #- CatBoost
   #- MLP  # Multi-Layer Perceptron
-  #- TabNet  # TabNet Classifier 
-  #- GATE 
-  #- Node
+  - TabNet  # TabNet Classifier 
+  - GATE 
+  - Node
   #- resnet
   #- S1DCNN
-  #- CategoryEmbedding
-  #- FTTransformer
-  #- TabTransformer
-  #- GANDALF
+  - CategoryEmbedding
+  - FTTransformer
+  - TabTransformer
+  - GANDALF
   - AutoInt
 
   ####- squeezenet
@@ -21,15 +21,15 @@ include_models:
 
 # List of datasets to include in the experiment
 include_datasets:
-  - iris        # Iris flower dataset
+  #- iris        # Iris flower dataset
   #- titanic
-  - breastcancer
+  #- breastcancer
   #- ageconditions
   #- adult
   #- housing
-  #- creditcard  # Credit card fraud dataset
+  - creditcard  # Credit card fraud dataset
   #- heloc
-  #- covertype
+  - covertype
   
   
 

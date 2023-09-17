@@ -1,16 +1,21 @@
-import os
-import logging
 import inspect
-import numpy as np
+import logging
+import os
 from typing import Dict
-from hyperopt import fmin, hp, space_eval, STATUS_OK, tpe, Trials
-from hyperopt.pyll import scope
-from sklearn.model_selection import KFold, StratifiedKFold
-from modelsdefinition.CommonStructure import BaseModel
-from sklearn.model_selection import KFold, StratifiedKFold
-from sklearn.model_selection import RandomizedSearchCV, train_test_split
-from evaluation.generalevaluator import Evaluator
+
+import numpy as np
 import xgboost as xgb
+from hyperopt import STATUS_OK, Trials, fmin, hp, space_eval, tpe
+from hyperopt.pyll import scope
+from sklearn.model_selection import (
+    KFold,
+    RandomizedSearchCV,
+    StratifiedKFold,
+    train_test_split,
+)
+
+from evaluation.generalevaluator import Evaluator
+from modelsdefinition.CommonStructure import BaseModel
 from modelutils.trainingutilities import (
     infer_hyperopt_space,
     stop_on_perfect_lossCondition,

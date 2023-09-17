@@ -1,21 +1,20 @@
-import os
 import logging
-import numpy as np
+import os
 from typing import Dict
+
+import numpy as np
+import torch
 from catboost import CatBoostClassifier, CatBoostRegressor
-from sklearn.model_selection import train_test_split
+from hyperopt import STATUS_OK, Trials, fmin, hp, space_eval, tpe
+from hyperopt.pyll import scope
+from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
+
 from evaluation.generalevaluator import Evaluator
 from modelsdefinition.CommonStructure import BaseModel
-from sklearn.model_selection import KFold, StratifiedKFold
-
-from hyperopt import fmin, hp, space_eval, STATUS_OK, tpe, Trials
-from hyperopt.pyll import scope
-
 from modelutils.trainingutilities import (
     infer_hyperopt_space,
     stop_on_perfect_lossCondition,
 )
-import torch
 
 
 class CatBoostTrainer(BaseModel):

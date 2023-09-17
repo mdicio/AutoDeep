@@ -1,33 +1,33 @@
-import torchvision.transforms as transforms
-from torchvision.models import resnet18, resnet34, resnet50
+import inspect
+import logging
+import os
 import warnings
 from abc import ABC, abstractmethod
+from typing import Dict, Optional
+
 import numpy as np
 import pandas as pd
-from typing import Dict, Optional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import torchvision.transforms as transforms
 from hyperopt import STATUS_OK, Trials, fmin, hp, space_eval, tpe
 from hyperopt.pyll import scope
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 from torch.optim.lr_scheduler import ReduceLROnPlateau, StepLR
+from torch.profiler import ProfilerActivity, profile, record_function
 from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
+from torchvision.models import resnet18, resnet34, resnet50
 from tqdm import tqdm
-import os
-import logging
-import inspect
+
 from evaluation.generalevaluator import *
+from modelsdefinition.CommonStructure import BaseModel
 from modelutils.trainingutilities import (
     infer_hyperopt_space_pytorch_custom,
     stop_on_perfect_lossCondition,
 )
-import os
-from modelsdefinition.CommonStructure import BaseModel
-from sklearn.model_selection import KFold, StratifiedKFold
-from torch.profiler import profile, record_function, ProfilerActivity
 
 
 class ResNetModel(nn.Module):

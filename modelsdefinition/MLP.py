@@ -2,20 +2,24 @@ import inspect
 import logging
 import os
 from typing import Dict
-from sklearn.model_selection import cross_val_score
+
 import joblib
 import numpy as np
 from sklearn.model_selection import (
     KFold,
     RandomizedSearchCV,
     StratifiedKFold,
+    cross_val_score,
     train_test_split,
 )
 from sklearn.neural_network import MLPClassifier, MLPRegressor
 
 from evaluation.generalevaluator import Evaluator
 from modelsdefinition.CommonStructure import BaseModel
-from modelutils.trainingutilities import stop_on_perfect_lossCondition
+from modelutils.trainingutilities import (
+    infer_hyperopt_space,
+    stop_on_perfect_lossCondition,
+)
 
 
 class MLP(BaseModel):

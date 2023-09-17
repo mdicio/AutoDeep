@@ -1,38 +1,31 @@
-import os
-import logging
 import inspect
+import logging
+import os
+from typing import Dict
 
 import numpy as np
 import pandas as pd
-from typing import Dict
-from typing import Dict
 import torch
 import torch.nn as nn
 from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
-from sklearn.model_selection import KFold, StratifiedKFold
-
-from torch.optim import Adam, SGD
-from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau, ExponentialLR
 
 # pip install pytorch_tabular[extra]
 from pytorch_tabular import TabularModel
-from pytorch_tabular.config import (
-    DataConfig,  # ExperimentConfig,
-    OptimizerConfig,
-    TrainerConfig,
-)
+from pytorch_tabular.config import DataConfig  # ExperimentConfig,
+from pytorch_tabular.config import OptimizerConfig, TrainerConfig
 from pytorch_tabular.models import TabTransformerConfig
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
 from sklearn.utils.class_weight import compute_class_weight
+from torch.optim import SGD, Adam
+from torch.optim.lr_scheduler import ExponentialLR, ReduceLROnPlateau, StepLR
 
 from evaluation.generalevaluator import Evaluator
 from modelsdefinition.CommonStructure import BaseModel
-from sklearn.model_selection import KFold, StratifiedKFold
 from modelutils.trainingutilities import (
-    infer_hyperopt_space_pytorch_tabular,
-    stop_on_perfect_lossCondition,
     calculate_possible_fold_sizes,
     handle_rogue_batch_size,
+    infer_hyperopt_space_pytorch_tabular,
+    stop_on_perfect_lossCondition,
 )
 
 
@@ -494,7 +487,6 @@ class TabTransformerTrainer(BaseModel):
             for fold, (train_idx, val_idx) in enumerate(
                 kf.split(train.drop(columns=["target"]), train["target"])
             ):
-                self.logger.info(f"Fold: {fold}")
                 train_fold = train.iloc[train_idx]
                 val_fold = train.iloc[val_idx]
                 train_fold, val_fold = handle_rogue_batch_size(
@@ -535,17 +527,19 @@ class TabTransformerTrainer(BaseModel):
 
                 # Iterate over the metric names and append values to the dictionary
                 metrics_for_fold = self.evaluator.evaluate_model()
-                for metric_name, metric_value in metrics_for_fold.items():
-                    if metric_name not in metric_dict:
-                        metric_dict[
-                            metric_name
-                        ] = []  # Initialize a list for this metric
-                    metric_dict[metric_name].append(metric_value)
-            # average score over the folds
-            score_average = np.average(metric_dict[metric_name])
-            score_std = np.std(metric_dict[metric_name])
+                for metric_nm, metric_value in metrics_for_fold.items():
+                    if metric_nm not in metric_dict:
+                        metric_dict[metric_nm] = []  # Initialize a list for this metric
+                    metric_dict[metric_nm].append(metric_value)
 
-            self.logger.info(f"Current hyperopt score {score_average}")
+                self.logger.info(
+                    f"Fold: {fold +1} metrics {metric}: {metric_dict[metric]}"
+                )
+            # average score over the folds
+            score_average = np.average(metric_dict[metric])
+            score_std = np.std(metric_dict[metric])
+
+            self.logger.info(f"Current hyperopt score {metric} = {score_average}")
 
             if self.evaluator.maximize[metric][0]:
                 score_average = -1 * score_average
