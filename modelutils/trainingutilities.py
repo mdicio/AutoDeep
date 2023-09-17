@@ -335,7 +335,7 @@ def infer_hyperopt_space(param_grid: Dict):
     for param_name, param_values in param_grid.items():
         min_value = min(param_values)
         max_value = max(param_values)
-        if isinstance(param_values[0], (str, bool)):
+        if isinstance(param_values[0], (str, bool, list)):
             # If the parameter values are strings, use hp.choice
             space[param_name] = hp.choice(param_name, param_values)
         elif isinstance(param_values[0], int):

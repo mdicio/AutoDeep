@@ -493,7 +493,7 @@ class FullCaliforniaHousingDataLoader(FullDataLoader):
         # df.to_csv(r"/home/boom/sdev/WTabRun/data/housing/cal_housing.csv")
         #        df[self.target_column] = data.target
 
-        df = pd.read_csv(r"/home/boom/sdev/WTabRun/data/housing/cal_housing.csv")
+        df = pd.read_csv(r"./data/housing/cal_housing.csv")
         df["pop_density"] = df["Population"] / df["AveRooms"]
 
         # Extract the features and target variables from the dataset

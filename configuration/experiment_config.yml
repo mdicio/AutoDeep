@@ -4,11 +4,11 @@ retrain: True
 include_models:
   #- XGB  # Extreme Gradient Boosting
   #- CatBoost
-  - MLP  # Multi-Layer Perceptron
+  #- MLP  # Multi-Layer Perceptron
   #- TabNet  # TabNet Classifier 
   #- GATE 
   #- Node
-  #- resnet
+  - resnet
   #- S1DCNN
   #- CategoryEmbedding
   #- FTTransformer

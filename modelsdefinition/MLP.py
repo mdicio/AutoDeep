@@ -236,15 +236,7 @@ class MLP(BaseModel):
                 X_val = X.iloc[val_idx]
                 y_val = y.iloc[val_idx]
 
-                eval_set = [(X_val, y_val)]
-
-                model.fit(
-                    X_train,
-                    y_train,
-                    early_stopping_rounds=early_stopping_rounds,
-                    verbose=verbose,
-                    eval_set=eval_set,
-                )
+                model.fit(X_train, y_train)
 
                 # Predict the labels of the validation data
                 y_pred = model.predict(X_val)
