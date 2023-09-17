@@ -1,8 +1,13 @@
 #custom
 data/
 output/
-notebooks/
 catboost_info/
+
+
+#data files
+*.csv
+*.png
+*.tex
 
 # saved models
 saved_models/

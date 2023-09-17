@@ -20,6 +20,8 @@ from modelutils.trainingutilities import (
     infer_hyperopt_space,
     stop_on_perfect_lossCondition,
 )
+from hyperopt import STATUS_OK, Trials, fmin, hp, space_eval, tpe
+from hyperopt.pyll import scope
 
 
 class MLP(BaseModel):
@@ -200,9 +202,31 @@ class MLP(BaseModel):
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")
             # Create an XGBoost model with the given hyperparameters
-            model = xgb.XGBRegressor(**params)
+            # Create the MLP model based on problem_type
+            if self.problem_type == "regression":
+                model = MLPRegressor(
+                    verbose=False,
+                    early_stopping=True,
+                    n_iter_no_change=self.outer_params["n_iter_no_change"],
+                    max_iter=self.outer_params["max_iter"],
+                    **params,
+                )
+                kf = KFold(n_splits=k_value, shuffle=True, random_state=42)
+            elif self.problem_type in [
+                "binary_classification",
+                "multiclass_classification",
+            ]:
+                model = MLPClassifier(
+                    verbose=False,
+                    early_stopping=True,
+                    n_iter_no_change=self.outer_params["n_iter_no_change"],
+                    max_iter=self.outer_params["max_iter"],
+                    **params,
+                )
+                kf = StratifiedKFold(n_splits=k_value, shuffle=True, random_state=42)
+            else:
+                raise ValueError("Wrong problem type")
             # Fit the model on the training data
-            kf = KFold(n_splits=k_value, shuffle=True, random_state=42)
 
             metric_dict = {}
 
@@ -224,7 +248,6 @@ class MLP(BaseModel):
 
                 # Predict the labels of the validation data
                 y_pred = model.predict(X_val)
-
                 # Generate predictions using the XGBoost model
                 probabilities = None
                 if self.problem_type == "binary_classification":

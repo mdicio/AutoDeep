@@ -4,32 +4,32 @@ retrain: True
 include_models:
   #- XGB  # Extreme Gradient Boosting
   #- CatBoost
-  #- MLP  # Multi-Layer Perceptron
-  - TabNet  # TabNet Classifier 
-  - GATE 
-  - Node
+  - MLP  # Multi-Layer Perceptron
+  #- TabNet  # TabNet Classifier 
+  #- GATE 
+  #- Node
   #- resnet
   #- S1DCNN
-  - CategoryEmbedding
-  - FTTransformer
-  - TabTransformer
-  - GANDALF
-  - AutoInt
+  #- CategoryEmbedding
+  #- FTTransformer
+  #- TabTransformer
+  #- GANDALF
+  #- AutoInt
 
   ####- squeezenet
   ####- LightGBM
 
 # List of datasets to include in the experiment
 include_datasets:
-  #- iris        # Iris flower dataset
-  #- titanic
+  - iris        # Iris flower dataset
+  - titanic
   #- breastcancer
   #- ageconditions
   #- adult
-  #- housing
-  - creditcard  # Credit card fraud dataset
+  - housing
+  #- creditcard  # Credit card fraud dataset
   #- heloc
-  - covertype
+  #- covertype
   
   
 
@@ -120,7 +120,7 @@ model_configs:
     retrain: False
 
   mlp:
-    execution_mode: cv
+    execution_mode: hyperopt_kfold
     normalize_features: mean_std
     encode_categorical: True
     return_extra_info: False
