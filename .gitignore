@@ -174,3 +174,4 @@ profile_results.json
 .vscode/extensions.json
 .gitignore
 stacktrace.json
+.vscode/settings.json
