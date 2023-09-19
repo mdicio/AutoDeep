@@ -161,11 +161,13 @@ class TabNetTrainer(BaseModel):
             progress_bar=outer_params.get("progress_bar", "rich"),  # none, simple, rich
             precision=outer_params.get("precision", 32),  # 16, 32, 64
         )
-
         vbs = params.get(
             "virtual_batch_size",
-            int(params["batch_size"] * params["virtual_batch_size_ratio"]),
+            int(params["batch_size"] * params.get("virtual_batch_size_ratio", 0.125)),
         )
+        if "virtual_batch_size_ratio" and "virtual_batch_size" not in params.keys():
+            vbs = 128
+
         params["virtual_batch_size"] = vbs
         if params["optimizer_fn"] == torch.optim.Adam:
             params["optimizer_params"] = dict(weight_decay=params["Adam_weight_decay"])
@@ -191,7 +193,7 @@ class TabNetTrainer(BaseModel):
                 verbose=True,
                 mode="min",
             )
-        params["n_a"] = params["n_d"]
+        params["n_a"] = params.get("n_d", 8)
         # DEBUG OPTIMIZER
         # https://pytorch-tabular.readthedocs.io/en/latest/optimizer/
         optimizer_config = OptimizerConfig(
@@ -201,6 +203,11 @@ class TabNetTrainer(BaseModel):
             lr_scheduler_params=params["scheduler_params"],
             lr_scheduler_monitor_metric="valid_loss",
         )
+
+        # override if we want to use default parameters
+        if default:
+            model_config = TabNetModelConfig(task=self.task)
+            optimizer_config = OptimizerConfig()
 
         valid_params = inspect.signature(TabNetModelConfig).parameters
         compatible_params = {
@@ -217,12 +224,6 @@ class TabNetTrainer(BaseModel):
 
         self.logger.debug(f"valid parameters: {compatible_params}")
         model_config = TabNetModelConfig(task=self.task, **compatible_params)
-
-        # override if we want to use default parameters
-        if default:
-            model_config = TabNetModelConfig(task=self.task)
-            optimizer_config = OptimizerConfig()
-
         tabular_model = TabularModel(
             data_config=data_config,
             model_config=model_config,
@@ -354,9 +355,6 @@ class TabNetTrainer(BaseModel):
                 params, self.outer_params, default=self.default
             )
 
-            # Opened issue on pytorch tabular for this DEBUG
-            params["optimizer_params"].pop("lr", None)
-
             self.train_df, self.validation_df = handle_rogue_batch_size(
                 self.train_df, self.validation_df, params["batch_size"]
             )
@@ -479,9 +477,6 @@ class TabNetTrainer(BaseModel):
         # Define the objective function for hyperopt search
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")
-            model = self.prepare_tabular_model(
-                params, self.outer_params, default=self.default
-            )
             if self.problem_type == "regression":
                 kf = KFold(n_splits=k_value, shuffle=True, random_state=42)
 
@@ -509,8 +504,7 @@ class TabNetTrainer(BaseModel):
                     params, self.outer_params, default=self.default
                 )
                 # Fit the model
-                # Opened issue on pytorch tabular for this DEBUG
-                params["optimizer_params"].pop("lr", None)
+
                 model.fit(
                     train=train_fold,
                     validation=val_fold,

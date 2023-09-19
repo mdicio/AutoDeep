@@ -232,7 +232,7 @@ class ResNetTrainer:
         if self.problem_type == "binary_classification":
             num_positives = y_train.sum()
             num_negatives = len(y_train) - num_positives
-            pos_weight = torch.tensor(num_negatives / num_positives)
+            pos_weight = torch.tensor(num_positives / num_negatives)
             self.loss_fn = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
         elif self.problem_type == "multiclass_classification":
             y_train_tensor = torch.tensor(y_train.values, dtype=torch.long).flatten()

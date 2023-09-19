@@ -12,10 +12,11 @@ import os
 import time
 
 full_load_mode = True
-output_results_filename = "kfold"
+output_results_filename = "DEFAULT_FINAL"
 with open("./configuration/experiment_config.yml", "r") as f:
     config = yaml.safe_load(f)
-
+# set model parameters to default
+DEFAULT = True
 random_state = config["random_state"]
 seed_everything(random_state)
 
@@ -72,7 +73,7 @@ for run in runs:
             problem_type=dataset_task,
             num_classes=dataset_num_classes,
         )
-        model.default = False
+        model.default = DEFAULT
         model.save_path = f"./output/modelsaves/{dataset_name}/{model_name}/{run_id}/"
         # check if the directory already exists
         if not os.path.exists(model.save_path):

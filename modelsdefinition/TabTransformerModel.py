@@ -348,9 +348,6 @@ class TabTransformerTrainer(BaseModel):
                 params, self.outer_params, default=self.default
             )
 
-            # Opened issue on pytorch tabular for this DEBUG
-            params["optimizer_params"].pop("lr", None)
-
             self.train_df, self.validation_df = handle_rogue_batch_size(
                 self.train_df, self.validation_df, params["batch_size"]
             )
@@ -473,9 +470,6 @@ class TabTransformerTrainer(BaseModel):
         # Define the objective function for hyperopt search
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")
-            model = self.prepare_tabular_model(
-                params, self.outer_params, default=self.default
-            )
             if self.problem_type == "regression":
                 kf = KFold(n_splits=k_value, shuffle=True, random_state=42)
 
@@ -503,8 +497,7 @@ class TabTransformerTrainer(BaseModel):
                     params, self.outer_params, default=self.default
                 )
                 # Fit the model
-                # Opened issue on pytorch tabular for this DEBUG
-                params["optimizer_params"].pop("lr", None)
+
                 model.fit(
                     train=train_fold,
                     validation=val_fold,

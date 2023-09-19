@@ -2,14 +2,14 @@ random_state: 4200
 retrain: True
 # List of models to include in the experiment
 include_models:
-  - XGB  # Extreme Gradient Boosting
-  - CatBoost
-  - MLP  # Multi-Layer Perceptron
+  #- XGB  # Extreme Gradient Boosting
+  #- CatBoost
+  #- MLP  # Multi-Layer Perceptron
   - TabNet  # TabNet Classifier 
   - GATE 
   - Node
-  - resnet
-  - S1DCNN
+  #- resnet
+  #- S1DCNN
   - CategoryEmbedding
   - FTTransformer
   - TabTransformer
@@ -22,12 +22,12 @@ include_models:
 # List of datasets to include in the experiment
 include_datasets:
   #- iris        # Iris flower dataset
-  #- titanic
-  - breastcancer
-  - ageconditions
+  - titanic
+  #- breastcancer
+  #- ageconditions
   #- adult
   #- housing
-  - creditcard  # Credit card fraud dataset
+  #- creditcard  # Credit card fraud dataset
   #- heloc
   #- covertype
   
