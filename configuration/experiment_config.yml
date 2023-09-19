@@ -169,6 +169,7 @@ dataset_configs:
     test_size: 0.25
     problem_type: binary_classification
     eval_metrics:
+      - lift
       - accuracy
       - roc_auc
       - f1
