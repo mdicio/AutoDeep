@@ -5,31 +5,31 @@ include_models:
   - XGB  # Extreme Gradient Boosting
   - CatBoost
   - MLP  # Multi-Layer Perceptron
-  #- TabNet  # TabNet Classifier 
-  #- GATE 
-  #- Node
-  #- resnet
-  #- S1DCNN
-  #- CategoryEmbedding
-  #- FTTransformer
-  #- TabTransformer
-  #- GANDALF
-  #- AutoInt
+  - TabNet  # TabNet Classifier 
+  - GATE 
+  - Node
+  - resnet
+  - S1DCNN
+  - CategoryEmbedding
+  - FTTransformer
+  - TabTransformer
+  - GANDALF
+  - AutoInt
 
   ####- squeezenet
   ####- LightGBM
 
 # List of datasets to include in the experiment
 include_datasets:
-  - iris        # Iris flower dataset
-  - titanic
+  #- iris        # Iris flower dataset
+  #- titanic
   - breastcancer
-  #- ageconditions
+  - ageconditions
   #- adult
-  - housing
+  #- housing
   - creditcard  # Credit card fraud dataset
-  - heloc
-  - covertype
+  #- heloc
+  #- covertype
   
   
 
@@ -197,6 +197,7 @@ dataset_configs:
     test_size: 0.25
     problem_type: binary_classification
     eval_metrics:
+      - lift
       - accuracy
       - roc_auc
       - f1

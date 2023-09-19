@@ -40,6 +40,7 @@ class Evaluator:
             "mse": (False, 0.0),
             "rmse": (False, 0.0),
             "r2_score": (True, 1.0),
+            "lift": (True, 100000),
         }
 
     def recall(self):
@@ -102,18 +103,20 @@ class Evaluator:
         else:
             raise ValueError(f"Invalid problem type: {self.problem_type}")
 
-    def lift(self, percentile):
+    def lift(self, percentile=0.1):
         n = len(self.y_true)
         p_true = np.sum(self.y_true) / n
 
-        sorted_indices = np.argsort(self.y_pred)[::-1]
-        top_indices = sorted_indices[: int(percentile * n)]
-        p_top_true = np.sum(self.y_true[top_indices]) / len(top_indices)
+        top_indices = np.argsort(self.y_prob)[::-1][: int(percentile * n)]
+        p_top_true = np.sum(np.take(self.y_true, top_indices, axis=0)) / len(
+            top_indices
+        )
 
         return p_top_true / p_true
 
     def area_under_pr(self):
-        return average_precision_score(self.y_true, self.y_pred)
+        # return average_precision_score(self.y_true, self.y_pred)
+        return average_precision_score(self.y_true, self.y_prob)
 
     def confusion_matrix(self):
         if self.problem_type == "binary_classification":
@@ -163,6 +166,8 @@ class Evaluator:
         if "area_under_pr" in self.run_metrics:
             results["area_under_pr"] = self.area_under_pr()
 
+        if "lift" in self.run_metrics:
+            results["lift"] = self.lift()
         return results
 
     def evaluate_metric(self, metric_name):
@@ -199,5 +204,8 @@ class Evaluator:
 
         if metric_name == "area_under_pr":
             return self.area_under_pr()
+
+        if metric_name == "lift":
+            return self.lift()
         else:
             raise ValueError(f"Invalid metric name: {metric_name}")
