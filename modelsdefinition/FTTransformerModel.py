@@ -199,7 +199,9 @@ class FTTransformerTrainer(BaseModel):
 
         iedm = params.get(
             "input_embed_dim",
-            int(params["input_embed_dim_multiplier"] * params["num_heads"]),
+            int(
+                params.get("input_embed_dim_multiplier", 4) * params.get("num_heads", 1)
+            ),
         )
         params["input_embed_dim"] = iedm
 
@@ -218,7 +220,7 @@ class FTTransformerTrainer(BaseModel):
             f"You are passing some invalid parameters to the model {invalid_params}"
         )
         if self.task == "regression":
-            compatible_params["target_range"] = self.target_range
+            compatible_params["target_range"] = self.target_range   
 
         self.logger.debug(f"valid parameters: {compatible_params}")
         model_config = FTTransformerConfig(task=self.task, **compatible_params)
