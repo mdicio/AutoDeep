@@ -725,8 +725,8 @@ class SoftOrdering1DCNN:
                 y_pred, y_prob = self.predict(X_val, predict_proba=True)
                 # Calculate the score using the specified metric
 
-                self.evaluator.y_true = y_val
-                self.evaluator.y_pred = y_pred
+                self.evaluator.y_true = y_val.values
+                self.evaluator.y_pred = y_pred.reshape(-1)
                 self.evaluator.y_prob = y_prob
                 self.evaluator.run_metrics = eval_metrics
 
@@ -736,6 +736,9 @@ class SoftOrdering1DCNN:
                     if metric_nm not in metric_dict:
                         metric_dict[metric_nm] = []  # Initialize a list for this metric
                     metric_dict[metric_nm].append(metric_value)
+                    self.logger.info(
+                        f"Fold: {fold +1} metric value {metric}: {metric_value}, type {type(metric_value)}, shape {metric_value.shape}"
+                    )
 
                 self.logger.info(
                     f"Fold: {fold +1} metrics {metric}: {metric_dict[metric]}"

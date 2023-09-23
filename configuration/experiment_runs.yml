@@ -1,4 +1,31 @@
 - dataset: titanic
+  model: s1dcnn
+  best_params: {}
+  param_grid:
+    outer_params:
+      hyperopt_evals: 1
+      max_epochs: 1
+      early_stopping: true
+      shuffle: true
+      validation_fraction: 0.15
+      early_stopping_patience: 10
+    batch_size:
+    - 128
+    hidden_size:
+    - 4096
+    optimizer_fn:
+      Adam:
+        weight_decay:
+        - 0.0
+        learning_rate:
+        - 0.001
+    scheduler_fn:
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        patience:
+        - 5
+- dataset: titanic
   model: fttransformer
   best_params: {}
   param_grid:

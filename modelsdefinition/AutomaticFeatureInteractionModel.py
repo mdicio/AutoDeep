@@ -199,7 +199,9 @@ class AutoIntTrainer(BaseModel):
 
         iedm = params.get(
             "attn_embed_dim",
-            int(params["attn_embed_dim_multiplier"] * params["num_heads"]),
+            int(
+                params.get("attn_embed_dim_multiplier", 4) * params.get("num_heads", 2)
+            ),
         )
         params["attn_embed_dim"] = iedm
 
@@ -504,7 +506,7 @@ class AutoIntTrainer(BaseModel):
                     params, self.outer_params, default=self.default
                 )
                 # Fit the model
-                
+
                 model.fit(
                     train=train_fold,
                     validation=val_fold,
