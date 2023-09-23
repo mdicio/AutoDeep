@@ -169,3 +169,46 @@
         - 0.1
         patience:
         - 5
+- dataset: diabetes
+  model: xgb
+  best_params: {}
+  param_grid:
+    outer_params: &id001
+      hyperopt_evals: 1
+      validation_fraction: 0.15
+      early_stopping_rounds: 30
+      verbose: false
+    learning_rate: &id002
+    - 0.3
+- dataset: diabetes
+  model: resnet
+  best_params: {}
+  param_grid:
+    outer_params:
+      hyperopt_evals: 1
+      max_epochs: 1000
+      early_stopping: true
+      early_stopping_patience: 6
+      validation_fraction: 0.2
+    resnet_depth:
+    - resnet18
+    batch_size:
+    - 1024
+    optimizer_fn:
+      Adam:
+        weight_decay:
+        - 0.0
+        learning_rate:
+        - 0.001
+    scheduler_fn:
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        patience:
+        - 5
+- dataset: diabetes
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id001
+    learning_rate: *id002

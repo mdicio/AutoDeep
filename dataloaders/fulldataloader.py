@@ -9,6 +9,7 @@ from pathlib import Path
 from collections import Counter
 import pandas as pd
 from sklearn.utils import shuffle
+import math
 
 
 class FullDataLoader:
@@ -97,6 +98,33 @@ class FullDataLoader:
 
         return train_df, test_df
 
+    def bin_numerical_columns(self, df, cols_to_bin, num_bins=10):
+        # Select a random numerical column to bin
+        min_value = 0
+
+        for col_to_bin in cols_to_bin:
+            # Calculate the maximum value in the column
+            max_value = df[col_to_bin].max()
+            # Calculate the width of each bin
+            bin_width = math.ceil((max_value - min_value) / num_bins)
+
+            bin_edges = [min_value + i * bin_width for i in range(num_bins + 1)]
+            print(bin_edges)
+
+            # Define labels for each category
+            labels = [f"category_{i + 1}" for i in range(num_bins)]
+
+            # Use pd.cut to create the categorical column
+            df[col_to_bin] = pd.cut(
+                df[col_to_bin],
+                bins=bin_edges,
+                labels=labels,
+                include_lowest=True,
+                right=True,
+            ).astype(str)
+
+        return df
+
     def _undersample(self, df, target_col, ratio):
         """
         Perform undersampling on a pandas dataframe with a target column
@@ -167,7 +195,7 @@ class FullDataLoader:
             # Normalize the features using min-max scaling
             scaler = MinMaxScaler(feature_range=(0, 1))
             X_train[num_cols] = scaler.fit_transform(X_train[num_cols])
-        elif mode == "false":
+        elif mode in ["false", False]:
             pass
         else:
             raise ValueError("Invalid normalization method specified")
@@ -697,6 +725,96 @@ class FullHelocDataLoader(FullDataLoader):
                 img_rows=6,
                 img_columns=4,
                 igtd_path=f"{self.igtd_path}results/heloc_igtd_Euclidean_Euclidean/abs/_index.txt",
+            )
+
+        return X_train, y_train, extra_info
+
+
+class FullDiabetesDataLoader(FullDataLoader):
+    def __init__(
+        self,
+        target_column="target",
+        test_size=0.2,
+        random_state=42,
+        normalize_features="mean_std",
+        return_extra_info=False,
+        encode_categorical=False,
+        num_targets=1,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.target_column = "target"
+        self.test_size = test_size
+        self.random_state = random_state
+        self.normalize_features = normalize_features
+        self.return_extra_info = return_extra_info
+        self.encode_categorical = encode_categorical
+        self.num_targets = num_targets
+        self.filename = f"{self.data_path}/diabetes/diabetic_data.csv"
+
+    def load_data(self):
+        # Load the Adult dataset from UCI Machine Learning Repository
+        df = pd.read_csv(self.filename)
+
+        target_map = {"NO": 0, "<30": 1, ">30": 0}
+        df["target"] = df["readmitted"].map(target_map)
+        df.drop(columns=["encounter_id", "patient_nbr", "readmitted"], inplace=True)
+        fake_num_cols = [
+            "admission_type_id",
+            "discharge_disposition_id",
+            "admission_source_id",
+        ]
+        df[fake_num_cols] = df[fake_num_cols].astype(str)
+
+        df["weight"] = df["weight"].apply(lambda x: x.replace("[", "").replace(")", ""))
+        df["age"] = df["age"].apply(lambda x: x.replace("[", "").replace(")", ""))
+        categorical_cols = df.select_dtypes(include=["object", "category"]).columns
+        numerical_cols = df.select_dtypes(exclude=["object", "category"]).columns
+        df[categorical_cols] = df[categorical_cols].fillna(
+            df[categorical_cols].mode().iloc[0]
+        )
+        df[numerical_cols] = df[numerical_cols].fillna(df[numerical_cols].median())
+
+        # Set a threshold for value counts
+        threshold = 100  # Adjust this threshold as needed
+
+        # Calculate the value counts of the categorical column
+        value_counts = df["medical_specialty"].value_counts()
+        # Identify categories with counts below the threshold
+        categories_to_replace = value_counts[value_counts < threshold].index.tolist()
+
+        # Replace the identified categories with 'Other'
+        df["medical_specialty"] = df["medical_specialty"].apply(
+            lambda x: "Other" if x in categories_to_replace else x
+        )
+
+        cols_to_bin = ["diag_1", "diag_2", "diag_3"]
+        for diag_col in cols_to_bin:
+            frequency_map = df[diag_col].value_counts().to_dict()
+            df[diag_col] = df[diag_col].map(frequency_map)
+
+        df = self.bin_numerical_columns(df, cols_to_bin, num_bins=10)
+        cat_cols = df.select_dtypes(include=["object", "category"]).columns
+        if self.encode_categorical and len(cat_cols) > 0:
+            df = self.force_encode_categorical(df, exclude_cols=[self.target_column])
+
+        # Extract the features and target variables from the dataset
+        X_train = df.drop(columns=[self.target_column])
+        y_train = df[self.target_column]
+
+        # Normalize the features if requested
+        X_train = self.scale_features(X_train, mode=self.normalize_features)
+
+        # Balance the training dataset
+        # X_train, y_train = self.balance_multiclass_dataset(X_train, y_train)
+
+        extra_info = None
+        if self.return_extra_info:
+            extra_info = self.create_extra_info(
+                X_train,
+                img_rows=16,
+                img_columns=15,
+                igtd_path=f"{self.igtd_path}results/diabetes_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
 
         return X_train, y_train, extra_info

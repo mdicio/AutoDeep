@@ -2,14 +2,14 @@ random_state: 4200
 retrain: True
 # List of models to include in the experiment
 include_models:
-  #- XGB  # Extreme Gradient Boosting
-  #- CatBoost
+  - XGB  # Extreme Gradient Boosting
+  - CatBoost
   #- MLP  # Multi-Layer Perceptron
   #- TabNet  # TabNet Classifier 
   #- GATE 
   #- Node
-  #- resnet
-  - S1DCNN
+  - resnet
+  #- S1DCNN
   #- CategoryEmbedding
   #- FTTransformer
   #- TabTransformer
@@ -22,9 +22,10 @@ include_models:
 # List of datasets to include in the experiment
 include_datasets:
   #- iris        # Iris flower dataset
-  - titanic
+  #- titanic
   #- breastcancer
   #- ageconditions
+  - diabetes
   #- adult
   #- housing
   #- creditcard  # Credit card fraud dataset
@@ -42,13 +43,6 @@ model_configs:
     return_extra_info: True # for dataloader
     retrain: False
   
-  lightgbm:
-    execution_mode: cv
-    normalize_features: mean_std
-    encode_categorical: True  #for dataloader 
-    return_extra_info: True # for dataloader
-    retrain: False
-
   autoint:
     execution_mode: hyperopt_kfold
     normalize_features: mean_std
@@ -107,7 +101,7 @@ model_configs:
   
   xgb:
     execution_mode: hyperopt_kfold
-    normalize_features: mean_std
+    normalize_features: false
     encode_categorical: True
     return_extra_info: False
     retrain: True
@@ -142,10 +136,11 @@ model_configs:
 
 dataset_configs:
 
-  bufix: 
+  diabetes: 
     test_size: 0.2
     problem_type: binary_classification
     eval_metrics:
+      - lift
       - roc_auc
       - f1
       - area_under_pr
@@ -158,6 +153,7 @@ dataset_configs:
     num_classes: 1
     problem_type: binary_classification
     eval_metrics:
+      - lift
       - roc_auc
       - f1
       - area_under_pr

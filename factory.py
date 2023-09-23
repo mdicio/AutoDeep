@@ -138,5 +138,7 @@ def create_full_data_loader(dataset_name, test_size=0.2, **kwargs):
         return FullCoverTypeDataLoader(test_size=test_size, **kwargs)
     elif dname == "heloc":
         return FullHelocDataLoader(test_size=test_size, **kwargs)
+    elif dname == "diabetes":
+        return FullDiabetesDataLoader(test_size=test_size, **kwargs)
     else:
         raise ValueError(f"Invalid dataset: {dataset_name}")
