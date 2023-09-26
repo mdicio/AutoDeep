@@ -1,1 +1,3 @@
-#Currently working on kfold cross validation for all models. TODO = [MLP, ResNet, S1DCNN]
+# Currently running default params all models, NODE has memory error even on small datasets so excluding it for now.
+Test all models an all datasets
+See what params we can run with NODE on all datasets

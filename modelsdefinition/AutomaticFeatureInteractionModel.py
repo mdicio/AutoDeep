@@ -422,7 +422,7 @@ class AutoIntTrainer(BaseModel):
 
         self.logger.info(f"Best hyperparameters: {best_params}")
         self.logger.info(
-            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {-best_score}"
+            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
         )
 
         return best_params, best_score
@@ -588,7 +588,7 @@ class AutoIntTrainer(BaseModel):
 
         self.logger.info(f"Best hyperparameters: {best_params}")
         self.logger.info(
-            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {-best_score}"
+            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
         )
 
         return best_params, best_score, score_std, full_metrics

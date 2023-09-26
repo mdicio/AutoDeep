@@ -542,8 +542,8 @@ class ResNetTrainer:
 
                         print(
                             f"Epoch [{epoch+1}/{max_epochs}],"
-                            f"Train Loss: {epoch_loss:.4f},"
-                            f"Val Loss: {val_loss:.4f}"
+                            f"Train Loss: {epoch_loss:.6f},"
+                            f"Val Loss: {val_loss:.6f}"
                         )
 
                         if current_patience >= patience:
@@ -568,7 +568,7 @@ class ResNetTrainer:
                         labels,
                         probabilities,
                     ) = self.process_inputs_labels_prediction(inputs, labels)
-                    y_true = np.append(y_pred, labels)
+                    y_true = np.append(y_true, labels)
                     y_pred = np.append(y_pred, predictions)
                     y_prob = np.append(y_prob, probabilities)
 
@@ -621,7 +621,7 @@ class ResNetTrainer:
 
         self.logger.info(f"Best hyperparameters: {best_params}")
         self.logger.info(
-            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {-best_score}"
+            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
         )
 
         return best_params, best_score
@@ -782,7 +782,7 @@ class ResNetTrainer:
                             labels,
                             probabilities,
                         ) = self.process_inputs_labels_prediction(inputs, labels)
-                        y_true = np.append(y_pred, labels)
+                        y_true = np.append(y_true, labels)
                         y_pred = np.append(y_pred, predictions)
                         y_prob = np.append(y_prob, probabilities)
 
@@ -856,7 +856,7 @@ class ResNetTrainer:
 
         self.logger.info(f"Best hyperparameters: {best_params}")
         self.logger.info(
-            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {-best_score}"
+            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
         )
 
         return best_params, best_score, score_std, full_metrics

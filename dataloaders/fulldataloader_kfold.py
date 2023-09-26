@@ -10,6 +10,7 @@ from pathlib import Path
 from collections import Counter
 import pandas as pd
 from sklearn.utils import shuffle
+from sklearn.model_selection import StratifiedShuffleSplit
 
 
 class FullDataLoader:
@@ -668,6 +669,19 @@ class FullCoverTypeDataLoader(FullDataLoader):
         if self.encode_categorical and len(cat_cols) > 0:
             df = self.force_encode_categorical(df, exclude_cols=[self.target_column])
 
+        # Your DataFrame 'df' with a 'target' column
+        # sample_size specifies the number of rows you want to sample
+        sample_size = 200000
+
+        # Initialize StratifiedShuffleSplit
+        stratified_split = StratifiedShuffleSplit(
+            n_splits=1, test_size=sample_size, random_state=42
+        )
+
+        # Generate indices for the stratified sample
+        for sample_index, _ in stratified_split.split(df, df["target"]):
+            df = df.iloc[sample_index]
+        print(f"covertype df {len(df)}")
         # Extract the features and target variables from the dataset
         X_train = df.drop(columns=[self.target_column])
         y_train = df[self.target_column]

@@ -24,7 +24,7 @@ seed_everything(random_state)
 included_models = [i.lower() for i in config["include_models"]]
 included_datasets = [i.lower() for i in config["include_datasets"]]
 
-with open("./configuration/experiment_runs1.yml", "r") as f:
+with open("./configuration/experiment_runs2.yml", "r") as f:
     runs = yaml.safe_load(f)
 
 # Loop over each run in the configuration file

@@ -220,7 +220,7 @@ class FTTransformerTrainer(BaseModel):
             f"You are passing some invalid parameters to the model {invalid_params}"
         )
         if self.task == "regression":
-            compatible_params["target_range"] = self.target_range   
+            compatible_params["target_range"] = self.target_range
 
         self.logger.debug(f"valid parameters: {compatible_params}")
         model_config = FTTransformerConfig(task=self.task, **compatible_params)
@@ -426,7 +426,7 @@ class FTTransformerTrainer(BaseModel):
 
         self.logger.info(f"Best hyperparameters: {best_params}")
         self.logger.info(
-            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {-best_score}"
+            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
         )
 
         return best_params, best_score
@@ -592,7 +592,7 @@ class FTTransformerTrainer(BaseModel):
 
         self.logger.info(f"Best hyperparameters: {best_params}")
         self.logger.info(
-            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {-best_score}"
+            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
         )
 
         return best_params, best_score, score_std, full_metrics
