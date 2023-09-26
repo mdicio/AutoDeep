@@ -227,7 +227,7 @@ class FullKaggleAgeConditionsLoader(FullDataLoader):
         self.num_targets = num_targets
         self.foldername = "ageconditions"
         self.filename = (
-            f"{self.data_path}kaggle/icr-identify-age-related-conditions/train.csv"
+            f"{self.data_path}kaggle/icr-identify-age-related-conditions/trainX.csv"
         )
 
     def load_data(self):

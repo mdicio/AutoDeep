@@ -285,7 +285,7 @@ class LightGBMTrainer(BaseModel):
             self.evaluator.y_prob = probabilities
             score = self.evaluator.evaluate_metric(metric_name=metric)
 
-            if self.evaluator.maximize[metric][0]:
+            if self.evaluator.maximize[metric][1]:
                 score = -1 * score
 
             return {

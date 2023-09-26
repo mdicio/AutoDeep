@@ -1,4 +1,4 @@
-- dataset: diabetes
+- dataset: ageconditions
   model: xgb
   best_params: {}
   param_grid:
@@ -9,7 +9,7 @@
       verbose: false
     learning_rate:
     - 0.3
-- dataset: diabetes
+- dataset: ageconditions
   model: mlp
   best_params: {}
   param_grid:
@@ -27,8 +27,8 @@
     solver:
     - adam
     batch_size:
-    - 1024
-- dataset: diabetes
+    - 128
+- dataset: ageconditions
   model: resnet
   best_params: {}
   param_grid:
@@ -41,7 +41,7 @@
     resnet_depth:
     - resnet18
     batch_size:
-    - 1024
+    - 128
     optimizer_fn:
       Adam:
         weight_decay:
@@ -54,7 +54,7 @@
         - 0.1
         patience:
         - 5
-- dataset: diabetes
+- dataset: ageconditions
   model: s1dcnn
   best_params: {}
   param_grid:
@@ -66,7 +66,7 @@
       validation_fraction: 0.15
       early_stopping_patience: 5
     batch_size:
-    - 1024
+    - 128
     hidden_size:
     - 4096
     optimizer_fn:
@@ -81,7 +81,7 @@
         - 0.1
         patience:
         - 5
-- dataset: diabetes
+- dataset: ageconditions
   model: tabnet
   best_params: {}
   param_grid:
@@ -92,7 +92,7 @@
       val_size: 0.15
       early_stopping_patience: 5
     batch_size:
-    - 1024
+    - 128
     optimizer_fn:
       Adam:
         weight_decay:
@@ -105,7 +105,7 @@
         - 0.1
         patience:
         - 5
-- dataset: diabetes
+- dataset: ageconditions
   model: gate
   best_params: {}
   param_grid:
@@ -116,7 +116,7 @@
       val_size: 0.15
       early_stopping_patience: 5
     batch_size:
-    - 1024
+    - 128
     optimizer_fn:
       Adam:
         weight_decay:
@@ -129,7 +129,7 @@
         - 0.1
         patience:
         - 5
-- dataset: diabetes
+- dataset: ageconditions
   model: fttransformer
   best_params: {}
   param_grid:
@@ -140,7 +140,7 @@
       val_size: 0.15
       early_stopping_patience: 5
     batch_size:
-    - 1024
+    - 128
     optimizer_fn:
       Adam:
         weight_decay:
@@ -153,7 +153,7 @@
         - 0.1
         patience:
         - 5
-- dataset: diabetes
+- dataset: ageconditions
   model: categoryembedding
   best_params: {}
   param_grid:
@@ -164,7 +164,7 @@
       val_size: 0.15
       early_stopping_patience: 5
     batch_size:
-    - 1024
+    - 128
     optimizer_fn:
       Adam:
         weight_decay:
@@ -177,7 +177,7 @@
         - 0.1
         patience:
         - 5
-- dataset: diabetes
+- dataset: ageconditions
   model: gandalf
   best_params: {}
   param_grid:
@@ -188,7 +188,7 @@
       val_size: 0.15
       early_stopping_patience: 5
     batch_size:
-    - 1024
+    - 128
     optimizer_fn:
       Adam:
         weight_decay:
@@ -201,7 +201,7 @@
         - 0.1
         patience:
         - 5
-- dataset: diabetes
+- dataset: ageconditions
   model: node
   best_params: {}
   param_grid:
@@ -212,7 +212,7 @@
       val_size: 0.15
       early_stopping_patience: 5
     batch_size:
-    - 1024
+    - 128
     optimizer_fn:
       Adam:
         weight_decay:
@@ -225,7 +225,7 @@
         - 0.1
         patience:
         - 5
-- dataset: diabetes
+- dataset: ageconditions
   model: autoint
   best_params: {}
   param_grid:
@@ -236,7 +236,7 @@
       val_size: 0.15
       early_stopping_patience: 5
     batch_size:
-    - 1024
+    - 128
     optimizer_fn:
       Adam:
         weight_decay:
@@ -249,7 +249,7 @@
         - 0.1
         patience:
         - 5
-- dataset: diabetes
+- dataset: ageconditions
   model: tabtransformer
   best_params: {}
   param_grid:
@@ -260,7 +260,7 @@
       val_size: 0.15
       early_stopping_patience: 5
     batch_size:
-    - 1024
+    - 128
     optimizer_fn:
       Adam:
         weight_decay:
@@ -273,7 +273,7 @@
         - 0.1
         patience:
         - 5
-- dataset: diabetes
+- dataset: ageconditions
   model: catboost
   best_params: {}
   param_grid:

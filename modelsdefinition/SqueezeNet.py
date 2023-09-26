@@ -458,7 +458,7 @@ class SqueezeNetTrainer:
             self.evaluator.y_pred = np.array(y_pred).reshape(-1)
             score = self.evaluator.evaluate_metric(metric_name=metric)
 
-            if self.evaluator.maximize[metric][0]:
+            if self.evaluator.maximize[metric][1]:
                 score = -1 * score
 
             # Return the negative score (to minimize)
