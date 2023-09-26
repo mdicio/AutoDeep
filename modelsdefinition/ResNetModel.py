@@ -138,8 +138,7 @@ class ResNetTrainer:
         # Get the number of available CPU cores
         num_cpu_cores = os.cpu_count()
         # Calculate the num_workers value as number of cores - 2
-        self.num_workers = max(1, num_cpu_cores - 4)
-        self.num_workers = 0
+        self.num_workers = max(1, num_cpu_cores - 2)
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -573,12 +572,6 @@ class ResNetTrainer:
                     y_prob = np.append(y_prob, probabilities)
 
             # Calculate the score using the specified metric
-            self.evaluator.y_true = np.array(y_true).reshape(-1)
-            self.logger.debug(f"y_true, {y_true[:5]}")
-            self.evaluator.y_pred = np.array(y_pred).reshape(-1)
-            self.logger.debug(f"y_pred, {y_pred[:5]}")
-            self.evaluator.y_prob = y_prob
-            self.logger.debug(f"y_prob, {y_prob[:5]}, {y_prob.shape}")
 
             score = self.evaluator.evaluate_metric(metric_name=metric)
             if self.evaluator.maximize[metric][1]:

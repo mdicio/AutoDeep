@@ -434,7 +434,7 @@ class FullCreditDataLoader(FullDataLoader):
         df = df.rename(columns={"Class": self.target_column})
 
         ###dtt
-        df_train = self._undersample(df, "target", 6)  # Keep 6 times as many 0s as 1s
+        df_train = self._undersample(df, "target", 10)  # Keep 6 times as many 0s as 1s
 
         df_train.reset_index(drop=True, inplace=True)
 

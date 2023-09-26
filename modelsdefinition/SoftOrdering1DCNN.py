@@ -173,9 +173,8 @@ class SoftOrdering1DCNN:
         # Get the number of available CPU cores
         num_cpu_cores = os.cpu_count()
         # Calculate the num_workers value as number of cores - 2
-        self.num_workers = max(1, num_cpu_cores - 4)
+        self.num_workers = max(1, num_cpu_cores - 2)
         # set  to 0 if not causes error with kfold on macos
-        self.num_workers = 0
 
     def _load_best_model(self):
         """Load a trained model from a given path"""

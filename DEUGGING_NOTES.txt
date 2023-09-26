@@ -1,3 +1,8 @@
 # Currently running default params all models, NODE has memory error even on small datasets so excluding it for now.
 Test all models an all datasets
 See what params we can run with NODE on all datasets
+
+
+#GATE AND RESNET TAKE AGES, EXCLUDE FROM FIRST HYPEROPT RUN WITH 100 Evals
+
+#S1DCNN on Housing gives weird results

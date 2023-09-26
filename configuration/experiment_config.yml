@@ -22,7 +22,7 @@ include_models:
 # List of datasets to include in the experiment
 include_datasets:
   - iris        # Iris flower dataset
-  #- titanic
+  - titanic
   - breastcancer
   - ageconditions
   - diabetes

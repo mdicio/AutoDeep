@@ -52,6 +52,7 @@ class CatBoostTrainer(BaseModel):
 
         self.device = "GPU" if torch.cuda.is_available() else "CPU"
         self.extra_info = None
+        self.gpu_ram_part = 0.5
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -82,6 +83,7 @@ class CatBoostTrainer(BaseModel):
                 od_type="Iter",
                 od_wait=20,
                 task_type=self.device,
+                gpu_ram_part=self.gpu_ram_part,
                 **params,
             )
         elif self.problem_type == "multiclass_classification":
@@ -93,6 +95,7 @@ class CatBoostTrainer(BaseModel):
                 od_type="Iter",
                 od_wait=20,
                 task_type=self.device,
+                gpu_ram_part=self.gpu_ram_part,
                 **params,
             )
 
@@ -102,6 +105,7 @@ class CatBoostTrainer(BaseModel):
                 od_type="Iter",
                 od_wait=20,
                 task_type=self.device,
+                gpu_ram_part=self.gpu_ram_part,
                 **params,
             )
         else:
