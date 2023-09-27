@@ -8,6 +8,7 @@
       max_epochs: 1000
       val_size: 0.15
       early_stopping_patience: 5
+      precision: 16
     batch_size:
     - 1024
     optimizer_fn:

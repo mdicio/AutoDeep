@@ -335,9 +335,6 @@ class TabNetTrainer(BaseModel):
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
 
-        if (self.problem_type == "regression") and not hasattr(self, "target_range"):
-            self.target_range = [(float(np.min(y) * 0.5), float(np.max(y) * 1.5))]
-
         # Split the train data into training and validation sets
         X_train, X_val, y_train, y_val = train_test_split(
             X,
@@ -361,6 +358,15 @@ class TabNetTrainer(BaseModel):
             self.train_df, self.validation_df = handle_rogue_batch_size(
                 self.train_df, self.validation_df, params["batch_size"]
             )
+            if (self.problem_type == "regression") and not hasattr(
+                self, "target_range"
+            ):
+                self.target_range = [
+                    (
+                        float(np.min(self.train_df["target"]) * 0.8),
+                        float(np.max(self.train_df["target"]) * 1.2),
+                    )
+                ]
 
             model.fit(
                 train=self.train_df,
@@ -470,9 +476,6 @@ class TabNetTrainer(BaseModel):
         self.outer_params = param_grid["outer_params"]
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
-
-        if (self.problem_type == "regression") and not hasattr(self, "target_range"):
-            self.target_range = [(float(np.min(y) * 0.5), float(np.max(y) * 1.5))]
 
         # Merge X_train and y_train
         train = pd.concat([X, y], axis=1)
