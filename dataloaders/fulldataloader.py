@@ -10,6 +10,7 @@ from collections import Counter
 import pandas as pd
 from sklearn.utils import shuffle
 import math
+from sklearn.model_selection import StratifiedShuffleSplit
 
 
 class FullDataLoader:
@@ -235,7 +236,7 @@ class FullKaggleAgeConditionsLoader(FullDataLoader):
         self.encode_categorical = encode_categorical
         self.num_targets = num_targets
         self.filename = (
-            f"{self.data_path}kaggle/icr-identify-age-related-conditions/train.csv"
+            f"{self.data_path}kaggle/icr-identify-age-related-conditions/trainX.csv"
         )
 
     def load_data(self):
@@ -417,11 +418,7 @@ class FullCreditDataLoader(FullDataLoader):
         # Load the Credit Card Fraud Detection dataset from Kaggle
         df = pd.read_csv(self.filename)
         df = df.rename(columns={"Class": self.target_column})
-
-        ###dtt
-        df_train = self._undersample(df, "target", 6)  # Keep 6 times as many 0s as 1s
-
-        df_train.reset_index(drop=True, inplace=True)
+        df.reset_index(drop=True, inplace=True)
 
         # Extract the features and target variables from the dataset
         X_train = df.drop(columns=[self.target_column])
@@ -512,6 +509,8 @@ class FullCaliforniaHousingDataLoader(FullDataLoader):
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
         self.num_targets = num_targets
+        self.foldername = "housing"
+        self.filename = f"{self.data_path}{self.foldername}/cal_housing.csv"
 
     def load_data(self):
         # Load the California Housing Prices dataset from scikit-learn
@@ -521,7 +520,7 @@ class FullCaliforniaHousingDataLoader(FullDataLoader):
         # df.to_csv(r"/home/boom/sdev/WTabRun/data/housing/cal_housing.csv")
         #        df[self.target_column] = data.target
 
-        df = pd.read_csv(r"./data/housing/cal_housing.csv")
+        df = pd.read_csv(self.filename)
         df["pop_density"] = df["Population"] / df["AveRooms"]
 
         # Extract the features and target variables from the dataset
@@ -653,6 +652,18 @@ class FullCoverTypeDataLoader(FullDataLoader):
         cat_cols = df.select_dtypes(include=["object", "category"]).columns
         if self.encode_categorical and len(cat_cols) > 0:
             df = self.force_encode_categorical(df, exclude_cols=[self.target_column])
+
+        sample_size = 300000
+
+        # Initialize StratifiedShuffleSplit
+        stratified_split = StratifiedShuffleSplit(
+            n_splits=1, test_size=sample_size, random_state=42
+        )
+
+        # Generate indices for the stratified sample
+        for sample_index, _ in stratified_split.split(df, df["target"]):
+            df = df.iloc[sample_index]
+        print(f"covertype df {len(df)}")
 
         # Extract the features and target variables from the dataset
         X_train = df.drop(columns=[self.target_column])

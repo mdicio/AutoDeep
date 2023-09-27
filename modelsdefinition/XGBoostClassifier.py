@@ -56,6 +56,7 @@ class XGBoostClassifier(BaseModel):
 
         # extra_info used in case it is needed and specific to the dataset we are training on
         self.extra_info = None
+        self.dataset_name = None
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -313,6 +314,9 @@ class XGBoostClassifier(BaseModel):
         param_grid.pop("outer_params")
         # Define the hyperparameter search space
         space = infer_hyperopt_space(param_grid)
+        self.logger.info(
+            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset {self.dataset_name}"
+        )
 
         # Define the objective function for hyperopt search
         def objective(params):

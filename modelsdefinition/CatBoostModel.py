@@ -52,7 +52,8 @@ class CatBoostTrainer(BaseModel):
 
         self.device = "GPU" if torch.cuda.is_available() else "CPU"
         self.extra_info = None
-        self.gpu_ram_part = 0.5
+        self.gpu_ram_part = 0.3
+        self.dataset_name = None
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -334,6 +335,10 @@ class CatBoostTrainer(BaseModel):
         early_stopping_rounds = self.outer_params.get("early_stopping_rounds", 100)
         verbose = self.outer_params.get("verbose", False)
         space = infer_hyperopt_space(param_grid)
+
+        self.logger.info(
+            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset {self.dataset_name}"
+        )
 
         # Define the objective function for hyperopt search
         def objective(params):

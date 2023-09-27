@@ -174,6 +174,8 @@ class SoftOrdering1DCNN:
         num_cpu_cores = os.cpu_count()
         # Calculate the num_workers value as number of cores - 2
         self.num_workers = max(1, num_cpu_cores - 2)
+        self.dataset_name = None
+
         # set  to 0 if not causes error with kfold on macos
 
     def _load_best_model(self):
@@ -457,7 +459,7 @@ class SoftOrdering1DCNN:
         self.num_features = extra_info["num_features"]
 
         self._set_loss_function(y)
-        self.logger.debug(f"Training on {self.device}")
+        self.logger.debug(f"Training on {self.device} for dataset {self.dataset_name}")
 
         train_dataset, val_dataset = self._pandas_to_torch_datasets(
             X, y, validation_fraction
@@ -627,7 +629,7 @@ class SoftOrdering1DCNN:
         self.num_features = extra_info["num_features"]
 
         self._set_loss_function(y)
-        self.logger.debug(f"Training on {self.device}")
+        self.logger.debug(f"Training on {self.device} for dataset {self.dataset_name}")
 
         self.torch_dataset = self._single_pandas_to_torch_image_dataset(X, y)
 

@@ -49,6 +49,15 @@ class MLP(BaseModel):
             for handler in self.logger.handlers
         ):
             self.logger.addHandler(console_handler)
+
+        # Add file handler
+        file_handler = logging.FileHandler("logfile.log")
+        file_handler.setLevel(logging.DEBUG)  # Set log level to INFO
+        file_handler.setFormatter(formatter)
+        if not any(
+            isinstance(handler, logging.FileHandler) for handler in self.logger.handlers
+        ):
+            self.logger.addHandler(file_handler)
         self.extra_info = None
         self.metric_mapping = {
             "recall": "recall",
@@ -60,6 +69,7 @@ class MLP(BaseModel):
             "roc_auc": "roc_auc",
             "area_under_pr": "average_precision",
         }
+        self.dataset_name = None
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -197,6 +207,9 @@ class MLP(BaseModel):
         param_grid.pop("outer_params")
         # Define the hyperparameter search space
         space = infer_hyperopt_space(param_grid)
+        self.logger.info(
+            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset {self.dataset_name}"
+        )
 
         # Define the objective function for hyperopt search
         def objective(params):

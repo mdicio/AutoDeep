@@ -139,6 +139,7 @@ class ResNetTrainer:
         num_cpu_cores = os.cpu_count()
         # Calculate the num_workers value as number of cores - 2
         self.num_workers = max(1, num_cpu_cores - 2)
+        self.dataset_name = None
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -469,7 +470,7 @@ class ResNetTrainer:
         patience = self.outer_params.get("early_stopping_patience", 5)
         validation_fraction = self.outer_params.get("validation_fraction", 0.2)
 
-        self.logger.debug(f"Training on {self.device}")
+        self.logger.debug(f"Training on {self.device} for dataset {self.dataset_name}")
         space = infer_hyperopt_space_pytorch_custom(param_grid)
         # IGTD_ORDERING
         self.extra_info = extra_info
@@ -659,7 +660,8 @@ class ResNetTrainer:
         patience = self.outer_params.get("early_stopping_patience", 5)
         validation_fraction = self.outer_params.get("validation_fraction", 0.2)
 
-        self.logger.debug(f"Training on {self.device}")
+        self.logger.debug(f"Training on {self.device} for dataset {self.dataset_name}")
+
         space = infer_hyperopt_space_pytorch_custom(param_grid)
         # IGTD_ORDERING
         self.extra_info = extra_info

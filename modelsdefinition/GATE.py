@@ -78,6 +78,7 @@ class GATE(BaseModel):
             "target_prediction" if self.problem_type == "regression" else "prediction"
         ][0]
         self.default = False
+        self.dataset_name = None
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -136,7 +137,7 @@ class GATE(BaseModel):
 
     # Define the data configuration
     def prepare_tabular_model(self, params, outer_params, default=False):
-        self.logger.debug(f"TRAINING ON {self.device}")
+        self.logger.debug(f"Training on {self.device} for dataset {self.dataset_name}")
         data_config = DataConfig(
             target=["target"],
             continuous_cols=[
@@ -325,7 +326,9 @@ class GATE(BaseModel):
         dict
             Dictionary containing the best hyperparameters and corresponding score.
         """
-        self.logger.info(f"Starting hyperopt search maximising {metric} metric")
+        self.logger.info(
+            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset {self.dataset_name}"
+        )
         self.extra_info = extra_info
         self.outer_params = param_grid["outer_params"]
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
@@ -458,7 +461,9 @@ class GATE(BaseModel):
             Dictionary containing the best hyperparameters and corresponding score.
         """
 
-        self.logger.info(f"Starting hyperopt search maximising {metric} metric")
+        self.logger.info(
+            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset {self.dataset_name}"
+        )
         self.extra_info = extra_info
         self.outer_params = param_grid["outer_params"]
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
