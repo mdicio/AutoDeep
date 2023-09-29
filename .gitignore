@@ -2,7 +2,7 @@
 data/
 output/
 catboost_info/
-
+lightning_logs/
 
 #data files
 *.csv
@@ -175,3 +175,4 @@ profile_results.json
 .gitignore
 stacktrace.json
 .vscode/settings.json
+lightning_logs/version_0/hparams.yaml

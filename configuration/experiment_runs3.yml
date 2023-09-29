@@ -1,25 +1,42 @@
 - dataset: creditcard
-  model: fttransformer
+  model: xgb
   best_params: {}
   param_grid:
     outer_params:
-      hyperopt_evals: 1
-      auto_lr_find: true
-      max_epochs: 1000
-      val_size: 0.15
-      early_stopping_patience: 5
-      precision: 16
-    batch_size:
-    - 1024
-    optimizer_fn:
-      Adam:
-        weight_decay:
-        - 0.0
-        learning_rate:
-        - 0.001
-    scheduler_fn:
-      ReduceLROnPlateau:
-        factor:
-        - 0.1
-        patience:
-        - 5
+      hyperopt_evals: 50
+      validation_fraction: 0.15
+      early_stopping_rounds: 30
+      verbose: false
+    n_estimators:
+    - 100
+    - 1000
+    max_bin:
+    - 256
+    - 32
+    tree_method:
+    - auto
+    - hist
+    max_depth:
+    - 4
+    - 10
+    learning_rate:
+    - 0.1
+    - 0.33
+    subsample:
+    - 0.7
+    - 1.0
+    colsample_bytree:
+    - 0.5
+    - 1.0
+    min_child_weight:
+    - 1
+    - 10
+    alpha:
+    - 0.0
+    - 5.0
+    gamma:
+    - 0.0
+    - 5.0
+    lambda:
+    - 0.0
+    - 5.0

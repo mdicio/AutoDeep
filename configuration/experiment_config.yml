@@ -15,6 +15,7 @@ include_models:
   - TabTransformer
   - GANDALF
   - AutoInt
+  - MLPTorch
 
   ####- squeezenet
   ####- LightGBM
@@ -35,6 +36,15 @@ include_datasets:
   
 
 model_configs:
+
+
+  mlptorch:
+    execution_mode: hyperopt_kfold
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+    retrain: False
+  
 
   catboost:
     execution_mode: hyperopt_kfold

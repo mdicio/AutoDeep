@@ -252,7 +252,7 @@ class CatBoostTrainer(BaseModel):
             self.evaluator.y_prob = probabilities
             score = self.evaluator.evaluate_metric(metric_name=metric)
 
-            if self.evaluator.maximize[metric][1]:
+            if self.evaluator.maximize[metric][0]:
                 score = -1 * score
 
             return {
@@ -266,7 +266,7 @@ class CatBoostTrainer(BaseModel):
         trials = Trials()
 
         self.evaluator = Evaluator(problem_type=self.problem_type)
-        threshold = float(-1.0 * self.evaluator.maximize[metric][0])
+        threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         # Run the hyperopt search
         best = fmin(
@@ -427,7 +427,7 @@ class CatBoostTrainer(BaseModel):
 
             self.logger.info(f"Current hyperopt score {metric} = {score_average}")
 
-            if self.evaluator.maximize[metric][1]:
+            if self.evaluator.maximize[metric][0]:
                 score_average = -1 * score_average
 
             # Return the negative score (to minimize)
@@ -443,7 +443,7 @@ class CatBoostTrainer(BaseModel):
         # Define the trials object to keep track of the results
         trials = Trials()
         self.evaluator = Evaluator(problem_type=problem_type)
-        threshold = float(-1.0 * self.evaluator.maximize[metric][0])
+        threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         # Run the hyperopt search
         best = fmin(
@@ -463,7 +463,7 @@ class CatBoostTrainer(BaseModel):
         best_trial = trials.best_trial
 
         best_score = best_trial["result"]["loss"]
-        if self.evaluator.maximize[metric][1]:
+        if self.evaluator.maximize[metric][0]:
             best_score = -1 * best_score
         score_std = best_trial["result"]["score_std"]
         full_metrics = best_trial["result"]["full_metrics"]

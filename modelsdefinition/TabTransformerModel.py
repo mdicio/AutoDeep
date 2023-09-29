@@ -384,7 +384,7 @@ class TabTransformerTrainer(BaseModel):
 
             score = self.evaluator.evaluate_metric(metric_name=metric)
 
-            if self.evaluator.maximize[metric][1]:
+            if self.evaluator.maximize[metric][0]:
                 score = -1 * score
 
             # Return the negative score (to minimize)
@@ -398,7 +398,7 @@ class TabTransformerTrainer(BaseModel):
         # Define the trials object to keep track of the results
         trials = Trials()
         self.evaluator = Evaluator(problem_type=problem_type)
-        threshold = float(-1.0 * self.evaluator.maximize[metric][0])
+        threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         # Run the hyperopt search
         best = fmin(
@@ -499,7 +499,15 @@ class TabTransformerTrainer(BaseModel):
                 self.logger.debug(
                     f"Train fold target shape : {train_fold['target'].shape}"
                 )
-                self.logger.debug(f"Val fold target shape : {val_fold['target'].shape}")
+                if (self.problem_type == "regression") and not hasattr(
+                    self, "target_range"
+                ):
+                    self.target_range = [
+                        (
+                            float(np.min(train_fold["target"]) * 0.8),
+                            float(np.max(train_fold["target"]) * 1.2),
+                        )
+                    ]
                 # Initialize the tabular model
                 model = self.prepare_tabular_model(
                     params, self.outer_params, default=self.default
@@ -542,7 +550,7 @@ class TabTransformerTrainer(BaseModel):
 
             self.logger.info(f"Current hyperopt score {metric} = {score_average}")
 
-            if self.evaluator.maximize[metric][1]:
+            if self.evaluator.maximize[metric][0]:
                 score_average = -1 * score_average
 
             # Return the negative score (to minimize)
@@ -558,7 +566,7 @@ class TabTransformerTrainer(BaseModel):
         # Define the trials object to keep track of the results
         trials = Trials()
         self.evaluator = Evaluator(problem_type=problem_type)
-        threshold = float(-1.0 * self.evaluator.maximize[metric][0])
+        threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         # Run the hyperopt search
         best = fmin(
@@ -578,7 +586,7 @@ class TabTransformerTrainer(BaseModel):
         best_trial = trials.best_trial
 
         best_score = best_trial["result"]["loss"]
-        if self.evaluator.maximize[metric][1]:
+        if self.evaluator.maximize[metric][0]:
             best_score = -1 * best_score
         score_std = best_trial["result"]["score_std"]
         full_metrics = best_trial["result"]["full_metrics"]

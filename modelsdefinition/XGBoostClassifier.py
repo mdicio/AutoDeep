@@ -231,7 +231,7 @@ class XGBoostClassifier(BaseModel):
             self.evaluator.y_prob = probabilities
             score = self.evaluator.evaluate_metric(metric_name=metric)
 
-            if self.evaluator.maximize[metric][1]:
+            if self.evaluator.maximize[metric][0]:
                 score = -1 * score
 
             # Return the negative score (to minimize)
@@ -246,7 +246,7 @@ class XGBoostClassifier(BaseModel):
         trials = Trials()
 
         self.evaluator = Evaluator(problem_type=problem_type)
-        threshold = float(-1.0 * self.evaluator.maximize[metric][0])
+        threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         # Run the hyperopt search
         best = fmin(
@@ -375,7 +375,7 @@ class XGBoostClassifier(BaseModel):
 
             self.logger.info(f"Current hyperopt score {metric} = {score_average}")
 
-            if self.evaluator.maximize[metric][1]:
+            if self.evaluator.maximize[metric][0]:
                 score_average = -1 * score_average
 
             # Return the negative score (to minimize)
@@ -411,7 +411,7 @@ class XGBoostClassifier(BaseModel):
         best_trial = trials.best_trial
 
         best_score = best_trial["result"]["loss"]
-        if self.evaluator.maximize[metric][1]:
+        if self.evaluator.maximize[metric][0]:
             best_score = -1 * best_score
         self.logger.debug(
             f"self.evaluator.maximize[metric][1] {self.evaluator.maximize[metric][1]}"

@@ -285,7 +285,7 @@ class LightGBMTrainer(BaseModel):
             self.evaluator.y_prob = probabilities
             score = self.evaluator.evaluate_metric(metric_name=metric)
 
-            if self.evaluator.maximize[metric][1]:
+            if self.evaluator.maximize[metric][0]:
                 score = -1 * score
 
             return {
@@ -299,7 +299,7 @@ class LightGBMTrainer(BaseModel):
         trials = Trials()
 
         self.evaluator = Evaluator(problem_type=self.problem_type)
-        threshold = float(-1.0 * self.evaluator.maximize[metric][0])
+        threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         # Run the hyperopt search
         best = fmin(

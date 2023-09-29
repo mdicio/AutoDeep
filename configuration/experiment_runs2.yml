@@ -1,25 +1,52 @@
 - dataset: creditcard
-  model: gandalf
+  model: resnet
   best_params: {}
   param_grid:
     outer_params:
-      hyperopt_evals: 1
-      auto_lr_find: true
+      hyperopt_evals: 50
       max_epochs: 1000
-      val_size: 0.15
+      early_stopping: true
       early_stopping_patience: 5
-      precision: 16
+      validation_fraction: 0.15
     batch_size:
     - 1024
+    - 2048
+    - 4096
+    resnet_depth:
+    - resnet18
+    - resnet34
+    - resnet50
     optimizer_fn:
       Adam:
         weight_decay:
-        - 0.0
+        - 1.0e-05
+        - 0.001
         learning_rate:
+        - 0.0001
+        - 0.001
+      AdamW:
+        weight_decay:
+        - 1.0e-05
+        - 0.001
+        learning_rate:
+        - 0.0001
         - 0.001
     scheduler_fn:
       ReduceLROnPlateau:
         factor:
         - 0.1
+        - 0.9
         patience:
+        - 3
         - 5
+      ExponentialLR:
+        gamma:
+        - 0.9
+        - 0.99
+      StepLR:
+        step_size:
+        - 5
+        - 10
+        gamma:
+        - 0.9
+        - 0.99

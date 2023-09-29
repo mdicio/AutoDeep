@@ -1,26 +1,27 @@
+import logging
+import os
 import warnings
+from typing import Dict, Optional
+
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 import pandas as pd
-from typing import Optional, Dict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
+from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_class_weight
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from tqdm import tqdm
-import os
-import logging
-from sklearn.model_selection import KFold, StratifiedKFold
+
 from evaluation.generalevaluator import *
 from modelutils.trainingutilities import (
     infer_hyperopt_space_pytorch_custom,
     stop_on_perfect_lossCondition,
 )
-import os
 
 warnings.filterwarnings("ignore")
 
@@ -540,7 +541,7 @@ class SoftOrdering1DCNN:
             self.evaluator.y_prob = y_prob
             score = self.evaluator.evaluate_metric(metric_name=metric)
 
-            if self.evaluator.maximize[metric][1]:
+            if self.evaluator.maximize[metric][0]:
                 score = -1 * score
 
             # Return the negative score (to minimize)
@@ -555,7 +556,7 @@ class SoftOrdering1DCNN:
         trials = Trials()
 
         self.evaluator = Evaluator(problem_type=problem_type)
-        threshold = float(-1.0 * self.evaluator.maximize[metric][0])
+        threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         # Run the hyperopt search
         best = fmin(
@@ -750,7 +751,7 @@ class SoftOrdering1DCNN:
 
             self.logger.info(f"Current hyperopt score {metric} = {score_average}")
 
-            if self.evaluator.maximize[metric][1]:
+            if self.evaluator.maximize[metric][0]:
                 score_average = -1 * score_average
 
             # Return the negative score (to minimize)
@@ -766,7 +767,7 @@ class SoftOrdering1DCNN:
         # Define the trials object to keep track of the results
         trials = Trials()
         self.evaluator = Evaluator(problem_type=problem_type)
-        threshold = float(-1.0 * self.evaluator.maximize[metric][0])
+        threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         # Run the hyperopt search
         best = fmin(
@@ -786,7 +787,7 @@ class SoftOrdering1DCNN:
         best_trial = trials.best_trial
 
         best_score = best_trial["result"]["loss"]
-        if self.evaluator.maximize[metric][1]:
+        if self.evaluator.maximize[metric][0]:
             best_score = -1 * best_score
         score_std = best_trial["result"]["score_std"]
         full_metrics = best_trial["result"]["full_metrics"]

@@ -12,11 +12,11 @@ import os
 import time
 
 full_load_mode = True
-output_results_filename = "DEFAULT_FINAL"
+output_results_filename = "REALRUN"
 with open("./configuration/experiment_config.yml", "r") as f:
     config = yaml.safe_load(f)
 # set model parameters to default
-DEFAULT = True
+DEFAULT = False
 random_state = config["random_state"]
 seed_everything(random_state)
 

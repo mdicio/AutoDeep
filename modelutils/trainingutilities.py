@@ -159,7 +159,7 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
                                     )
                                 )
         elif (
-            (isinstance(param_values[0], (str, bool)))
+            (isinstance(param_values[0], (str, bool, list)))
             or (
                 param_name
                 in ["virtual_batch_size_ratio", "weights", "input_embed_dim_multiplier"]
@@ -254,7 +254,7 @@ def infer_hyperopt_space_pytorch_custom(param_grid: Dict):
                                     )
                                 )
         elif (
-            (isinstance(param_values[0], (str, bool)))
+            (isinstance(param_values[0], (str, bool, list)))
             or (param_name in ["hidden_size"])
             or any(value is None for value in param_values)
         ):
