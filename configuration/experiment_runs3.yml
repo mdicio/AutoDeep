@@ -1,42 +1,58 @@
-- dataset: creditcard
+- dataset: diabetes
   model: xgb
   best_params: {}
   param_grid:
-    outer_params:
+    outer_params: &id001
       hyperopt_evals: 50
       validation_fraction: 0.15
       early_stopping_rounds: 30
       verbose: false
-    n_estimators:
+    n_estimators: &id002
     - 100
-    - 1000
-    max_bin:
+    - 1500
+    max_bin: &id003
     - 256
     - 32
-    tree_method:
+    tree_method: &id004
     - auto
     - hist
-    max_depth:
+    max_depth: &id005
     - 4
     - 10
-    learning_rate:
+    learning_rate: &id006
     - 0.1
     - 0.33
-    subsample:
+    subsample: &id007
     - 0.7
     - 1.0
-    colsample_bytree:
+    colsample_bytree: &id008
     - 0.5
     - 1.0
-    min_child_weight:
+    min_child_weight: &id009
     - 1
     - 10
-    alpha:
+    alpha: &id010
     - 0.0
     - 5.0
-    gamma:
+    gamma: &id011
     - 0.0
     - 5.0
-    lambda:
+    lambda: &id012
     - 0.0
     - 5.0
+- dataset: covertype
+  model: xgb
+  best_params: {}
+  param_grid:
+    outer_params: *id001
+    n_estimators: *id002
+    max_bin: *id003
+    tree_method: *id004
+    max_depth: *id005
+    learning_rate: *id006
+    subsample: *id007
+    colsample_bytree: *id008
+    min_child_weight: *id009
+    alpha: *id010
+    gamma: *id011
+    lambda: *id012

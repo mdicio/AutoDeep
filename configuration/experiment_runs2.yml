@@ -1,52 +1,120 @@
-- dataset: creditcard
-  model: resnet
+- dataset: ageconditions
+  model: catboost
   best_params: {}
   param_grid:
-    outer_params:
+    outer_params: &id001
       hyperopt_evals: 50
-      max_epochs: 1000
-      early_stopping: true
-      early_stopping_patience: 5
       validation_fraction: 0.15
-    batch_size:
-    - 1024
-    - 2048
-    - 4096
-    resnet_depth:
-    - resnet18
-    - resnet34
-    - resnet50
-    optimizer_fn:
-      Adam:
-        weight_decay:
-        - 1.0e-05
-        - 0.001
-        learning_rate:
-        - 0.0001
-        - 0.001
-      AdamW:
-        weight_decay:
-        - 1.0e-05
-        - 0.001
-        learning_rate:
-        - 0.0001
-        - 0.001
-    scheduler_fn:
-      ReduceLROnPlateau:
-        factor:
-        - 0.1
-        - 0.9
-        patience:
-        - 3
-        - 5
-      ExponentialLR:
-        gamma:
-        - 0.9
-        - 0.99
-      StepLR:
-        step_size:
-        - 5
-        - 10
-        gamma:
-        - 0.9
-        - 0.99
+      early_stopping_rounds: 100
+      verbose: false
+    iterations: &id002
+    - 200
+    - 2000
+    learning_rate: &id003
+    - 0.001
+    - 0.1
+    depth: &id004
+    - 4
+    - 10
+    l2_leaf_reg: &id005
+    - 0.5
+    - 5.0
+    min_child_samples: &id006
+    - 1
+    - 100
+    bagging_temperature: &id007
+    - 0.1
+    - 2.0
+- dataset: breastcancer
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id001
+    iterations: *id002
+    learning_rate: *id003
+    depth: *id004
+    l2_leaf_reg: *id005
+    min_child_samples: *id006
+    bagging_temperature: *id007
+- dataset: iris
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id001
+    iterations: *id002
+    learning_rate: *id003
+    depth: *id004
+    l2_leaf_reg: *id005
+    min_child_samples: *id006
+    bagging_temperature: *id007
+- dataset: titanic
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id001
+    iterations: *id002
+    learning_rate: *id003
+    depth: *id004
+    l2_leaf_reg: *id005
+    min_child_samples: *id006
+    bagging_temperature: *id007
+- dataset: adult
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: &id008
+      hyperopt_evals: 50
+      validation_fraction: 0.15
+      early_stopping_rounds: 100
+      verbose: false
+    iterations: &id009
+    - 200
+    - 1500
+    learning_rate: &id010
+    - 0.001
+    - 0.1
+    depth: &id011
+    - 4
+    - 10
+    l2_leaf_reg: &id012
+    - 0.5
+    - 5.0
+    min_child_samples: &id013
+    - 1
+    - 100
+    bagging_temperature: &id014
+    - 0.1
+    - 2.0
+- dataset: heloc
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id008
+    iterations: *id009
+    learning_rate: *id010
+    depth: *id011
+    l2_leaf_reg: *id012
+    min_child_samples: *id013
+    bagging_temperature: *id014
+- dataset: diabetes
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id008
+    iterations: *id009
+    learning_rate: *id010
+    depth: *id011
+    l2_leaf_reg: *id012
+    min_child_samples: *id013
+    bagging_temperature: *id014
+- dataset: covertype
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id008
+    iterations: *id009
+    learning_rate: *id010
+    depth: *id011
+    l2_leaf_reg: *id012
+    min_child_samples: *id013
+    bagging_temperature: *id014

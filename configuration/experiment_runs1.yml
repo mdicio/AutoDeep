@@ -1,53 +1,100 @@
-- dataset: creditcard
-  model: s1dcnn
+- dataset: iris
+  model: xgb
+  best_params: {}
+  param_grid:
+    outer_params: &id001
+      hyperopt_evals: 50
+      validation_fraction: 0.15
+      early_stopping_rounds: 30
+      verbose: false
+    n_estimators: &id002
+    - 100
+    - 2000
+    max_bin: &id003
+    - 256
+    - 32
+    tree_method: &id004
+    - auto
+    - hist
+    max_depth: &id005
+    - 4
+    - 10
+    learning_rate: &id006
+    - 0.1
+    - 0.33
+    subsample: &id007
+    - 0.7
+    - 1.0
+    colsample_bytree: &id008
+    - 0.5
+    - 1.0
+    min_child_weight: &id009
+    - 1
+    - 10
+    alpha: &id010
+    - 0.0
+    - 5.0
+    gamma: &id011
+    - 0.0
+    - 5.0
+    lambda: &id012
+    - 0.0
+    - 5.0
+- dataset: titanic
+  model: xgb
+  best_params: {}
+  param_grid:
+    outer_params: *id001
+    n_estimators: *id002
+    max_bin: *id003
+    tree_method: *id004
+    max_depth: *id005
+    learning_rate: *id006
+    subsample: *id007
+    colsample_bytree: *id008
+    min_child_weight: *id009
+    alpha: *id010
+    gamma: *id011
+    lambda: *id012
+- dataset: adult
+  model: xgb
   best_params: {}
   param_grid:
     outer_params:
       hyperopt_evals: 50
-      max_epochs: 1000
-      early_stopping: true
-      shuffle: true
       validation_fraction: 0.15
-      early_stopping_patience: 5
-    batch_size:
-    - 1024
-    - 2048
-    - 4096
-    hidden_size:
-    - 1024
-    - 2048
-    - 4096
-    optimizer_fn:
-      Adam:
-        weight_decay:
-        - 1.0e-05
-        - 0.001
-        learning_rate:
-        - 0.0001
-        - 0.001
-      AdamW:
-        weight_decay:
-        - 1.0e-05
-        - 0.001
-        learning_rate:
-        - 0.0001
-        - 0.001
-    scheduler_fn:
-      ReduceLROnPlateau:
-        factor:
-        - 0.1
-        - 0.9
-        patience:
-        - 3
-        - 5
-      ExponentialLR:
-        gamma:
-        - 0.9
-        - 0.99
-      StepLR:
-        step_size:
-        - 5
-        - 10
-        gamma:
-        - 0.9
-        - 0.99
+      early_stopping_rounds: 30
+      verbose: false
+    n_estimators:
+    - 100
+    - 1500
+    max_bin:
+    - 256
+    - 32
+    tree_method:
+    - auto
+    - hist
+    max_depth:
+    - 4
+    - 10
+    learning_rate:
+    - 0.1
+    - 0.33
+    subsample:
+    - 0.7
+    - 1.0
+    colsample_bytree:
+    - 0.5
+    - 1.0
+    min_child_weight:
+    - 1
+    - 10
+    alpha:
+    - 0.0
+    - 5.0
+    gamma:
+    - 0.0
+    - 5.0
+    lambda:
+    - 0.0
+    - 5.0

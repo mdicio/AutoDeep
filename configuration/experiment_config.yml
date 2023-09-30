@@ -7,7 +7,6 @@ include_models:
   - MLP  # Multi-Layer Perceptron
   - TabNet  # TabNet Classifier 
   - GATE 
-  #- Node
   - resnet
   - S1DCNN
   - CategoryEmbedding
@@ -15,8 +14,11 @@ include_models:
   - TabTransformer
   - GANDALF
   - AutoInt
-  - MLPTorch
-
+  #- Node
+  
+  
+  
+  ####- MLPTorch
   ####- squeezenet
   ####- LightGBM
 
@@ -163,9 +165,9 @@ dataset_configs:
     num_classes: 1
     problem_type: binary_classification
     eval_metrics:
+      - f1
       - lift
       - roc_auc
-      - f1
       - area_under_pr
       - accuracy
       - precision
@@ -204,9 +206,9 @@ dataset_configs:
     test_size: 0.25
     problem_type: binary_classification
     eval_metrics:
+      - roc_auc
       - lift
       - accuracy
-      - roc_auc
       - f1
       - area_under_pr
       - precision
@@ -237,9 +239,9 @@ dataset_configs:
     test_size: 0.25
     problem_type: binary_classification
     eval_metrics:
+      - f1
       - lift
       - roc_auc
-      - f1
       - area_under_pr
       - accuracy
       - precision
