@@ -1,15 +1,15 @@
-- dataset: iris
+- dataset: diabetes
   model: xgb
   best_params: {}
   param_grid:
     outer_params: &id001
       hyperopt_evals: 50
       validation_fraction: 0.15
-      early_stopping_rounds: 30
+      early_stopping_rounds: 5
       verbose: false
     n_estimators: &id002
     - 100
-    - 2000
+    - 1500
     max_bin: &id003
     - 256
     - 32
@@ -40,7 +40,7 @@
     lambda: &id012
     - 0.0
     - 5.0
-- dataset: titanic
+- dataset: covertype
   model: xgb
   best_params: {}
   param_grid:
@@ -60,41 +60,135 @@
   model: xgb
   best_params: {}
   param_grid:
-    outer_params:
+    outer_params: *id001
+    n_estimators: *id002
+    max_bin: *id003
+    tree_method: *id004
+    max_depth: *id005
+    learning_rate: *id006
+    subsample: *id007
+    colsample_bytree: *id008
+    min_child_weight: *id009
+    alpha: *id010
+    gamma: *id011
+    lambda: *id012
+- dataset: ageconditions
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: &id013
       hyperopt_evals: 50
       validation_fraction: 0.15
-      early_stopping_rounds: 30
+      early_stopping_rounds: 100
       verbose: false
-    n_estimators:
-    - 100
-    - 1500
-    max_bin:
-    - 256
-    - 32
-    tree_method:
-    - auto
-    - hist
-    max_depth:
+    iterations: &id014
+    - 200
+    - 2000
+    learning_rate: &id015
+    - 0.001
+    - 0.1
+    depth: &id016
     - 4
     - 10
-    learning_rate:
-    - 0.1
-    - 0.33
-    subsample:
-    - 0.7
-    - 1.0
-    colsample_bytree:
+    l2_leaf_reg: &id017
     - 0.5
-    - 1.0
-    min_child_weight:
+    - 5.0
+    min_child_samples: &id018
     - 1
+    - 100
+    bagging_temperature: &id019
+    - 0.1
+    - 2.0
+- dataset: breastcancer
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id013
+    iterations: *id014
+    learning_rate: *id015
+    depth: *id016
+    l2_leaf_reg: *id017
+    min_child_samples: *id018
+    bagging_temperature: *id019
+- dataset: iris
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id013
+    iterations: *id014
+    learning_rate: *id015
+    depth: *id016
+    l2_leaf_reg: *id017
+    min_child_samples: *id018
+    bagging_temperature: *id019
+- dataset: titanic
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id013
+    iterations: *id014
+    learning_rate: *id015
+    depth: *id016
+    l2_leaf_reg: *id017
+    min_child_samples: *id018
+    bagging_temperature: *id019
+- dataset: adult
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: &id020
+      hyperopt_evals: 50
+      validation_fraction: 0.15
+      early_stopping_rounds: 100
+      verbose: false
+    iterations: &id021
+    - 200
+    - 1500
+    learning_rate: &id022
+    - 0.001
+    - 0.1
+    depth: &id023
+    - 4
     - 10
-    alpha:
-    - 0.0
+    l2_leaf_reg: &id024
+    - 0.5
     - 5.0
-    gamma:
-    - 0.0
-    - 5.0
-    lambda:
-    - 0.0
-    - 5.0
+    min_child_samples: &id025
+    - 1
+    - 100
+    bagging_temperature: &id026
+    - 0.1
+    - 2.0
+- dataset: heloc
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id020
+    iterations: *id021
+    learning_rate: *id022
+    depth: *id023
+    l2_leaf_reg: *id024
+    min_child_samples: *id025
+    bagging_temperature: *id026
+- dataset: diabetes
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id020
+    iterations: *id021
+    learning_rate: *id022
+    depth: *id023
+    l2_leaf_reg: *id024
+    min_child_samples: *id025
+    bagging_temperature: *id026
+- dataset: covertype
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id020
+    iterations: *id021
+    learning_rate: *id022
+    depth: *id023
+    l2_leaf_reg: *id024
+    min_child_samples: *id025
+    bagging_temperature: *id026

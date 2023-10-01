@@ -17,7 +17,7 @@ root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_path)
 
 from factory import (
-    create_data_loader,
+    create_full_data_loader,
     create_model,
     seed_everything,
 )
@@ -40,7 +40,7 @@ included_models = [i.lower() for i in config["include_models"]]
 included_datasets = [i.lower() for i in config["include_datasets"]]
 
 model_name = "node"
-dataset_name = "covertype"
+dataset_name = "diabetes"
 
 model_configs = config["model_configs"][model_name]
 encode_categorical = model_configs["encode_categorical"]
@@ -53,7 +53,7 @@ dataset_num_classes = dataset_configs.get("num_targets", 1)
 dataset_test_size = dataset_configs["test_size"]
 
 # Create an instance of the specified data loader class
-data_loader = create_data_loader(
+data_loader = create_full_data_loader(
     dataset_name,
     test_size=dataset_test_size,
     normalize_features=normalize_features,
@@ -63,7 +63,7 @@ data_loader = create_data_loader(
     num_targets=dataset_num_classes,
 )
 
-X_train, X_test, y_train, y_test, extra_info = data_loader.load_data()
+X, y, extra_info = data_loader.load_data()
 
 # Create an instance of the specified model class
 model = create_model(
@@ -79,23 +79,23 @@ model.save_path = f"./output/modelsaves/{dataset_name}/{model_name}/testing/"
 # Learning rate
 node_large_param_grid = {
     "outer_params": {
-        "hyperopt_evals": 10,
+        "hyperopt_evals": 1,
         "auto_lr_find": False,
         "max_epochs": 1000,
         "val_size": 0.15,
         "early_stopping_patience": 6,
     },
     "learning_rate": 0.1,
-    "batch_size": 4096,
-    "num_trees": 84,
-    "num_layers": 1,
-    "additional_tree_output_dim": 2,
-    "depth": 5,
-    "choice_function": "entmax15",
-    "bin_function": "entmoid15",
+    "batch_size": 1024,
+    "num_trees": 128,
+    "num_layers": 3,
+    "additional_tree_output_dim": 4,
+    "depth": 7,
+    "choice_function": "sparsemax",
+    "bin_function": "sparsemoid",
     "input_dropout": 0.0,
     "embedding_dropout": 0.0,
-    "embed_categorical": False,
+    "embed_categorical": True,
     "optimizer_fn": AdamW,
     "AdamW_weight_decay": 0.0001,
     "scheduler_fn": ReduceLROnPlateau,
@@ -105,29 +105,4 @@ node_large_param_grid = {
 
 print(node_large_param_grid)
 
-model.train(X_train, y_train, node_large_param_grid, extra_info)
-
-
-# the metric to use as base for CV or hyperopt search is the first metric specified in config file for the dataset
-dmetric = dataset_configs["eval_metrics"][0]
-
-if dataset_task == "binary_classification":
-    y_pred, y_prob = model.predict(X_test, predict_proba=True)
-else:
-    y_pred = model.predict(X_test)
-    y_prob = None
-
-print(f"y_true.shape, y_pred.shape {y_test.shape, y_pred.shape}")
-print(y_test[:3])
-print(y_pred[:3])
-# Initialize the evaluator
-evaluator = Evaluator(
-    y_true=y_test,
-    y_pred=y_pred,
-    y_prob=y_prob,
-    run_metrics=dataset_configs["eval_metrics"],
-    metric=dmetric,
-    problem_type=dataset_task,
-)
-output_metrics = evaluator.evaluate_model()
-print("FINAL TEST METRICS: ", output_metrics)
+model.train(X, y, node_large_param_grid, extra_info)

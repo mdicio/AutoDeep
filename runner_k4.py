@@ -74,6 +74,7 @@ for run in runs:
             num_classes=dataset_num_classes,
         )
         model.default = DEFAULT
+        model.dataset_name = dataset_name
         model.save_path = f"./output/modelsaves/{dataset_name}/{model_name}/{run_id}/"
         # check if the directory already exists
         if not os.path.exists(model.save_path):

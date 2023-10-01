@@ -3,6 +3,15 @@ data/
 output/
 catboost_info/
 lightning_logs/
+lightning_logs/version_0/hparams.yaml
+configuration/experiment_runs1.yml
+configuration/experiment_runs2.yml
+configuration/experiment_runs3.yml
+configuration/experiment_runs4.yml
+notebooks/personal
+runner_k2.py
+runner_k3.py
+runner_k4.py
 
 #data files
 *.csv
@@ -175,4 +184,3 @@ profile_results.json
 .gitignore
 stacktrace.json
 .vscode/settings.json
-lightning_logs/version_0/hparams.yaml
