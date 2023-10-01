@@ -40,7 +40,7 @@ included_models = [i.lower() for i in config["include_models"]]
 included_datasets = [i.lower() for i in config["include_datasets"]]
 
 model_name = "node"
-dataset_name = "adult"
+dataset_name = "diabetes"
 
 model_configs = config["model_configs"][model_name]
 encode_categorical = model_configs["encode_categorical"]

@@ -562,14 +562,38 @@ class FullAdultDataLoader(FullDataLoader):
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
         self.num_targets = num_targets
+        self.filename = f"{self.data_path}/adult/adult.csv"
 
     def load_data(self):
         # Load the Adult dataset from UCI Machine Learning Repository
 
-        df = pd.read_csv(r"/home/boom/sdev/WTabRun/data/adult/adult.csv")
+        #data_url = (
+        #    "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
+        #)
+        #data_columns = [
+        #    "age",
+        #    "workclass",
+        #    "fnlwgt",
+        #    "education",
+        #    "education-num",
+        #    "marital-status",
+        #    "occupation",
+        #    "relationship",
+        #    "race",
+        #    "sex",
+        #    "capital-gain",
+        #    "capital-loss",
+        #    "hours-per-week",
+        #    "native-country",
+        #    "income",
+        #]
+        #df = pd.read_csv(data_url, names=data_columns)
         # Create the "target_income" column by replacing values in the "income" column
-        df["target"] = df["income"].str.strip().replace({">50K": 1, "<=50K": 0})
-        df.drop(columns=["income"], inplace=True)
+        #df["target"] = df["income"].str.strip().replace({">50K": 1, "<=50K": 0})
+        #df.drop(columns=["income"], inplace=True)
+
+
+        df = pd.read_csv(self.filename)
 
         # Fill missing categorical values with the mode
         categorical_cols = [
