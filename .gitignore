@@ -1,0 +1,86 @@
+ 
+# Custom
+*.ckpt
+data/
+output/modelsaves
+
+
+# Compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+__init__.pyc
+
+# Python environment
+venv/
+env/
+*.egg-info/
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Virtual Environment
+pyvenv.cfg
+
+# IDE-specific files
+.vscode/
+.idea/
+
+# Package directories
+dist/
+build/
+*.egg-info/
+
+# Distribution/installation scripts
+*.pyc
+*.pyo
+*.egg
+*.egg-info
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+__pycache__/
+bin/
+include/
+.pip_cache/
+.installed.cfg
+
+# macOS system files
+.DS_Store
+
+# Windows Thumbs.db file
+Thumbs.db
+
+# Compiled C extensions
+*.so
+
+# Caches and Logs
+*.swp
+*.log
+*.cache
+
+# Coverage reports
+.coverage
+.coverage.*
+htmlcov/
+
+# Translations
+*.mo
+*.pot
+
+# Dependency folders
+__pycache__/
+node_modules/
+bower_components/
+jspm_packages/

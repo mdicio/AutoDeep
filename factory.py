@@ -12,9 +12,8 @@ from modelsdefinition.TabTransformerModel import TabTransformerTrainer
 from modelsdefinition.GANDALF import GandalfTrainer
 from modelsdefinition.CatBoostModel import CatBoostTrainer
 from modelsdefinition.LightGBMModel import LightGBMTrainer
-from modelsdefinition.MLPTorch import MLPTorch
 from modelsdefinition.SoftOrdering1DCNN import SoftOrdering1DCNN
-from modelsdefinition.SqueezeNet import SqueezeNetTrainer
+from SCRATCH.SqueezeNet import SqueezeNetTrainer
 from dataloaders.dataloader import *
 from dataloaders.fulldataloader import *
 
@@ -86,8 +85,6 @@ def create_model(model_name, problem_type, num_classes, **kwargs):
         return SoftOrdering1DCNN(
             problem_type=problem_type, num_targets=num_classes, **kwargs
         )
-    elif mname == "mlptorch":
-        return MLPTorch(problem_type=problem_type, num_targets=num_classes, **kwargs)
     else:
         raise ValueError(f"Invalid model: {model_name}")
 
