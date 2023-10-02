@@ -418,6 +418,9 @@ class XGBoostClassifier(BaseModel):
         )
         score_std = best_trial["result"]["score_std"]
         full_metrics = best_trial["result"]["full_metrics"]
+
+
+        self.logger.info(f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 

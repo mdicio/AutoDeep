@@ -381,6 +381,7 @@ class NodeTrainer(BaseModel):
             pred_df = model.predict(self.validation_df)
             predictions = pred_df[self.prediction_col].values
             if self.problem_type == "binary_classification":
+                self.logger.debug(pred_df.columns)
                 probabilities = pred_df["1_probability"].values
                 self.evaluator.y_prob = probabilities
 
@@ -532,6 +533,7 @@ class NodeTrainer(BaseModel):
                 pred_df = model.predict(val_fold)
                 predictions = pred_df[self.prediction_col].values
                 if self.problem_type == "binary_classification":
+                    self.logger.debug(pred_df.columns)
                     probabilities = pred_df["1_probability"].values
                     self.evaluator.y_prob = probabilities
 
@@ -596,6 +598,9 @@ class NodeTrainer(BaseModel):
             best_score = -1 * best_score
         score_std = best_trial["result"]["score_std"]
         full_metrics = best_trial["result"]["full_metrics"]
+
+
+        self.logger.info(f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 

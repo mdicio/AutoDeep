@@ -1,46 +1,36 @@
-- dataset: heloc
-  model: node
+- dataset: housing
+  model: categoryembedding
   best_params: {}
   param_grid:
     outer_params: &id001
       hyperopt_evals: 50
       auto_lr_find: true
+      precision: 16
       max_epochs: 1000
       val_size: 0.15
       early_stopping_patience: 5
     batch_size: &id002
-    - 512
     - 1024
-    num_layers: &id003
-    - 1
-    - 2
-    - 3
-    num_trees: &id004
-    - 12
-    - 128
-    additional_tree_output_dim: &id005
-    - 2
-    - 3
-    - 4
-    depth: &id006
-    - 5
-    - 7
-    choice_function: &id007
-    - entmax15
-    - sparsemax
-    bin_function: &id008
-    - entmoid15
-    - sparsemoid
-    input_dropout: &id009
+    - 2048
+    - 4096
+    layers: &id003
+    - 128-64-32
+    - 128-64-32-16
+    - 256-128-64
+    activation: &id004
+    - ReLU
+    - LeakyReLU
+    - Tanh
+    initialization: &id005
+    - kaiming
+    - xavier
+    dropout: &id006
     - 0.0
-    - 0.1
-    embedding_dropout: &id010
+    - 0.3
+    embedding_dropout: &id007
     - 0.0
-    - 0.1
-    embed_categorical: &id011
-    - true
-    - false
-    optimizer_fn: &id012
+    - 0.3
+    optimizer_fn: &id008
       Adam:
         weight_decay:
         - 0.0001
@@ -49,7 +39,7 @@
         weight_decay:
         - 0.0001
         - 1.0e-05
-    scheduler_fn: &id013
+    scheduler_fn: &id009
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -61,85 +51,53 @@
         gamma:
         - 0.9
         - 0.99
-- dataset: diabetes
-  model: node
+- dataset: heloc
+  model: categoryembedding
   best_params: {}
   param_grid:
     outer_params: *id001
     batch_size: *id002
-    num_layers: *id003
-    num_trees: *id004
-    additional_tree_output_dim: *id005
-    depth: *id006
-    choice_function: *id007
-    bin_function: *id008
-    input_dropout: *id009
-    embedding_dropout: *id010
-    embed_categorical: *id011
-    optimizer_fn: *id012
-    scheduler_fn: *id013
-- dataset: covertype
-  model: node
+    layers: *id003
+    activation: *id004
+    initialization: *id005
+    dropout: *id006
+    embedding_dropout: *id007
+    optimizer_fn: *id008
+    scheduler_fn: *id009
+- dataset: iris
+  model: categoryembedding
   best_params: {}
   param_grid:
-    outer_params: *id001
-    batch_size: *id002
-    num_layers: *id003
-    num_trees: *id004
-    additional_tree_output_dim: *id005
-    depth: *id006
-    choice_function: *id007
-    bin_function: *id008
-    input_dropout: *id009
-    embedding_dropout: *id010
-    embed_categorical: *id011
-    optimizer_fn: *id012
-    scheduler_fn: *id013
-- dataset: breastcancer
-  model: node
-  best_params: {}
-  param_grid:
-    outer_params: &id014
+    outer_params: &id010
       hyperopt_evals: 50
       auto_lr_find: true
+      precision: 16
       max_epochs: 1000
       val_size: 0.15
       early_stopping_patience: 5
-    batch_size: &id015
+    batch_size: &id011
     - 32
     - 64
     - 128
     - 256
-    num_layers: &id016
-    - 1
-    - 2
-    - 3
-    num_trees: &id017
-    - 12
-    - 128
-    additional_tree_output_dim: &id018
-    - 2
-    - 3
-    - 4
-    depth: &id019
-    - 5
-    - 7
-    choice_function: &id020
-    - entmax15
-    - sparsemax
-    bin_function: &id021
-    - entmoid15
-    - sparsemoid
-    input_dropout: &id022
+    layers: &id012
+    - 128-64-32
+    - 128-64-32-16
+    - 256-128-64
+    activation: &id013
+    - ReLU
+    - LeakyReLU
+    - Tanh
+    initialization: &id014
+    - kaiming
+    - xavier
+    dropout: &id015
     - 0.0
-    - 0.1
-    embedding_dropout: &id023
+    - 0.3
+    embedding_dropout: &id016
     - 0.0
-    - 0.1
-    embed_categorical: &id024
-    - true
-    - false
-    optimizer_fn: &id025
+    - 0.3
+    optimizer_fn: &id017
       Adam:
         weight_decay:
         - 0.0001
@@ -148,7 +106,7 @@
         weight_decay:
         - 0.0001
         - 1.0e-05
-    scheduler_fn: &id026
+    scheduler_fn: &id018
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -160,105 +118,94 @@
         gamma:
         - 0.9
         - 0.99
-- dataset: creditcard
-  model: node
+- dataset: breastcancer
+  model: categoryembedding
   best_params: {}
   param_grid:
-    outer_params: *id001
-    batch_size: *id002
-    num_layers: *id003
-    num_trees: *id004
-    additional_tree_output_dim: *id005
-    depth: *id006
-    choice_function: *id007
-    bin_function: *id008
-    input_dropout: *id009
-    embedding_dropout: *id010
-    embed_categorical: *id011
-    optimizer_fn: *id012
-    scheduler_fn: *id013
-- dataset: ageconditions
-  model: node
-  best_params: {}
-  param_grid:
-    outer_params: *id014
-    batch_size: *id015
-    num_layers: *id016
-    num_trees: *id017
-    additional_tree_output_dim: *id018
-    depth: *id019
-    choice_function: *id020
-    bin_function: *id021
-    input_dropout: *id022
-    embedding_dropout: *id023
-    embed_categorical: *id024
-    optimizer_fn: *id025
-    scheduler_fn: *id026
+    outer_params: *id010
+    batch_size: *id011
+    layers: *id012
+    activation: *id013
+    initialization: *id014
+    dropout: *id015
+    embedding_dropout: *id016
+    optimizer_fn: *id017
+    scheduler_fn: *id018
 - dataset: titanic
-  model: node
+  model: categoryembedding
   best_params: {}
   param_grid:
-    outer_params: *id014
-    batch_size: *id015
-    num_layers: *id016
-    num_trees: *id017
-    additional_tree_output_dim: *id018
-    depth: *id019
-    choice_function: *id020
-    bin_function: *id021
-    input_dropout: *id022
-    embedding_dropout: *id023
-    embed_categorical: *id024
-    optimizer_fn: *id025
-    scheduler_fn: *id026
-- dataset: housing
-  model: node
-  best_params: {}
-  param_grid:
-    outer_params: *id001
-    batch_size: *id002
-    num_layers: *id003
-    num_trees: *id004
-    additional_tree_output_dim: *id005
-    depth: *id006
-    choice_function: *id007
-    bin_function: *id008
-    input_dropout: *id009
-    embedding_dropout: *id010
-    embed_categorical: *id011
-    optimizer_fn: *id012
-    scheduler_fn: *id013
+    outer_params: *id010
+    batch_size: *id011
+    layers: *id012
+    activation: *id013
+    initialization: *id014
+    dropout: *id015
+    embedding_dropout: *id016
+    optimizer_fn: *id017
+    scheduler_fn: *id018
 - dataset: adult
-  model: node
+  model: categoryembedding
   best_params: {}
   param_grid:
     outer_params: *id001
     batch_size: *id002
-    num_layers: *id003
-    num_trees: *id004
-    additional_tree_output_dim: *id005
-    depth: *id006
-    choice_function: *id007
-    bin_function: *id008
-    input_dropout: *id009
-    embedding_dropout: *id010
-    embed_categorical: *id011
-    optimizer_fn: *id012
-    scheduler_fn: *id013
-- dataset: iris
-  model: node
+    layers: *id003
+    activation: *id004
+    initialization: *id005
+    dropout: *id006
+    embedding_dropout: *id007
+    optimizer_fn: *id008
+    scheduler_fn: *id009
+- dataset: diabetes
+  model: categoryembedding
   best_params: {}
   param_grid:
-    outer_params: *id014
-    batch_size: *id015
-    num_layers: *id016
-    num_trees: *id017
-    additional_tree_output_dim: *id018
-    depth: *id019
-    choice_function: *id020
-    bin_function: *id021
-    input_dropout: *id022
-    embedding_dropout: *id023
-    embed_categorical: *id024
-    optimizer_fn: *id025
-    scheduler_fn: *id026
+    outer_params: *id001
+    batch_size: *id002
+    layers: *id003
+    activation: *id004
+    initialization: *id005
+    dropout: *id006
+    embedding_dropout: *id007
+    optimizer_fn: *id008
+    scheduler_fn: *id009
+- dataset: covertype
+  model: categoryembedding
+  best_params: {}
+  param_grid:
+    outer_params: *id001
+    batch_size: *id002
+    layers: *id003
+    activation: *id004
+    initialization: *id005
+    dropout: *id006
+    embedding_dropout: *id007
+    optimizer_fn: *id008
+    scheduler_fn: *id009
+- dataset: ageconditions
+  model: categoryembedding
+  best_params: {}
+  param_grid:
+    outer_params: *id010
+    batch_size: *id011
+    layers: *id012
+    activation: *id013
+    initialization: *id014
+    dropout: *id015
+    embedding_dropout: *id016
+    optimizer_fn: *id017
+    scheduler_fn: *id018
+- dataset: creditcard
+  model: categoryembedding
+  best_params: {}
+  param_grid:
+    outer_params: *id001
+    batch_size: *id002
+    layers: *id003
+    activation: *id004
+    initialization: *id005
+    dropout: *id006
+    embedding_dropout: *id007
+    optimizer_fn: *id008
+    scheduler_fn: *id009

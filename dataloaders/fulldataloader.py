@@ -257,6 +257,7 @@ class FullKaggleAgeConditionsLoader(FullDataLoader):
         if self.encode_categorical:
             df = self.force_encode_categorical(df, exclude_cols=[self.target_column])
 
+        df["target"] = df["target"].astype(int)
         ###dtt
         # Extract the features and target variables from the dataset
         X_train = df.drop(columns=[self.target_column])
@@ -316,6 +317,7 @@ class FullTitanicDataLoader(FullDataLoader):
         df[object_cols] = df[object_cols].fillna("NA")
 
         df = df.rename(columns={"survived": "target"})
+        df["target"] = df["target"].astype(int)
         bool_cols = df.select_dtypes(include=["bool"]).columns
         # Convert boolean columns to 0/1
         for col in bool_cols:
@@ -371,6 +373,7 @@ class FullBreastCancerDataLoader(FullDataLoader):
         # Convert the dataset to a DataFrame
         df = pd.DataFrame(data.data, columns=data.feature_names)
         df[self.target_column] = data.target
+        df["target"] = df["target"].astype(int)
 
         ###dtt
 
@@ -419,6 +422,7 @@ class FullCreditDataLoader(FullDataLoader):
         df = pd.read_csv(self.filename)
         df = df.rename(columns={"Class": self.target_column})
         df.reset_index(drop=True, inplace=True)
+        df["target"] = df["target"].astype(int)
 
         # Extract the features and target variables from the dataset
         X_train = df.drop(columns=[self.target_column])
@@ -467,7 +471,7 @@ class FullIrisDataLoader(FullDataLoader):
         # Convert the dataset to a DataFrame
         df = pd.DataFrame(data.data, columns=data.feature_names)
         df[self.target_column] = data.target
-
+        df["target"] = df["target"].astype(int)
         ###dtt
 
         # Extract the features and target variables from the dataset
@@ -522,7 +526,7 @@ class FullCaliforniaHousingDataLoader(FullDataLoader):
 
         df = pd.read_csv(self.filename)
         df["pop_density"] = df["Population"] / df["AveRooms"]
-
+        df["target"] = df["target"].astype(int)
         # Extract the features and target variables from the dataset
         X_train = df.drop(columns=[self.target_column])
         y_train = df[self.target_column]
@@ -620,7 +624,7 @@ class FullAdultDataLoader(FullDataLoader):
             "hours-per-week",
         ]
         df[numerical_cols] = df[numerical_cols].fillna(df[numerical_cols].median())
-
+        df["target"] = df["target"].astype(int)
         if self.encode_categorical:
             df = self.force_encode_categorical(df, exclude_cols=[self.target_column])
 
@@ -793,6 +797,7 @@ class FullDiabetesDataLoader(FullDataLoader):
 
         target_map = {"NO": 0, "<30": 1, ">30": 0}
         df["target"] = df["readmitted"].map(target_map)
+        df["target"] = df["target"].astype(int)
         df.drop(columns=["encounter_id", "patient_nbr", "readmitted"], inplace=True)
         fake_num_cols = [
             "admission_type_id",
