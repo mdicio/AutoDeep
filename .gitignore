@@ -84,3 +84,4 @@ __pycache__/
 node_modules/
 bower_components/
 jspm_packages/
+.pt_tmp/exp_version_manager.yml

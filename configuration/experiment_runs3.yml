@@ -1,4 +1,4 @@
-- dataset: adult
+- dataset: iris
   model: gate
   best_params: {}
   param_grid:
@@ -9,9 +9,10 @@
       val_size: 0.15
       early_stopping_patience: 5
     batch_size: &id002
-    - 1024
-    - 2048
-    - 4096
+    - 32
+    - 64
+    - 128
+    - 256
     tree_depth: &id003
     - 4
     - 7
@@ -57,7 +58,23 @@
         gamma:
         - 0.9
         - 0.99
-- dataset: creditcard
+- dataset: titanic
+  model: gate
+  best_params: {}
+  param_grid:
+    outer_params: *id001
+    batch_size: *id002
+    tree_depth: *id003
+    num_trees: *id004
+    chain_trees: *id005
+    gflu_stages: *id006
+    gflu_dropout: *id007
+    tree_dropout: *id008
+    tree_wise_attention_dropout: *id009
+    embedding_dropout: *id010
+    optimizer_fn: *id011
+    scheduler_fn: *id012
+- dataset: breastcancer
   model: gate
   best_params: {}
   param_grid:
@@ -77,6 +94,22 @@
   model: gate
   best_params: {}
   param_grid:
+    outer_params: *id001
+    batch_size: *id002
+    tree_depth: *id003
+    num_trees: *id004
+    chain_trees: *id005
+    gflu_stages: *id006
+    gflu_dropout: *id007
+    tree_dropout: *id008
+    tree_wise_attention_dropout: *id009
+    embedding_dropout: *id010
+    optimizer_fn: *id011
+    scheduler_fn: *id012
+- dataset: adult
+  model: gate
+  best_params: {}
+  param_grid:
     outer_params: &id013
       hyperopt_evals: 50
       auto_lr_find: true
@@ -84,10 +117,9 @@
       val_size: 0.15
       early_stopping_patience: 5
     batch_size: &id014
-    - 32
-    - 64
-    - 128
-    - 256
+    - 1024
+    - 2048
+    - 4096
     tree_depth: &id015
     - 4
     - 7
@@ -133,7 +165,55 @@
         gamma:
         - 0.9
         - 0.99
-- dataset: iris
+- dataset: diabetes
+  model: gate
+  best_params: {}
+  param_grid:
+    outer_params: *id013
+    batch_size: *id014
+    tree_depth: *id015
+    num_trees: *id016
+    chain_trees: *id017
+    gflu_stages: *id018
+    gflu_dropout: *id019
+    tree_dropout: *id020
+    tree_wise_attention_dropout: *id021
+    embedding_dropout: *id022
+    optimizer_fn: *id023
+    scheduler_fn: *id024
+- dataset: housing
+  model: gate
+  best_params: {}
+  param_grid:
+    outer_params: *id013
+    batch_size: *id014
+    tree_depth: *id015
+    num_trees: *id016
+    chain_trees: *id017
+    gflu_stages: *id018
+    gflu_dropout: *id019
+    tree_dropout: *id020
+    tree_wise_attention_dropout: *id021
+    embedding_dropout: *id022
+    optimizer_fn: *id023
+    scheduler_fn: *id024
+- dataset: creditcard
+  model: gate
+  best_params: {}
+  param_grid:
+    outer_params: *id013
+    batch_size: *id014
+    tree_depth: *id015
+    num_trees: *id016
+    chain_trees: *id017
+    gflu_stages: *id018
+    gflu_dropout: *id019
+    tree_dropout: *id020
+    tree_wise_attention_dropout: *id021
+    embedding_dropout: *id022
+    optimizer_fn: *id023
+    scheduler_fn: *id024
+- dataset: heloc
   model: gate
   best_params: {}
   param_grid:
@@ -150,86 +230,6 @@
     optimizer_fn: *id023
     scheduler_fn: *id024
 - dataset: covertype
-  model: gate
-  best_params: {}
-  param_grid:
-    outer_params: *id001
-    batch_size: *id002
-    tree_depth: *id003
-    num_trees: *id004
-    chain_trees: *id005
-    gflu_stages: *id006
-    gflu_dropout: *id007
-    tree_dropout: *id008
-    tree_wise_attention_dropout: *id009
-    embedding_dropout: *id010
-    optimizer_fn: *id011
-    scheduler_fn: *id012
-- dataset: heloc
-  model: gate
-  best_params: {}
-  param_grid:
-    outer_params: *id001
-    batch_size: *id002
-    tree_depth: *id003
-    num_trees: *id004
-    chain_trees: *id005
-    gflu_stages: *id006
-    gflu_dropout: *id007
-    tree_dropout: *id008
-    tree_wise_attention_dropout: *id009
-    embedding_dropout: *id010
-    optimizer_fn: *id011
-    scheduler_fn: *id012
-- dataset: housing
-  model: gate
-  best_params: {}
-  param_grid:
-    outer_params: *id001
-    batch_size: *id002
-    tree_depth: *id003
-    num_trees: *id004
-    chain_trees: *id005
-    gflu_stages: *id006
-    gflu_dropout: *id007
-    tree_dropout: *id008
-    tree_wise_attention_dropout: *id009
-    embedding_dropout: *id010
-    optimizer_fn: *id011
-    scheduler_fn: *id012
-- dataset: titanic
-  model: gate
-  best_params: {}
-  param_grid:
-    outer_params: *id013
-    batch_size: *id014
-    tree_depth: *id015
-    num_trees: *id016
-    chain_trees: *id017
-    gflu_stages: *id018
-    gflu_dropout: *id019
-    tree_dropout: *id020
-    tree_wise_attention_dropout: *id021
-    embedding_dropout: *id022
-    optimizer_fn: *id023
-    scheduler_fn: *id024
-- dataset: diabetes
-  model: gate
-  best_params: {}
-  param_grid:
-    outer_params: *id001
-    batch_size: *id002
-    tree_depth: *id003
-    num_trees: *id004
-    chain_trees: *id005
-    gflu_stages: *id006
-    gflu_dropout: *id007
-    tree_dropout: *id008
-    tree_wise_attention_dropout: *id009
-    embedding_dropout: *id010
-    optimizer_fn: *id011
-    scheduler_fn: *id012
-- dataset: breastcancer
   model: gate
   best_params: {}
   param_grid:

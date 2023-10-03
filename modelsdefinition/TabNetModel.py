@@ -382,7 +382,7 @@ class TabNetTrainer(BaseModel):
             pred_df = model.predict(self.validation_df)
             predictions = pred_df[self.prediction_col].values
             if self.problem_type == "binary_classification":
-                probabilities = pred_df["1_probability"].values
+                probabilities = pred_df["1_probability"].fillna(0).values
                 self.evaluator.y_prob = probabilities
 
             # Calculate the score using the specified metric
@@ -534,7 +534,7 @@ class TabNetTrainer(BaseModel):
                 pred_df = model.predict(val_fold)
                 predictions = pred_df[self.prediction_col].values
                 if self.problem_type == "binary_classification":
-                    probabilities = pred_df["1_probability"].values
+                    probabilities = pred_df["1_probability"].fillna(0).values
                     self.evaluator.y_prob = probabilities
 
                 # Calculate the score using the specified metric
@@ -599,8 +599,9 @@ class TabNetTrainer(BaseModel):
         score_std = best_trial["result"]["score_std"]
         full_metrics = best_trial["result"]["full_metrics"]
 
-
-        self.logger.info(f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}")
+        self.logger.info(
+            f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}"
+        )
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
@@ -633,7 +634,7 @@ class TabNetTrainer(BaseModel):
         probabilities = None
         predictions = pred_df[self.prediction_col].values
         if predict_proba:
-            probabilities = pred_df["1_probability"].values
+            probabilities = pred_df["1_probability"].fillna(0).values
 
         self.logger.debug(f"{predictions[:10]}")
         self.logger.debug("Computed predictions successfully")
