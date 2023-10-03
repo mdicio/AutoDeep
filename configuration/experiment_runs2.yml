@@ -1,39 +1,38 @@
-- dataset: iris
-  model: s1dcnn
+- dataset: breastcancer
+  model: gandalf
   best_params: {}
   param_grid:
     outer_params: &id001
       hyperopt_evals: 50
+      auto_lr_find: true
+      precision: 16
       max_epochs: 1000
-      early_stopping: true
-      shuffle: true
-      validation_fraction: 0.15
+      val_size: 0.15
       early_stopping_patience: 10
     batch_size: &id002
     - 32
     - 64
     - 128
     - 256
-    hidden_size: &id003
-    - 1024
-    - 2048
-    - 4096
-    optimizer_fn: &id004
+    gflu_stages: &id003
+    - 4
+    - 10
+    gflu_dropout: &id004
+    - 0.0
+    - 0.3
+    embedding_dropout: &id005
+    - 0.0
+    - 0.3
+    optimizer_fn: &id006
       Adam:
         weight_decay:
-        - 1.0e-05
-        - 0.001
-        learning_rate:
         - 0.0001
-        - 0.01
+        - 1.0e-05
       AdamW:
         weight_decay:
-        - 1.0e-05
-        - 0.001
-        learning_rate:
         - 0.0001
-        - 0.01
-    scheduler_fn: &id005
+        - 1.0e-05
+    scheduler_fn: &id007
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -45,29 +44,22 @@
         gamma:
         - 0.9
         - 0.99
-- dataset: titanic
-  model: s1dcnn
+- dataset: ageconditions
+  model: gandalf
   best_params: {}
   param_grid:
     outer_params: *id001
     batch_size: *id002
-    hidden_size: *id003
-    optimizer_fn: *id004
-    scheduler_fn: *id005
-- dataset: ageconditions
-  model: s1dcnn
-  best_params: {}
-  param_grid:
-    outer_params: *id001
-    batch_size: *id002
-    hidden_size: *id003
-    optimizer_fn: *id004
-    scheduler_fn: *id005
-- dataset: ageconditions
+    gflu_stages: *id003
+    gflu_dropout: *id004
+    embedding_dropout: *id005
+    optimizer_fn: *id006
+    scheduler_fn: *id007
+- dataset: breastcancer
   model: fttransformer
   best_params: {}
   param_grid:
-    outer_params: &id006
+    outer_params: &id008
       hyperopt_evals: 50
       auto_lr_find: true
       precision: 16
@@ -75,47 +67,47 @@
       val_size: 0.15
       early_stopping_patience: 10
       attn_feature_importance: false
-    batch_size: &id007
+    batch_size: &id009
     - 32
     - 64
     - 128
     - 256
-    num_heads: &id008
+    num_heads: &id010
     - 4
     - 10
-    input_embed_dim_multiplier: &id009
+    input_embed_dim_multiplier: &id011
     - 2
     - 6
-    embedding_initialization: &id010
+    embedding_initialization: &id012
     - kaiming_uniform
     - kaiming_normal
-    embedding_dropout: &id011
+    embedding_dropout: &id013
     - 0.05
     - 0.2
-    shared_embedding_fraction: &id012
+    shared_embedding_fraction: &id014
     - 0.125
     - 0.25
     - 0.5
-    num_attn_blocks: &id013
+    num_attn_blocks: &id015
     - 4
     - 8
-    attn_dropout: &id014
+    attn_dropout: &id016
     - 0.05
     - 0.2
-    add_norm_dropout: &id015
+    add_norm_dropout: &id017
     - 0.05
     - 0.2
-    ff_dropout: &id016
+    ff_dropout: &id018
     - 0.05
     - 0.2
-    ff_hidden_multiplier: &id017
+    ff_hidden_multiplier: &id019
     - 4
     - 32
-    transformer_activation: &id018
+    transformer_activation: &id020
     - GEGLU
     - ReGLU
     - SwiGLU
-    optimizer_fn: &id019
+    optimizer_fn: &id021
       Adam:
         weight_decay:
         - 0.0001
@@ -124,7 +116,7 @@
         weight_decay:
         - 0.0001
         - 1.0e-05
-    scheduler_fn: &id020
+    scheduler_fn: &id022
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -136,69 +128,82 @@
         gamma:
         - 0.9
         - 0.99
+- dataset: ageconditions
+  model: fttransformer
+  best_params: {}
+  param_grid:
+    outer_params: *id008
+    batch_size: *id009
+    num_heads: *id010
+    input_embed_dim_multiplier: *id011
+    embedding_initialization: *id012
+    embedding_dropout: *id013
+    shared_embedding_fraction: *id014
+    num_attn_blocks: *id015
+    attn_dropout: *id016
+    add_norm_dropout: *id017
+    ff_dropout: *id018
+    ff_hidden_multiplier: *id019
+    transformer_activation: *id020
+    optimizer_fn: *id021
+    scheduler_fn: *id022
 - dataset: iris
   model: fttransformer
   best_params: {}
   param_grid:
-    outer_params: *id006
-    batch_size: *id007
-    num_heads: *id008
-    input_embed_dim_multiplier: *id009
-    embedding_initialization: *id010
-    embedding_dropout: *id011
-    shared_embedding_fraction: *id012
-    num_attn_blocks: *id013
-    attn_dropout: *id014
-    add_norm_dropout: *id015
-    ff_dropout: *id016
-    ff_hidden_multiplier: *id017
-    transformer_activation: *id018
-    optimizer_fn: *id019
-    scheduler_fn: *id020
-- dataset: breastcancer
-  model: s1dcnn
+    outer_params: *id008
+    batch_size: *id009
+    num_heads: *id010
+    input_embed_dim_multiplier: *id011
+    embedding_initialization: *id012
+    embedding_dropout: *id013
+    shared_embedding_fraction: *id014
+    num_attn_blocks: *id015
+    attn_dropout: *id016
+    add_norm_dropout: *id017
+    ff_dropout: *id018
+    ff_hidden_multiplier: *id019
+    transformer_activation: *id020
+    optimizer_fn: *id021
+    scheduler_fn: *id022
+- dataset: titanic
+  model: gandalf
   best_params: {}
   param_grid:
     outer_params: *id001
     batch_size: *id002
-    hidden_size: *id003
-    optimizer_fn: *id004
-    scheduler_fn: *id005
-- dataset: breastcancer
-  model: fttransformer
+    gflu_stages: *id003
+    gflu_dropout: *id004
+    embedding_dropout: *id005
+    optimizer_fn: *id006
+    scheduler_fn: *id007
+- dataset: iris
+  model: gandalf
   best_params: {}
   param_grid:
-    outer_params: *id006
-    batch_size: *id007
-    num_heads: *id008
-    input_embed_dim_multiplier: *id009
-    embedding_initialization: *id010
-    embedding_dropout: *id011
-    shared_embedding_fraction: *id012
-    num_attn_blocks: *id013
-    attn_dropout: *id014
-    add_norm_dropout: *id015
-    ff_dropout: *id016
-    ff_hidden_multiplier: *id017
-    transformer_activation: *id018
-    optimizer_fn: *id019
-    scheduler_fn: *id020
+    outer_params: *id001
+    batch_size: *id002
+    gflu_stages: *id003
+    gflu_dropout: *id004
+    embedding_dropout: *id005
+    optimizer_fn: *id006
+    scheduler_fn: *id007
 - dataset: titanic
   model: fttransformer
   best_params: {}
   param_grid:
-    outer_params: *id006
-    batch_size: *id007
-    num_heads: *id008
-    input_embed_dim_multiplier: *id009
-    embedding_initialization: *id010
-    embedding_dropout: *id011
-    shared_embedding_fraction: *id012
-    num_attn_blocks: *id013
-    attn_dropout: *id014
-    add_norm_dropout: *id015
-    ff_dropout: *id016
-    ff_hidden_multiplier: *id017
-    transformer_activation: *id018
-    optimizer_fn: *id019
-    scheduler_fn: *id020
+    outer_params: *id008
+    batch_size: *id009
+    num_heads: *id010
+    input_embed_dim_multiplier: *id011
+    embedding_initialization: *id012
+    embedding_dropout: *id013
+    shared_embedding_fraction: *id014
+    num_attn_blocks: *id015
+    attn_dropout: *id016
+    add_norm_dropout: *id017
+    ff_dropout: *id018
+    ff_hidden_multiplier: *id019
+    transformer_activation: *id020
+    optimizer_fn: *id021
+    scheduler_fn: *id022

@@ -1,202 +1,142 @@
 - dataset: iris
-  model: tabtransformer
+  model: catboost
   best_params: {}
   param_grid:
     outer_params: &id001
       hyperopt_evals: 50
-      auto_lr_find: true
-      precision: 16
-      max_epochs: 1000
-      val_size: 0.15
-      early_stopping_patience: 10
-    batch_size: &id002
-    - 32
-    - 64
-    - 128
-    - 256
-    embedding_bias: &id003
-    - true
-    - false
-    embedding_initialization: &id004
-    - kaiming_uniform
-    - kaiming_normal
-    shared_embedding_fraction: &id005
-    - 0.125
-    - 0.25
+      validation_fraction: 0.15
+      early_stopping_rounds: 50
+      verbose: false
+    iterations: &id002
+    - 200
+    - 4000
+    learning_rate: &id003
+    - 0.001
+    - 0.1
+    depth: &id004
+    - 4
+    - 10
+    l2_leaf_reg: &id005
     - 0.5
-    num_attn_blocks: &id006
-    - 4
-    - 10
-    attn_dropout: &id007
-    - 0.05
-    - 0.3
-    add_norm_dropout: &id008
-    - 0.05
-    - 0.3
-    ff_dropout: &id009
-    - 0.05
-    - 0.3
-    ff_hidden_multiplier: &id010
-    - 2
-    - 6
-    transformer_activation: &id011
-    - GEGLU
-    - ReGLU
-    - SwiGLU
-    embedding_dropout: &id012
-    - 0.05
-    - 0.3
-    optimizer_fn: &id013
-      Adam:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-      AdamW:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-    scheduler_fn: &id014
-      ReduceLROnPlateau:
-        factor:
-        - 0.1
-        - 0.9
-        patience:
-        - 3
-        - 5
-      ExponentialLR:
-        gamma:
-        - 0.9
-        - 0.99
+    - 5.0
+    min_child_samples: &id006
+    - 1
+    - 100
+    bagging_temperature: &id007
+    - 0.1
+    - 2.0
 - dataset: titanic
-  model: tabtransformer
+  model: catboost
   best_params: {}
   param_grid:
     outer_params: *id001
-    batch_size: *id002
-    embedding_bias: *id003
-    embedding_initialization: *id004
-    shared_embedding_fraction: *id005
-    num_attn_blocks: *id006
-    attn_dropout: *id007
-    add_norm_dropout: *id008
-    ff_dropout: *id009
-    ff_hidden_multiplier: *id010
-    transformer_activation: *id011
-    embedding_dropout: *id012
-    optimizer_fn: *id013
-    scheduler_fn: *id014
+    iterations: *id002
+    learning_rate: *id003
+    depth: *id004
+    l2_leaf_reg: *id005
+    min_child_samples: *id006
+    bagging_temperature: *id007
 - dataset: breastcancer
-  model: tabtransformer
+  model: catboost
   best_params: {}
   param_grid:
     outer_params: *id001
-    batch_size: *id002
-    embedding_bias: *id003
-    embedding_initialization: *id004
-    shared_embedding_fraction: *id005
-    num_attn_blocks: *id006
-    attn_dropout: *id007
-    add_norm_dropout: *id008
-    ff_dropout: *id009
-    ff_hidden_multiplier: *id010
-    transformer_activation: *id011
-    embedding_dropout: *id012
-    optimizer_fn: *id013
-    scheduler_fn: *id014
+    iterations: *id002
+    learning_rate: *id003
+    depth: *id004
+    l2_leaf_reg: *id005
+    min_child_samples: *id006
+    bagging_temperature: *id007
 - dataset: ageconditions
-  model: tabtransformer
+  model: catboost
   best_params: {}
   param_grid:
     outer_params: *id001
-    batch_size: *id002
-    embedding_bias: *id003
-    embedding_initialization: *id004
-    shared_embedding_fraction: *id005
-    num_attn_blocks: *id006
-    attn_dropout: *id007
-    add_norm_dropout: *id008
-    ff_dropout: *id009
-    ff_hidden_multiplier: *id010
-    transformer_activation: *id011
-    embedding_dropout: *id012
-    optimizer_fn: *id013
-    scheduler_fn: *id014
-- dataset: iris
-  model: gandalf
+    iterations: *id002
+    learning_rate: *id003
+    depth: *id004
+    l2_leaf_reg: *id005
+    min_child_samples: *id006
+    bagging_temperature: *id007
+- dataset: diabetes
+  model: catboost
   best_params: {}
   param_grid:
-    outer_params: &id015
+    outer_params: &id008
       hyperopt_evals: 50
-      auto_lr_find: true
-      precision: 16
-      max_epochs: 1000
-      val_size: 0.15
-      early_stopping_patience: 10
-    batch_size: &id016
-    - 32
-    - 64
-    - 128
-    - 256
-    gflu_stages: &id017
+      validation_fraction: 0.15
+      early_stopping_rounds: 50
+      verbose: false
+    iterations: &id009
+    - 200
+    - 3000
+    learning_rate: &id010
+    - 0.001
+    - 0.1
+    depth: &id011
     - 4
     - 10
-    gflu_dropout: &id018
-    - 0.0
-    - 0.3
-    embedding_dropout: &id019
-    - 0.0
-    - 0.3
-    optimizer_fn: &id020
-      Adam:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-      AdamW:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-    scheduler_fn: &id021
-      ReduceLROnPlateau:
-        factor:
-        - 0.1
-        - 0.9
-        patience:
-        - 3
-        - 5
-      ExponentialLR:
-        gamma:
-        - 0.9
-        - 0.99
-- dataset: titanic
-  model: gandalf
+    l2_leaf_reg: &id012
+    - 0.5
+    - 5.0
+    min_child_samples: &id013
+    - 1
+    - 100
+    bagging_temperature: &id014
+    - 0.1
+    - 2.0
+- dataset: adult
+  model: catboost
   best_params: {}
   param_grid:
-    outer_params: *id015
-    batch_size: *id016
-    gflu_stages: *id017
-    gflu_dropout: *id018
-    embedding_dropout: *id019
-    optimizer_fn: *id020
-    scheduler_fn: *id021
-- dataset: breastcancer
-  model: gandalf
+    outer_params: *id008
+    iterations: *id009
+    learning_rate: *id010
+    depth: *id011
+    l2_leaf_reg: *id012
+    min_child_samples: *id013
+    bagging_temperature: *id014
+- dataset: housing
+  model: catboost
   best_params: {}
   param_grid:
-    outer_params: *id015
-    batch_size: *id016
-    gflu_stages: *id017
-    gflu_dropout: *id018
-    embedding_dropout: *id019
-    optimizer_fn: *id020
-    scheduler_fn: *id021
-- dataset: ageconditions
-  model: gandalf
+    outer_params: *id008
+    iterations: *id009
+    learning_rate: *id010
+    depth: *id011
+    l2_leaf_reg: *id012
+    min_child_samples: *id013
+    bagging_temperature: *id014
+- dataset: creditcard
+  model: catboost
   best_params: {}
   param_grid:
-    outer_params: *id015
-    batch_size: *id016
-    gflu_stages: *id017
-    gflu_dropout: *id018
-    embedding_dropout: *id019
-    optimizer_fn: *id020
-    scheduler_fn: *id021
+    outer_params: *id008
+    iterations: *id009
+    learning_rate: *id010
+    depth: *id011
+    l2_leaf_reg: *id012
+    min_child_samples: *id013
+    bagging_temperature: *id014
+- dataset: heloc
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id008
+    iterations: *id009
+    learning_rate: *id010
+    depth: *id011
+    l2_leaf_reg: *id012
+    min_child_samples: *id013
+    bagging_temperature: *id014
+- dataset: covertype
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id008
+    iterations: *id009
+    learning_rate: *id010
+    depth: *id011
+    l2_leaf_reg: *id012
+    min_child_samples: *id013
+    bagging_temperature: *id014
