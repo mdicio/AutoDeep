@@ -3,7 +3,7 @@
 *.ckpt
 data/
 output/modelsaves
-
+.pt_tmp/
 
 # Compiled Python files
 __pycache__/
@@ -84,4 +84,3 @@ __pycache__/
 node_modules/
 bower_components/
 jspm_packages/
-.pt_tmp/exp_version_manager.yml

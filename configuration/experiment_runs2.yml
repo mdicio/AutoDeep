@@ -1,45 +1,39 @@
-- dataset: creditcard
-  model: categoryembedding
+- dataset: iris
+  model: s1dcnn
   best_params: {}
   param_grid:
     outer_params: &id001
       hyperopt_evals: 50
-      auto_lr_find: true
-      precision: 16
       max_epochs: 1000
-      val_size: 0.15
-      early_stopping_patience: 8
+      early_stopping: true
+      shuffle: true
+      validation_fraction: 0.15
+      early_stopping_patience: 10
     batch_size: &id002
+    - 32
+    - 64
+    - 128
+    - 256
+    hidden_size: &id003
     - 1024
     - 2048
     - 4096
-    layers: &id003
-    - 128-64-32
-    - 128-64-32-16
-    - 256-128-64
-    activation: &id004
-    - ReLU
-    - LeakyReLU
-    - Tanh
-    initialization: &id005
-    - kaiming
-    - xavier
-    dropout: &id006
-    - 0.0
-    - 0.3
-    embedding_dropout: &id007
-    - 0.0
-    - 0.3
-    optimizer_fn: &id008
+    optimizer_fn: &id004
       Adam:
         weight_decay:
-        - 0.0001
         - 1.0e-05
+        - 0.001
+        learning_rate:
+        - 0.0001
+        - 0.01
       AdamW:
         weight_decay:
-        - 0.0001
         - 1.0e-05
-    scheduler_fn: &id009
+        - 0.001
+        learning_rate:
+        - 0.0001
+        - 0.01
+    scheduler_fn: &id005
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -51,66 +45,77 @@
         gamma:
         - 0.9
         - 0.99
-- dataset: adult
-  model: categoryembedding
+- dataset: titanic
+  model: s1dcnn
   best_params: {}
   param_grid:
     outer_params: *id001
     batch_size: *id002
-    layers: *id003
-    activation: *id004
-    initialization: *id005
-    dropout: *id006
-    embedding_dropout: *id007
-    optimizer_fn: *id008
-    scheduler_fn: *id009
-- dataset: covertype
-  model: categoryembedding
-  best_params: {}
-  param_grid:
-    outer_params: *id001
-    batch_size: *id002
-    layers: *id003
-    activation: *id004
-    initialization: *id005
-    dropout: *id006
-    embedding_dropout: *id007
-    optimizer_fn: *id008
-    scheduler_fn: *id009
+    hidden_size: *id003
+    optimizer_fn: *id004
+    scheduler_fn: *id005
 - dataset: ageconditions
-  model: categoryembedding
+  model: s1dcnn
   best_params: {}
   param_grid:
-    outer_params:
+    outer_params: *id001
+    batch_size: *id002
+    hidden_size: *id003
+    optimizer_fn: *id004
+    scheduler_fn: *id005
+- dataset: ageconditions
+  model: fttransformer
+  best_params: {}
+  param_grid:
+    outer_params: &id006
       hyperopt_evals: 50
       auto_lr_find: true
       precision: 16
       max_epochs: 1000
       val_size: 0.15
       early_stopping_patience: 10
-    batch_size:
+      attn_feature_importance: false
+    batch_size: &id007
     - 32
     - 64
     - 128
     - 256
-    layers:
-    - 128-64-32
-    - 128-64-32-16
-    - 256-128-64
-    activation:
-    - ReLU
-    - LeakyReLU
-    - Tanh
-    initialization:
-    - kaiming
-    - xavier
-    dropout:
-    - 0.0
-    - 0.3
-    embedding_dropout:
-    - 0.0
-    - 0.3
-    optimizer_fn:
+    num_heads: &id008
+    - 4
+    - 10
+    input_embed_dim_multiplier: &id009
+    - 2
+    - 6
+    embedding_initialization: &id010
+    - kaiming_uniform
+    - kaiming_normal
+    embedding_dropout: &id011
+    - 0.05
+    - 0.2
+    shared_embedding_fraction: &id012
+    - 0.125
+    - 0.25
+    - 0.5
+    num_attn_blocks: &id013
+    - 4
+    - 8
+    attn_dropout: &id014
+    - 0.05
+    - 0.2
+    add_norm_dropout: &id015
+    - 0.05
+    - 0.2
+    ff_dropout: &id016
+    - 0.05
+    - 0.2
+    ff_hidden_multiplier: &id017
+    - 4
+    - 32
+    transformer_activation: &id018
+    - GEGLU
+    - ReGLU
+    - SwiGLU
+    optimizer_fn: &id019
       Adam:
         weight_decay:
         - 0.0001
@@ -119,7 +124,7 @@
         weight_decay:
         - 0.0001
         - 1.0e-05
-    scheduler_fn:
+    scheduler_fn: &id020
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -131,16 +136,69 @@
         gamma:
         - 0.9
         - 0.99
-- dataset: diabetes
-  model: categoryembedding
+- dataset: iris
+  model: fttransformer
+  best_params: {}
+  param_grid:
+    outer_params: *id006
+    batch_size: *id007
+    num_heads: *id008
+    input_embed_dim_multiplier: *id009
+    embedding_initialization: *id010
+    embedding_dropout: *id011
+    shared_embedding_fraction: *id012
+    num_attn_blocks: *id013
+    attn_dropout: *id014
+    add_norm_dropout: *id015
+    ff_dropout: *id016
+    ff_hidden_multiplier: *id017
+    transformer_activation: *id018
+    optimizer_fn: *id019
+    scheduler_fn: *id020
+- dataset: breastcancer
+  model: s1dcnn
   best_params: {}
   param_grid:
     outer_params: *id001
     batch_size: *id002
-    layers: *id003
-    activation: *id004
-    initialization: *id005
-    dropout: *id006
-    embedding_dropout: *id007
-    optimizer_fn: *id008
-    scheduler_fn: *id009
+    hidden_size: *id003
+    optimizer_fn: *id004
+    scheduler_fn: *id005
+- dataset: breastcancer
+  model: fttransformer
+  best_params: {}
+  param_grid:
+    outer_params: *id006
+    batch_size: *id007
+    num_heads: *id008
+    input_embed_dim_multiplier: *id009
+    embedding_initialization: *id010
+    embedding_dropout: *id011
+    shared_embedding_fraction: *id012
+    num_attn_blocks: *id013
+    attn_dropout: *id014
+    add_norm_dropout: *id015
+    ff_dropout: *id016
+    ff_hidden_multiplier: *id017
+    transformer_activation: *id018
+    optimizer_fn: *id019
+    scheduler_fn: *id020
+- dataset: titanic
+  model: fttransformer
+  best_params: {}
+  param_grid:
+    outer_params: *id006
+    batch_size: *id007
+    num_heads: *id008
+    input_embed_dim_multiplier: *id009
+    embedding_initialization: *id010
+    embedding_dropout: *id011
+    shared_embedding_fraction: *id012
+    num_attn_blocks: *id013
+    attn_dropout: *id014
+    add_norm_dropout: *id015
+    ff_dropout: *id016
+    ff_hidden_multiplier: *id017
+    transformer_activation: *id018
+    optimizer_fn: *id019
+    scheduler_fn: *id020
