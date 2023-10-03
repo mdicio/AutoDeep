@@ -1,0 +1,235 @@
+ 18%|███████████████████████████████████████████████▌                                                                                                                                                                                                                        | 9/50 [10:03<37:02, 54.20s/trial, best loss: -0.9749408983451536]2023-10-03 23:25:05,385 - INFO - TabNetModel.py - Fold: 3 metrics f1: [0.7675675675675676, 0.9722222222222222, 0.927536231884058]
+2023-10-03 23:25:05,388 - WARNING - TabNetModel.py - You are passing some invalid parameters to the model {'AdamW_weight_decay': 7.2951601283694e-05, 'Adam_weight_decay': 1.2541261448487733e-05, 'ExponentialLR_gamma': 0.9757272600178017, 'ReduceLROnPlateau_factor': 0.5143178476407899, 'ReduceLROnPlateau_patience': 4, 'batch_size': 47, 'optimizer_fn': <class 'torch.optim.adam.Adam'>, 'scheduler_fn': 'ExponentialLR', 'virtual_batch_size_ratio': 0.5, 'weights': 0, 'optimizer_params': {'weight_decay': 1.2541261448487733e-05}, 'scheduler_params': {'gamma': 0.9757272600178017}}
+2023-10-03 23:25:05,417 - {pytorch_tabular.tabular_model:105} - INFO - Experiment Tracking is turned off                                                                                                                                                                                                                                       
+
+ 18%|███████████████████████████████████████████████▌                                                                                                                                                                                                                        | 9/50 [10:03<37:02, 54.20s/trial, best loss: -0.9749408983451536]Global seed set to 42
+2023-10-03 23:25:05,455 - {pytorch_tabular.tabular_model:473} - INFO - Preparing the DataLoaders                                                                                                                                                                                                                                               
+
+2023-10-03 23:25:05,458 - {pytorch_tabular.tabular_datamodule:290} - INFO - Setting up the datamodule for classification task                                                                                                                                                                                                                  
+
+2023-10-03 23:25:05,483 - {pytorch_tabular.tabular_model:521} - INFO - Preparing the Model: TabNetModel                                                                                                                                                                                                                                        
+
+2023-10-03 23:25:05,533 - {pytorch_tabular.tabular_model:268} - INFO - Preparing the Trainer                                                                                                                                                                                                                                                   
+
+2023-10-03 23:25:05,561 - {pytorch_tabular.tabular_model:573} - INFO - Auto LR Find Started                                                                                                                                                                                                                                                    
+
+Finding best initial lr:   0%|          | 0/100 [00:00<?, ?it/s]                                                                                                                                                                                                             | 9/50 [10:04<37:02, 54.20s/trial, best loss: -0.9749408983451536]
+Finding best initial lr:   4%|4         | 4/100 [00:00<00:02, 38.70it/s]
+Finding best initial lr:   8%|8         | 8/100 [00:00<00:02, 35.48it/s]
+Finding best initial lr:  12%|#2        | 12/100 [00:00<00:03, 27.96it/s]
+Finding best initial lr:  16%|#6        | 16/100 [00:00<00:02, 28.48it/s]
+Finding best initial lr:  20%|##        | 20/100 [00:00<00:02, 31.27it/s]
+Finding best initial lr:  24%|##4       | 24/100 [00:00<00:02, 28.01it/s]
+Finding best initial lr:  28%|##8       | 28/100 [00:00<00:02, 30.19it/s]
+Finding best initial lr:  32%|###2      | 32/100 [00:01<00:02, 25.99it/s]
+Finding best initial lr:  35%|###5      | 35/100 [00:01<00:02, 25.88it/s]
+Finding best initial lr:  39%|###9      | 39/100 [00:01<00:02, 27.35it/s]
+Finding best initial lr:  42%|####2     | 42/100 [00:01<00:02, 25.82it/s]
+Finding best initial lr:  45%|####5     | 45/100 [00:01<00:02, 26.20it/s]
+Finding best initial lr:  48%|####8     | 48/100 [00:01<00:02, 24.30it/s]
+Finding best initial lr:  51%|#####1    | 51/100 [00:01<00:02, 20.45it/s]
+Finding best initial lr:  54%|#####4    | 54/100 [00:02<00:02, 21.86it/s]
+Finding best initial lr:  57%|#####6    | 57/100 [00:02<00:01, 22.66it/s]
+Finding best initial lr:  60%|######    | 60/100 [00:02<00:01, 23.68it/s]
+Finding best initial lr:  63%|######3   | 63/100 [00:02<00:01, 21.58it/s]
+Finding best initial lr:  66%|######6   | 66/100 [00:02<00:01, 22.07it/s]
+Finding best initial lr:  70%|#######   | 70/100 [00:02<00:01, 24.64it/s]
+Finding best initial lr:  73%|#######3  | 73/100 [00:02<00:01, 24.08it/s]
+Finding best initial lr:  77%|#######7  | 77/100 [00:03<00:00, 26.20it/s]
+Finding best initial lr:  81%|########1 | 81/100 [00:03<00:00, 25.65it/s]
+Finding best initial lr:  85%|########5 | 85/100 [00:03<00:00, 27.42it/s]
+Finding best initial lr:  89%|########9 | 89/100 [00:03<00:00, 28.62it/s]
+Finding best initial lr:  92%|#########2| 92/100 [00:03<00:00, 25.83it/s]
+Finding best initial lr:  96%|#########6| 96/100 [00:03<00:00, 27.95it/s]
+Finding best initial lr:  99%|#########9| 99/100 [00:03<00:00, 28.42it/s]
+Finding best initial lr: 100%|##########| 100/100 [00:03<00:00, 25.94it/s]
+2023-10-03 23:25:09,602 - {pytorch_tabular.tabular_model:575} - INFO - Suggested LR: 0.8317637711026709. For plot and detailed analysis, use `find_learning_rate` method.                                                                                                                                                                      
+
+2023-10-03 23:25:09,604 - {pytorch_tabular.tabular_model:582} - INFO - Training Started                                                                                                                                                                                                                                                        
+
+┏━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┳━━━━━━━━┓                                                                                                                                                                                                                                                                                           
+┃   ┃ Name             ┃ Type             ┃ Params ┃
+┡━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━╇━━━━━━━━┩
+│ 0 │ custom_loss      │ CrossEntropyLoss │      0 │
+│ 1 │ _embedding_layer │ Identity         │      0 │
+│ 2 │ _backbone        │ TabNetBackbone   │ 48.4 K │
+│ 3 │ _head            │ Identity         │      0 │
+└───┴──────────────────┴──────────────────┴────────┘
+
+Trainable params: 48.4 K                                                                                                                                                                                                                                                                                                                       
+Non-trainable params: 0                                                                                                                                                                                                                                                                                                                        
+Total params: 48.4 K                                                                                                                                                                                                                                                                                                                           
+Total estimated model params size (MB): 0                                                                                                                                                                                                                                                                                                      
+
+                                                                                                                                                                                                                                                                                                                                               
+
+
+Sanity Checking ━━━━━━━━━━━━━━━━━━━━╺━━━━━━━━━━━━━━━━━━━ 1/2 0:00:00 • -:--:-- 0.00it/s  
+Sanity Checking ━━━━━━━━━━━━━━━━━━━━╺━━━━━━━━━━━━━━━━━━━ 1/2 0:00:00 • -:--:-- 0.00it/s  
+Sanity Checking ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2/2 0:00:00 • 0:00:00 70.20it/s  
+Sanity Checking ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2/2 0:00:00 • 0:00:00 70.20it/s  
+
+Epoch 0/999 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 0/13 0:00:00 • -:--:-- 0.00it/s  
+Epoch 0/999 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 0/13 0:00:00 • -:--:-- 0.00it/s loss: 0.506 valid_loss: 8.862 valid_accuracy: 0.606 
+Epoch 0/999 ━━━╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1/13 0:00:00 • -:--:-- 0.00it/s loss: 0.506 valid_loss: 8.862 valid_accuracy: 0.606 
+Epoch 0/999 ━━━╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1/13 0:00:00 • -:--:-- 0.00it/s loss: 0.544 train_loss: 1.5 
+Epoch 0/999 ━━━━━━╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2/13 0:00:00 • 0:00:01 24.21it/s loss: 0.544 train_loss: 1.5 
+Epoch 0/999 ━━━━━━╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2/13 0:00:00 • 0:00:01 24.21it/s loss: 0.606 train_loss: 2.023 
+Epoch 0/999 ━━━━━━━━━╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3/13 0:00:00 • 0:00:01 26.91it/s loss: 0.606 train_loss: 2.023 
+Epoch 0/999 ━━━━━━━━━╺━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3/13 0:00:00 • 0:00:01 26.91it/s loss: 0.664 train_loss: 1.962 
+Epoch 0/999 ━━━━━━━━━━━━╺━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4/13 0:00:00 • 0:00:01 26.56it/s loss: 0.664 train_loss: 1.962 
+Epoch 0/999 ━━━━━━━━━━━━╺━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4/13 0:00:00 • 0:00:01 26.56it/s loss: 0.717 train_loss: 1.788 
+Epoch 0/999 ━━━━━━━━━━━━━━━╺━━━━━━━━━━━━━━━━━━━━━━━━ 5/13 0:00:00 • 0:00:01 24.84it/s loss: 0.717 train_loss: 1.788 
+Epoch 0/999 ━━━━━━━━━━━━━━━╺━━━━━━━━━━━━━━━━━━━━━━━━ 5/13 0:00:00 • 0:00:01 24.84it/s loss: 1.5 train_loss: 16.462 
+Epoch 0/999 ━━━━━━━━━━━━━━━━━━╺━━━━━━━━━━━━━━━━━━━━━ 6/13 0:00:00 • 0:00:01 27.12it/s loss: 1.5 train_loss: 16.462 
+Epoch 0/999 ━━━━━━━━━━━━━━━━━━╺━━━━━━━━━━━━━━━━━━━━━ 6/13 0:00:00 • 0:00:01 27.12it/s loss: 1.63 train_loss: 3.107 
+Epoch 0/999 ━━━━━━━━━━━━━━━━━━━━━╸━━━━━━━━━━━━━━━━━━ 7/13 0:00:00 • 0:00:01 27.05it/s loss: 1.63 train_loss: 3.107 
+Epoch 0/999 ━━━━━━━━━━━━━━━━━━━━━╸━━━━━━━━━━━━━━━━━━ 7/13 0:00:00 • 0:00:01 27.05it/s loss: 1.82 train_loss: 4.433 
+Epoch 0/999 ━━━━━━━━━━━━━━━━━━━━━━━━╸━━━━━━━━━━━━━━━ 8/13 0:00:00 • 0:00:01 26.20it/s loss: 1.82 train_loss: 4.433 
+Epoch 0/999 ━━━━━━━━━━━━━━━━━━━━━━━━╸━━━━━━━━━━━━━━━ 8/13 0:00:00 • 0:00:01 26.20it/s loss: 1.84 train_loss: 0.937 
+Epoch 0/999 ━━━━━━━━━━━━━━━━━━━━━━━━━━━╸━━━━━━━━━━━━ 9/13 0:00:00 • 0:00:01 26.48it/s loss: 1.84 train_loss: 0.937 
+Epoch 0/999 ━━━━━━━━━━━━━━━━━━━━━━━━━━━╸━━━━━━━━━━━━ 9/13 0:00:00 • 0:00:01 26.48it/s loss: 1.86 train_loss: 0.799 
+Epoch 0/999 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸━━━━━━━━━ 10/13 0:00:00 • 0:00:01 25.87it/s loss: 1.86 train_loss: 0.799 
+Epoch 0/999 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸━━━━━━━━━ 10/13 0:00:00 • 0:00:01 25.87it/s loss: 1.86 train_loss: 0.504 
+Epoch 0/999 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸━━━━━━━━━ 10/13 0:00:00 • 0:00:01 25.87it/s loss: 1.86 train_loss: 0.504 
+Epoch 0/999 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸━━━━━━━━━ 10/13 0:00:00 • 0:00:01 25.87it/s loss: 1.86 train_loss: 0.504 
+ 18%|███████████████████████████████████████████████▌                                                                                                                                                                                                                        | 9/50 [10:08<37:02, 54.20s/trial, best loss: -0.9749408983451536]../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [34,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [35,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [37,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [39,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [40,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [42,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [44,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [45,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [46,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [0,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [2,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [4,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [5,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [7,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [9,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [10,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [11,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [12,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [14,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [15,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [16,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [17,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [19,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [21,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [22,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [25,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [26,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [28,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [30,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+../aten/src/ATen/native/cuda/ScatterGatherKernel.cu:144: operator(): block: [0,0,0], thread: [31,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
+Epoch 0/999 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸━━━━━━━━━ 10/13 0:00:00 • 0:00:01 25.87it/s loss: 1.86 train_loss: 0.504 
+
+ 18%|███████████████████████████████████████████████▌                                                                                                                                                                                                                        | 9/50 [10:08<37:02, 54.20s/trial, best loss: -0.9749408983451536]job exception: CUDA error: CUBLAS_STATUS_EXECUTION_FAILED when calling `cublasGemmEx( handle, opa, opb, m, n, k, &falpha, a, CUDA_R_16F, lda, b, CUDA_R_16F, ldb, &fbeta, c, CUDA_R_16F, ldc, CUDA_R_32F, CUBLAS_GEMM_DFALT_TENSOR_OP)`
+
+ 18%|███████████████████████████████████████████████▌                                                                                                                                                                                                                        | 9/50 [10:08<46:13, 67.63s/trial, best loss: -0.9749408983451536]
+Traceback (most recent call last):
+  File "/home/boom/sdev/WTabRun/runner_k.py", line 107, in <module>
+    ) = model.hyperopt_search_kfold(
+  File "/home/boom/sdev/WTabRun/modelsdefinition/TabNetModel.py", line 580, in hyperopt_search_kfold
+    best = fmin(
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/hyperopt/fmin.py", line 540, in fmin
+    return trials.fmin(
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/hyperopt/base.py", line 671, in fmin
+    return fmin(
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/hyperopt/fmin.py", line 586, in fmin
+    rval.exhaust()
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/hyperopt/fmin.py", line 364, in exhaust
+    self.run(self.max_evals - n_done, block_until_done=self.asynchronous)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/hyperopt/fmin.py", line 300, in run
+    self.serial_evaluate()
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/hyperopt/fmin.py", line 178, in serial_evaluate
+    result = self.domain.evaluate(spec, ctrl)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/hyperopt/base.py", line 892, in evaluate
+    rval = self.fn(pyll_rval)
+  File "/home/boom/sdev/WTabRun/modelsdefinition/TabNetModel.py", line 525, in objective
+    model.fit(
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_tabular/tabular_model.py", line 694, in fit
+    return self.train(model, datamodule, callbacks, max_epochs, min_epochs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_tabular/tabular_model.py", line 583, in train
+    self.trainer.fit(self.model, train_loader, val_loader)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/trainer/trainer.py", line 608, in fit
+    call._call_and_handle_interrupt(
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/trainer/call.py", line 38, in _call_and_handle_interrupt
+    return trainer_fn(*args, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/trainer/trainer.py", line 650, in _fit_impl
+    self._run(model, ckpt_path=self.ckpt_path)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/trainer/trainer.py", line 1112, in _run
+    results = self._run_stage()
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/trainer/trainer.py", line 1191, in _run_stage
+    self._run_train()
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/trainer/trainer.py", line 1214, in _run_train
+    self.fit_loop.run()
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/loops/loop.py", line 199, in run
+    self.advance(*args, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/loops/fit_loop.py", line 267, in advance
+    self._outputs = self.epoch_loop.run(self._data_fetcher)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/loops/loop.py", line 200, in run
+    self.on_advance_end()
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/loops/epoch/training_epoch_loop.py", line 250, in on_advance_end
+    self._run_validation()
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/loops/epoch/training_epoch_loop.py", line 308, in _run_validation
+    self.val_loop.run()
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/loops/loop.py", line 199, in run
+    self.advance(*args, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/loops/dataloader/evaluation_loop.py", line 152, in advance
+    dl_outputs = self.epoch_loop.run(self._data_fetcher, dl_max_batches, kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/loops/loop.py", line 199, in run
+    self.advance(*args, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/loops/epoch/evaluation_epoch_loop.py", line 137, in advance
+    output = self._evaluation_step(**kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/loops/epoch/evaluation_epoch_loop.py", line 234, in _evaluation_step
+    output = self.trainer._call_strategy_hook(hook_name, *kwargs.values())
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/trainer/trainer.py", line 1494, in _call_strategy_hook
+    output = fn(*args, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_lightning/strategies/strategy.py", line 390, in validation_step
+    return self.model.validation_step(*args, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_tabular/models/base_model.py", line 440, in validation_step
+    output, y = self.forward_pass(batch)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_tabular/models/base_model.py", line 408, in forward_pass
+    return self(batch), None
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_tabular/models/base_model.py", line 387, in forward
+    x = self.compute_backbone(x)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_tabular/models/base_model.py", line 329, in compute_backbone
+    x = self.backbone(x)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_tabular/models/tabnet/tabnet_model.py", line 52, in forward
+    x, _ = self.tabnet(x)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_tabnet/tab_network.py", line 586, in forward
+    return self.tabnet(x)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_tabnet/tab_network.py", line 471, in forward
+    steps_output, M_loss = self.encoder(x)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_tabnet/tab_network.py", line 168, in forward
+    out = self.feat_transformers[step](masked_x)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_tabnet/tab_network.py", line 706, in forward
+    x = self.shared(x)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_tabnet/tab_network.py", line 743, in forward
+    x = self.glu_layers[0](x)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/pytorch_tabnet/tab_network.py", line 772, in forward
+    x = self.fc(x)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1194, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/boom/.pyenv/versions/thesis/lib/python3.10/site-packages/torch/nn/modules/linear.py", line 114, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: CUDA error: CUBLAS_STATUS_EXECUTION_FAILED when calling `cublasGemmEx( handle, opa, opb, m, n, k, &falpha, a, CUDA_R_16F, lda, b, CUDA_R_16F, ldb, &fbeta, c, CUDA_R_16F, ldc, CUDA_R_32F, CUBLAS_GEMM_DFALT_TENSOR_OP)`
+(thesis) boom@marco-ubuntu:~/sdev/WTabRun$ 
