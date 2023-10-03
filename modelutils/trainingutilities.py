@@ -46,6 +46,28 @@ def handle_rogue_batch_size(train, val, batch_size):
         return train, val
 
 
+def handle_rogue_batch_size_ptcustom(X, y, batch_size):
+    num_rows_to_adjust = 1
+    if len(X) % batch_size != 1:
+        return X, y
+    else:
+        num_rows_to_adjust = 0
+        for i in range(100):
+            print("removing on observation to avoid 1 batch size problem")
+            print(i)
+            if len(X) % batch_size == 1:
+                num_rows_to_adjust += 1
+                removed_rows = X.iloc[
+                    -num_rows_to_adjust:
+                ]  # Select rows as a DataFrame
+                X = X.iloc[:-num_rows_to_adjust]
+                y = y.iloc[:-num_rows_to_adjust]
+
+            if len(X) % batch_size != 1:
+                break
+        return X, y
+
+
 def stop_on_perfect_lossCondition(x, threshold, *kwargs):
     best_loss = x.best_trial["result"]["loss"]
     stop = best_loss <= threshold

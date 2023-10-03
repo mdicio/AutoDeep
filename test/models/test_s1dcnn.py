@@ -17,7 +17,7 @@ root_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_path)
 
 from factory import (
-    create_data_loader,
+    create_full_data_loader,
     create_model,
     seed_everything,
 )
@@ -40,7 +40,7 @@ included_models = [i.lower() for i in config["include_models"]]
 included_datasets = [i.lower() for i in config["include_datasets"]]
 
 model_name = "s1dcnn"
-dataset_name = "housing"
+dataset_name = "titanic"
 
 model_configs = config["model_configs"][model_name]
 encode_categorical = model_configs["encode_categorical"]
@@ -53,7 +53,7 @@ dataset_num_classes = dataset_configs.get("num_targets", 1)
 dataset_test_size = dataset_configs["test_size"]
 
 # Create an instance of the specified data loader class
-data_loader = create_data_loader(
+data_loader = create_full_data_loader(
     dataset_name,
     test_size=dataset_test_size,
     normalize_features=normalize_features,
@@ -63,7 +63,7 @@ data_loader = create_data_loader(
     num_targets=dataset_num_classes,
 )
 
-X_train, X_test, y_train, y_test, extra_info = data_loader.load_data()
+X, y, extra_info = data_loader.load_data()
 
 # Create an instance of the specified model class
 model = create_model(
@@ -85,7 +85,7 @@ node_large_param_grid = {
         "early_stopping_patience": 6,
     },
     "hidden_size": 1024,
-    "batch_size": 512,
+    "batch_size": 79,
     "optimizer_fn": AdamW,
     "AdamW_learning_rate": 0.001,
     "AdamW_weight_decay": 0.0001,
@@ -96,29 +96,4 @@ node_large_param_grid = {
 print(node_large_param_grid)
 model.default = False
 
-model.train(X_train, y_train, node_large_param_grid, extra_info)
-
-
-# the metric to use as base for CV or hyperopt search is the first metric specified in config file for the dataset
-dmetric = dataset_configs["eval_metrics"][0]
-
-if dataset_task == "binary_classification":
-    y_pred, y_prob = model.predict(X_test, predict_proba=True)
-else:
-    y_pred = model.predict(X_test)
-    y_prob = None
-
-print(f"y_true.shape, y_pred.shape {y_test.shape, y_pred.shape}")
-print(y_test[:3])
-print(y_pred[:3])
-# Initialize the evaluator
-evaluator = Evaluator(
-    y_true=y_test,
-    y_pred=y_pred,
-    y_prob=y_prob,
-    run_metrics=dataset_configs["eval_metrics"],
-    metric=dmetric,
-    problem_type=dataset_task,
-)
-output_metrics = evaluator.evaluate_model()
-print("FINAL TEST METRICS: ", output_metrics)
+model.train(X, y, node_large_param_grid, extra_info)

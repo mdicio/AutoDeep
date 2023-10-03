@@ -252,7 +252,14 @@ class ResNetTrainer:
             )
 
     def _pandas_to_torch_image_datasets(
-        self, X_train, y_train, img_rows, img_columns, transform, validation_fraction
+        self,
+        X_train,
+        y_train,
+        img_rows,
+        img_columns,
+        transform,
+        validation_fraction,
+        batch_size,
     ):
         dataset = CustomDataset(
             data=X_train,
@@ -265,6 +272,8 @@ class ResNetTrainer:
         num_samples = len(dataset)
 
         num_train_samples = int((1 - validation_fraction) * num_samples)
+        if num_train_samples % batch_size == 1:
+            num_train_samples += 1
         num_val_samples = num_samples - num_train_samples
 
         train_dataset, val_dataset = random_split(
@@ -404,6 +413,7 @@ class ResNetTrainer:
             self.img_columns,
             self.transformation,
             validation_fraction,
+            batch_size,
         )
 
         train_loader, val_loader = self._torch_image_datasets_to_dataloaders(
@@ -701,6 +711,10 @@ class ResNetTrainer:
                 train_subsampler = torch.utils.data.SubsetRandomSampler(train_idx)
                 test_subsampler = torch.utils.data.SubsetRandomSampler(val_idx)
 
+                if train_idx.shape[0] % params["batch_size"] == 1:
+                    bs = params["batch_size"] + 1
+                else:
+                    bs = params["batch_size"]
                 train_loader = torch.utils.data.DataLoader(
                     torch_dataset,
                     batch_size=params["batch_size"],
@@ -847,8 +861,9 @@ class ResNetTrainer:
         score_std = best_trial["result"]["score_std"]
         full_metrics = best_trial["result"]["full_metrics"]
 
-
-        self.logger.info(f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}")
+        self.logger.info(
+            f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}"
+        )
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 

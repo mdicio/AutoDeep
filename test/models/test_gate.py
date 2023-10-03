@@ -86,7 +86,7 @@ node_large_param_grid = {
         "early_stopping_patience": 5,
     },
     "learning_rate": 0.0001,
-    "batch_size": 512,
+    "batch_size": 89,
     "tree_depth": 4,
     "num_trees": 10,
     "chain_trees": False,

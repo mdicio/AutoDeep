@@ -21,6 +21,7 @@ from evaluation.generalevaluator import *
 from modelutils.trainingutilities import (
     infer_hyperopt_space_pytorch_custom,
     stop_on_perfect_lossCondition,
+    handle_rogue_batch_size_ptcustom,
 )
 
 warnings.filterwarnings("ignore")
@@ -261,7 +262,9 @@ class SoftOrdering1DCNN:
                 "Invalid problem_type. Supported values are 'binary', 'multiclass', and 'regression'."
             )
 
-    def _pandas_to_torch_datasets(self, X_train, y_train, validation_fraction):
+    def _pandas_to_torch_datasets(
+        self, X_train, y_train, validation_fraction, batch_size
+    ):
         X_train_tensor = torch.tensor(X_train.values, dtype=torch.float)
         y_train_tensor = torch.tensor(
             y_train.values,
@@ -273,8 +276,10 @@ class SoftOrdering1DCNN:
         num_samples = len(dataset)
 
         num_train_samples = int((1 - validation_fraction) * num_samples)
+        if num_train_samples % batch_size == 1:
+            num_train_samples += 1
         num_val_samples = num_samples - num_train_samples
-
+        print("num train samples", num_train_samples)
         train_dataset, val_dataset = random_split(
             dataset, [num_train_samples, num_val_samples]
         )
@@ -390,7 +395,7 @@ class SoftOrdering1DCNN:
         self._set_loss_function(y_train)
 
         train_dataset, val_dataset = self._pandas_to_torch_datasets(
-            X_train, y_train, validation_fraction
+            X_train, y_train, validation_fraction, params["batch_size"]
         )
 
         train_loader, val_loader = self._torch_datasets_to_dataloaders(
@@ -646,12 +651,17 @@ class SoftOrdering1DCNN:
             metric_dict = {}
 
             for fold, (train_idx, val_idx) in enumerate(kf.split(X, y)):
+                if train_idx.shape[0] % params["batch_size"] == 1:
+                    bs = params["batch_size"] + 1
+                else:
+                    bs = params["batch_size"]
                 train_subsampler = torch.utils.data.SubsetRandomSampler(train_idx)
                 test_subsampler = torch.utils.data.SubsetRandomSampler(val_idx)
 
+                print(train_idx.shape)
                 train_loader = torch.utils.data.DataLoader(
                     self.torch_dataset,
-                    batch_size=params["batch_size"],
+                    batch_size=bs,
                     sampler=train_subsampler,
                     drop_last=False,
                     num_workers=self.num_workers,
@@ -659,7 +669,7 @@ class SoftOrdering1DCNN:
                 )
                 val_loader = torch.utils.data.DataLoader(
                     self.torch_dataset,
-                    batch_size=params["batch_size"],
+                    batch_size=bs,
                     sampler=test_subsampler,
                     drop_last=False,
                     num_workers=self.num_workers,
@@ -793,8 +803,9 @@ class SoftOrdering1DCNN:
         score_std = best_trial["result"]["score_std"]
         full_metrics = best_trial["result"]["full_metrics"]
 
-
-        self.logger.info(f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}")
+        self.logger.info(
+            f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}"
+        )
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
@@ -850,7 +861,6 @@ class SoftOrdering1DCNN:
         predictions = np.array(predictions).squeeze()
         probabilities = np.array(probabilities)
 
-        self.logger.debug("Model predicting success")
         if predict_proba:
             return predictions, probabilities
         else:

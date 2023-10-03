@@ -275,6 +275,7 @@ class NodeTrainer(BaseModel):
         # Merge X_val and y_val
         self.validation_df = pd.concat([X_val, y_val], axis=1)
 
+        print()
         self._set_loss_function(y_train)
         self.model = self.prepare_tabular_model(
             params, params["outer_params"], default=self.default

@@ -1,8 +1,5 @@
-# Currently running default params all models, NODE has memory error even on small datasets so excluding it for now.
-Test all models an all datasets
-See what params we can run with NODE on all datasets
+# 
+#TABNET GIVES THIS ERROR NO APPARENT REASON ob exception: CUDA error: CUBLAS_STATUS_EXECUTION_FAILED when calling `cublasGemmEx( handle, opa, opb, m, n, k, &falpha, a, CUDA_R_16F, lda, b, CUDA_R_16F, ldb, &fbeta, c, CUDA_R_16F, ldc, CUDA_R_32F, CUBLAS_GEMM_DFALT_TENSOR_OP)`
 
-
-#GATE AND RESNET TAKE AGES, EXCLUDE FROM FIRST HYPEROPT RUN WITH 100 Evals
-
-#S1DCNN on Housing gives weird results
+# S1DCNN Gives batch size 1 problem with titanic:
+ 'batch_size': 89, 

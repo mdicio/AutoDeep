@@ -40,7 +40,7 @@ included_models = [i.lower() for i in config["include_models"]]
 included_datasets = [i.lower() for i in config["include_datasets"]]
 
 model_name = "node"
-dataset_name = "diabetes"
+dataset_name = "titanic"
 
 model_configs = config["model_configs"][model_name]
 encode_categorical = model_configs["encode_categorical"]
@@ -86,7 +86,7 @@ node_large_param_grid = {
         "early_stopping_patience": 6,
     },
     "learning_rate": 0.1,
-    "batch_size": 1024,
+    "batch_size": 84,
     "num_trees": 4,
     "num_layers": 1,
     "additional_tree_output_dim": 4,
