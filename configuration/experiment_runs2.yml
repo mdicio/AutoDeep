@@ -1,5 +1,5 @@
 - dataset: creditcard
-  model: tabtransformer
+  model: gandalf
   best_params: {}
   param_grid:
     outer_params: &id001
@@ -13,39 +13,16 @@
     - 1024
     - 2048
     - 4096
-    embedding_bias: &id003
-    - true
-    - false
-    embedding_initialization: &id004
-    - kaiming_uniform
-    - kaiming_normal
-    shared_embedding_fraction: &id005
-    - 0.125
-    - 0.25
-    - 0.5
-    num_attn_blocks: &id006
+    gflu_stages: &id003
     - 4
     - 10
-    attn_dropout: &id007
-    - 0.05
+    gflu_dropout: &id004
+    - 0.0
     - 0.3
-    add_norm_dropout: &id008
-    - 0.05
+    embedding_dropout: &id005
+    - 0.0
     - 0.3
-    ff_dropout: &id009
-    - 0.05
-    - 0.3
-    ff_hidden_multiplier: &id010
-    - 2
-    - 6
-    transformer_activation: &id011
-    - GEGLU
-    - ReGLU
-    - SwiGLU
-    embedding_dropout: &id012
-    - 0.05
-    - 0.3
-    optimizer_fn: &id013
+    optimizer_fn: &id006
       Adam:
         weight_decay:
         - 0.0001
@@ -54,7 +31,7 @@
         weight_decay:
         - 0.0001
         - 1.0e-05
-    scheduler_fn: &id014
+    scheduler_fn: &id007
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -70,25 +47,59 @@
   model: gandalf
   best_params: {}
   param_grid:
-    outer_params: &id015
+    outer_params: *id001
+    batch_size: *id002
+    gflu_stages: *id003
+    gflu_dropout: *id004
+    embedding_dropout: *id005
+    optimizer_fn: *id006
+    scheduler_fn: *id007
+- dataset: creditcard
+  model: tabtransformer
+  best_params: {}
+  param_grid:
+    outer_params: &id008
       hyperopt_evals: 50
       auto_lr_find: true
       precision: 16
       max_epochs: 1000
       val_size: 0.15
       early_stopping_patience: 8
-    batch_size: &id016
+    batch_size: &id009
     - 1024
     - 2048
     - 4096
-    gflu_stages: &id017
+    embedding_bias: &id010
+    - true
+    - false
+    embedding_initialization: &id011
+    - kaiming_uniform
+    - kaiming_normal
+    shared_embedding_fraction: &id012
+    - 0.125
+    - 0.25
+    - 0.5
+    num_attn_blocks: &id013
     - 4
     - 10
-    gflu_dropout: &id018
-    - 0.0
+    attn_dropout: &id014
+    - 0.05
     - 0.3
+    add_norm_dropout: &id015
+    - 0.05
+    - 0.3
+    ff_dropout: &id016
+    - 0.05
+    - 0.3
+    ff_hidden_multiplier: &id017
+    - 2
+    - 6
+    transformer_activation: &id018
+    - GEGLU
+    - ReGLU
+    - SwiGLU
     embedding_dropout: &id019
-    - 0.0
+    - 0.05
     - 0.3
     optimizer_fn: &id020
       Adam:
@@ -115,28 +126,17 @@
   model: tabtransformer
   best_params: {}
   param_grid:
-    outer_params: *id001
-    batch_size: *id002
-    embedding_bias: *id003
-    embedding_initialization: *id004
-    shared_embedding_fraction: *id005
-    num_attn_blocks: *id006
-    attn_dropout: *id007
-    add_norm_dropout: *id008
-    ff_dropout: *id009
-    ff_hidden_multiplier: *id010
-    transformer_activation: *id011
-    embedding_dropout: *id012
-    optimizer_fn: *id013
-    scheduler_fn: *id014
-- dataset: creditcard
-  model: gandalf
-  best_params: {}
-  param_grid:
-    outer_params: *id015
-    batch_size: *id016
-    gflu_stages: *id017
-    gflu_dropout: *id018
+    outer_params: *id008
+    batch_size: *id009
+    embedding_bias: *id010
+    embedding_initialization: *id011
+    shared_embedding_fraction: *id012
+    num_attn_blocks: *id013
+    attn_dropout: *id014
+    add_norm_dropout: *id015
+    ff_dropout: *id016
+    ff_hidden_multiplier: *id017
+    transformer_activation: *id018
     embedding_dropout: *id019
     optimizer_fn: *id020
     scheduler_fn: *id021

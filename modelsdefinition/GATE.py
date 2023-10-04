@@ -79,6 +79,9 @@ class GATE(BaseModel):
         ][0]
         self.default = False
         self.dataset_name = None
+        num_cpu_cores = os.cpu_count()
+        # Calculate the num_workers value as number of cores - 2
+        self.num_workers = max(1, num_cpu_cores)
 
     def _load_best_model(self):
         """Load a trained model from a given path"""

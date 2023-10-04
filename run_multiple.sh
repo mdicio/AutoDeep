@@ -1,6 +1,6 @@
 #!/bin/bash
 # Sleep for 6 hours (6 hours * 3600 seconds per hour)
-sleep 21600
+sleep 2160
 
 # Start runner_k.py and runner_k2.py in the background
 python runner_k.py > runner_k.log 2>&1 &

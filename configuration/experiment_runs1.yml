@@ -5,6 +5,7 @@
     outer_params: &id001
       hyperopt_evals: 50
       auto_lr_find: true
+      precision: 16
       max_epochs: 1000
       val_size: 0.15
       early_stopping_patience: 8

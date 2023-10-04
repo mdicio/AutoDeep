@@ -219,11 +219,13 @@ class MLPTorch(BaseModel):
             "roc_auc": "roc_auc",
             "area_under_pr": "average_precision",
         }
-        self.dataset_name = None
+        num_cpu_cores = os.cpu_count()
+        # Calculate the num_workers value as number of cores - 2
+        self.num_workers = max(1, num_cpu_cores)
         # Get the number of available CPU cores
         num_cpu_cores = os.cpu_count()
         # Calculate the num_workers value as number of cores - 2
-        self.num_workers = max(1, num_cpu_cores - 2)
+        self.num_workers = max(1, num_cpu_cores)
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -558,8 +560,9 @@ class MLPTorch(BaseModel):
         score_std = best_trial["result"]["score_std"]
         full_metrics = best_trial["result"]["full_metrics"]
 
-
-        self.logger.info(f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}")
+        self.logger.info(
+            f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}"
+        )
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 

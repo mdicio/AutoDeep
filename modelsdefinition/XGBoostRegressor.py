@@ -54,7 +54,9 @@ class XGBoostRegressor(BaseModel):
 
         # extra_info used in case it is needed and specific to the dataset we are training on
         self.extra_info = None
-        self.dataset_name = None
+        num_cpu_cores = os.cpu_count()
+        # Calculate the num_workers value as number of cores - 2
+        self.num_workers = max(1, num_cpu_cores)
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -395,8 +397,9 @@ class XGBoostRegressor(BaseModel):
         score_std = best_trial["result"]["score_std"]
         full_metrics = best_trial["result"]["full_metrics"]
 
-
-        self.logger.info(f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}")
+        self.logger.info(
+            f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}"
+        )
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
