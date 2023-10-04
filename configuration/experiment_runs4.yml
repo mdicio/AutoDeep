@@ -12,7 +12,7 @@
     batch_size: &id002
     - 1024
     - 2048
-    - 4096
+    - 3500
     attn_embed_dim_multiplier: &id003
     - 2
     - 16
