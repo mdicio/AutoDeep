@@ -437,7 +437,7 @@ class ResNetTrainer:
                     val_loss = self.validate_step(val_loader)
                     self.scheduler.step(val_loss)
 
-                    if val_loss < best_val_loss:
+                    if val_loss < best_val_loss + self.outer_params.get("tol", 0.0):
                         best_val_loss = val_loss
                         best_epoch = epoch
                         current_patience = 0
@@ -543,7 +543,7 @@ class ResNetTrainer:
                         val_loss = self.validate_step(val_loader)
                         self.scheduler.step(val_loss)
 
-                        if val_loss < best_val_loss:
+                        if val_loss < best_val_loss + self.outer_params.get("tol", 0.0):
                             best_val_loss = val_loss
                             best_epoch = epoch
                             current_patience = 0
@@ -719,7 +719,7 @@ class ResNetTrainer:
                     bs = params["batch_size"]
                 train_loader = torch.utils.data.DataLoader(
                     torch_dataset,
-                    batch_size=params["batch_size"],
+                    batch_size=bs,
                     sampler=train_subsampler,
                     drop_last=False,
                     num_workers=self.num_workers,
@@ -727,7 +727,7 @@ class ResNetTrainer:
                 )
                 val_loader = torch.utils.data.DataLoader(
                     torch_dataset,
-                    batch_size=params["batch_size"],
+                    batch_size=bs,
                     sampler=test_subsampler,
                     drop_last=False,
                     num_workers=self.num_workers,
@@ -756,7 +756,9 @@ class ResNetTrainer:
                             val_loss = self.validate_step(val_loader)
                             self.scheduler.step(val_loss)
 
-                            if val_loss < best_val_loss:
+                            if val_loss < best_val_loss + self.outer_params.get(
+                                "tol", 0.0
+                            ):
                                 best_val_loss = val_loss
                                 best_epoch = epoch
                                 current_patience = 0

@@ -11,7 +11,7 @@ from modelsdefinition.AutomaticFeatureInteractionModel import AutoIntTrainer
 from modelsdefinition.TabTransformerModel import TabTransformerTrainer
 from modelsdefinition.GANDALF import GandalfTrainer
 from modelsdefinition.CatBoostModel import CatBoostTrainer
-from modelsdefinition.LightGBMModel import LightGBMTrainer
+from SCRATCH.LightGBMModel import LightGBMTrainer
 from modelsdefinition.SoftOrdering1DCNN import SoftOrdering1DCNN
 from SCRATCH.SqueezeNet import SqueezeNetTrainer
 from dataloaders.dataloader import *

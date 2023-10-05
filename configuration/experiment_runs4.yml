@@ -6,6 +6,7 @@
       hyperopt_evals: 50
       auto_lr_find: true
       precision: 16
+      tol: 1.0e-05
       max_epochs: 1000
       val_size: 0.15
       early_stopping_patience: 8
