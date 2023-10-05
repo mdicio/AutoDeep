@@ -160,7 +160,9 @@ class GATE(BaseModel):
             early_stopping_patience=outer_params[
                 "early_stopping_patience"
             ],  # No. of epochs of degradation training will wait before terminating
-            early_stopping_min_delta = outer_params.get("tol", 0.0) # No. of epochs of degradation training will wait before terminating
+            early_stopping_min_delta=outer_params.get(
+                "tol", 0.0
+            ),  # No. of epochs of degradation training will wait before terminating
             checkpoints="valid_loss",
             checkpoints_path=self.save_path,  # Save best checkpoint monitoring val_loss
             load_best=True,  # After training, load the best checkpoint
