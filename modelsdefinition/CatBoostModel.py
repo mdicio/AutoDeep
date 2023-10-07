@@ -52,7 +52,7 @@ class CatBoostTrainer(BaseModel):
 
         self.device = "GPU" if torch.cuda.is_available() else "CPU"
         self.extra_info = None
-        self.gpu_ram_part = 0.3
+        # self.gpu_ram_part = 0.3
         num_cpu_cores = os.cpu_count()
         # Calculate the num_workers value as number of cores - 2
         self.num_workers = max(1, num_cpu_cores)
@@ -86,7 +86,7 @@ class CatBoostTrainer(BaseModel):
                 od_type="Iter",
                 od_wait=20,
                 task_type=self.device,
-                gpu_ram_part=self.gpu_ram_part,
+                # gpu_ram_part=self.gpu_ram_part,
                 **params,
             )
         elif self.problem_type == "multiclass_classification":
@@ -98,7 +98,7 @@ class CatBoostTrainer(BaseModel):
                 od_type="Iter",
                 od_wait=20,
                 task_type=self.device,
-                gpu_ram_part=self.gpu_ram_part,
+                # gpu_ram_part=self.gpu_ram_part,
                 **params,
             )
 
@@ -108,7 +108,7 @@ class CatBoostTrainer(BaseModel):
                 od_type="Iter",
                 od_wait=20,
                 task_type=self.device,
-                gpu_ram_part=self.gpu_ram_part,
+                # gpu_ram_part=self.gpu_ram_part,
                 **params,
             )
         else:
