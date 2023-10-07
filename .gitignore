@@ -4,6 +4,7 @@
 data/
 output/modelsaves
 .pt_tmp/
+catboost_info/
 
 # Compiled Python files
 __pycache__/
@@ -84,3 +85,4 @@ __pycache__/
 node_modules/
 bower_components/
 jspm_packages/
+

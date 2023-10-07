@@ -526,7 +526,7 @@ class FullCaliforniaHousingDataLoader(FullDataLoader):
 
         df = pd.read_csv(self.filename)
         df["pop_density"] = df["Population"] / df["AveRooms"]
-        df["target"] = df["target"].astype(int)
+        df["target"] = df["target"].astype(float)
         # Extract the features and target variables from the dataset
         X_train = df.drop(columns=[self.target_column])
         y_train = df[self.target_column]
@@ -571,10 +571,10 @@ class FullAdultDataLoader(FullDataLoader):
     def load_data(self):
         # Load the Adult dataset from UCI Machine Learning Repository
 
-        #data_url = (
+        # data_url = (
         #    "https://archive.ics.uci.edu/ml/machine-learning-databases/adult/adult.data"
-        #)
-        #data_columns = [
+        # )
+        # data_columns = [
         #    "age",
         #    "workclass",
         #    "fnlwgt",
@@ -590,12 +590,11 @@ class FullAdultDataLoader(FullDataLoader):
         #    "hours-per-week",
         #    "native-country",
         #    "income",
-        #]
-        #df = pd.read_csv(data_url, names=data_columns)
+        # ]
+        # df = pd.read_csv(data_url, names=data_columns)
         # Create the "target_income" column by replacing values in the "income" column
-        #df["target"] = df["income"].str.strip().replace({">50K": 1, "<=50K": 0})
-        #df.drop(columns=["income"], inplace=True)
-
+        # df["target"] = df["income"].str.strip().replace({">50K": 1, "<=50K": 0})
+        # df.drop(columns=["income"], inplace=True)
 
         df = pd.read_csv(self.filename)
 
