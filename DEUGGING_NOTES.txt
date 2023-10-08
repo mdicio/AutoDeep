@@ -3,3 +3,9 @@
 
 # S1DCNN Gives batch size 1 problem with titanic:
  'batch_size': 89, 
+
+
+
+#MLP Covertype metrics
+
+| 12/50 [11:28:57<42:21:28, 4012.86s/trial, best loss: -0.9422727245446382]
