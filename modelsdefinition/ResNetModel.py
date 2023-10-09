@@ -756,8 +756,9 @@ class ResNetTrainer:
                             val_loss = self.validate_step(val_loader)
                             self.scheduler.step(val_loss)
 
-                            if val_loss < best_val_loss + self.outer_params.get(
-                                "tol", 0.0
+                            if (
+                                val_loss + self.outer_params.get("tol", 0.0)
+                                < best_val_loss
                             ):
                                 best_val_loss = val_loss
                                 best_epoch = epoch
