@@ -488,6 +488,9 @@ class NodeTrainer(BaseModel):
 
         self.logger.debug(f"Full df shape : {train.shape}")
 
+        # save info in case of run crash
+        write_list = []
+
         # Define the objective function for hyperopt search
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")
@@ -563,6 +566,10 @@ class NodeTrainer(BaseModel):
             score_std = np.std(metric_dict[metric])
 
             self.logger.info(f"Current hyperopt score {metric} = {score_average}")
+
+            self.logger.info(
+                f"CRUCIAL INFO hyperopt FULL METRICS CURRENT {metric_dict}"
+            )
 
             if self.evaluator.maximize[metric][0]:
                 score_average = -1 * score_average

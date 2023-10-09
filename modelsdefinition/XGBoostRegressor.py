@@ -356,6 +356,10 @@ class XGBoostRegressor(BaseModel):
 
             self.logger.info(f"Current hyperopt score {metric} = {score_average}")
 
+            self.logger.info(
+                f"CRUCIAL INFO hyperopt FULL METRICS CURRENT {metric_dict}"
+            )
+
             if self.evaluator.maximize[metric][0]:
                 score_average = -1 * score_average
 
