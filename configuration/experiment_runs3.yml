@@ -1,77 +1,4 @@
 - dataset: diabetes
-  model: fttransformer
-  best_params: {}
-  param_grid:
-    outer_params:
-      hyperopt_evals: 50
-      auto_lr_find: true
-      precision: 16
-      tol: 1.0e-05
-      max_epochs: 1000
-      val_size: 0.15
-      early_stopping_patience: 8
-      attn_feature_importance: false
-    batch_size:
-    - 1024
-    - 2048
-    - 4096
-    num_heads:
-    - 4
-    - 10
-    input_embed_dim_multiplier:
-    - 2
-    - 6
-    embedding_initialization:
-    - kaiming_uniform
-    - kaiming_normal
-    embedding_dropout:
-    - 0.05
-    - 0.2
-    shared_embedding_fraction:
-    - 0.125
-    - 0.25
-    - 0.5
-    num_attn_blocks:
-    - 4
-    - 8
-    attn_dropout:
-    - 0.05
-    - 0.2
-    add_norm_dropout:
-    - 0.05
-    - 0.2
-    ff_dropout:
-    - 0.05
-    - 0.2
-    ff_hidden_multiplier:
-    - 4
-    - 32
-    transformer_activation:
-    - GEGLU
-    - ReGLU
-    - SwiGLU
-    optimizer_fn:
-      Adam:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-      AdamW:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-    scheduler_fn:
-      ReduceLROnPlateau:
-        factor:
-        - 0.1
-        - 0.9
-        patience:
-        - 3
-        - 5
-      ExponentialLR:
-        gamma:
-        - 0.9
-        - 0.99
-- dataset: diabetes
   model: gandalf
   best_params: {}
   param_grid:
@@ -279,3 +206,75 @@
     l2_leaf_reg: *id010
     min_child_samples: *id011
     bagging_temperature: *id012
+- dataset: diabetes
+  model: fttransformer
+  best_params: {}
+  param_grid:
+    outer_params:
+      hyperopt_evals: 50
+      auto_lr_find: true
+      precision: 16
+      tol: 1.0e-05
+      max_epochs: 1000
+      val_size: 0.15
+      early_stopping_patience: 8
+      attn_feature_importance: false
+    batch_size:
+    - 1024
+    - 2048
+    num_heads:
+    - 4
+    - 8
+    input_embed_dim_multiplier:
+    - 2
+    - 6
+    embedding_initialization:
+    - kaiming_uniform
+    - kaiming_normal
+    embedding_dropout:
+    - 0.05
+    - 0.2
+    shared_embedding_fraction:
+    - 0.125
+    - 0.25
+    - 0.5
+    num_attn_blocks:
+    - 4
+    - 7
+    attn_dropout:
+    - 0.05
+    - 0.2
+    add_norm_dropout:
+    - 0.05
+    - 0.2
+    ff_dropout:
+    - 0.05
+    - 0.2
+    ff_hidden_multiplier:
+    - 4
+    - 32
+    transformer_activation:
+    - GEGLU
+    - ReGLU
+    - SwiGLU
+    optimizer_fn:
+      Adam:
+        weight_decay:
+        - 0.0001
+        - 1.0e-05
+      AdamW:
+        weight_decay:
+        - 0.0001
+        - 1.0e-05
+    scheduler_fn:
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        - 0.9
+        patience:
+        - 3
+        - 5
+      ExponentialLR:
+        gamma:
+        - 0.9
+        - 0.99
