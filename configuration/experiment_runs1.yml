@@ -26,7 +26,7 @@
     - 0.5
     num_attn_blocks:
     - 4
-    - 10
+    - 7
     attn_dropout:
     - 0.05
     - 0.3
@@ -96,18 +96,18 @@
     - entmax
     n_d: &id006
     - 6
-    - 32
+    - 24
     n_steps: &id007
-    - 1
-    - 6
+    - 3
+    - 7
     gamma: &id008
     - 1.0
     - 2.0
     n_independent: &id009
-    - 1
+    - 2
     - 3
     n_shared: &id010
-    - 1
+    - 2
     - 3
     optimizer_fn: &id011
       Adam:
@@ -155,7 +155,7 @@
       max_epochs: 1000
       early_stopping: true
       early_stopping_patience: 10
-      tol: 1.0e-05
+      tol: 0.0001
       validation_fraction: 0.15
     batch_size: &id014
     - 32
@@ -219,8 +219,8 @@
       hyperopt_evals: 50
       max_epochs: 1000
       early_stopping: true
-      early_stopping_patience: 6
-      tol: 1.0e-05
+      early_stopping_patience: 4
+      tol: 0.0001
       validation_fraction: 0.15
     batch_size:
     - 1024
