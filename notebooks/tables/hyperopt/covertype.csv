@@ -1,3 +1,4 @@
 ,model,accuracy,f1
 0,gandalf,0.9060 ± (0.0073),0.9087 ± (0.0067)
 1,categoryembedding,0.8634 ± (0.0093),0.8670 ± (0.0087)
+2,tabtransformer,0.6082 ± (0.0204),0.6351 ± (0.0161)
