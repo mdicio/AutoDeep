@@ -3,7 +3,7 @@
   best_params: {}
   param_grid:
     outer_params:
-      hyperopt_evals: 50
+      hyperopt_evals: 10
       auto_lr_find: true
       precision: 16
       tol: 0.001
@@ -72,7 +72,7 @@
   best_params: {}
   param_grid:
     outer_params: &id001
-      hyperopt_evals: 50
+      hyperopt_evals: 10
       max_epochs: 1000
       early_stopping: true
       early_stopping_patience: 10

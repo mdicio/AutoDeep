@@ -1,0 +1,11 @@
+Dataset,Target Type,Total Samples,Num Classes,Pos. Class Rate (%),Total Features,Num Categorical,Num Numerical
+creditcard,Classification,284807,2,0.17,30,0,30
+iris,Classification,150,3,,4,0,4
+titanic,Classification,891,2,38.38,12,5,7
+breastcancer,Classification,569,2,62.74,30,0,30
+housing,Regression,20640,,,10,0,10
+ageconditions,Classification,622,2,17.36,56,0,56
+adult,Classification,32561,2,24.08,15,8,7
+heloc,Classification,10459,2,52.19,24,0,24
+covertype,Classification,281011,7,,54,0,54
+diabetes,Classification,101766,2,11.16,47,39,8

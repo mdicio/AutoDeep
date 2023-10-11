@@ -1,104 +1,52 @@
-- dataset: diabetes
-  model: catboost
+- dataset: covertype
+  model: node
   best_params: {}
   param_grid:
     outer_params: &id001
-      hyperopt_evals: 50
-      validation_fraction: 0.15
-      early_stopping_rounds: 50
-      verbose: false
-    iterations: &id002
-    - 200
-    - 3000
-    learning_rate: &id003
-    - 0.001
-    - 0.1
-    depth: &id004
-    - 4
-    - 10
-    l2_leaf_reg: &id005
-    - 0.5
-    - 5.0
-    min_child_samples: &id006
-    - 1
-    - 100
-    bagging_temperature: &id007
-    - 0.1
-    - 2.0
-- dataset: covertype
-  model: catboost
-  best_params: {}
-  param_grid:
-    outer_params: *id001
-    iterations: *id002
-    learning_rate: *id003
-    depth: *id004
-    l2_leaf_reg: *id005
-    min_child_samples: *id006
-    bagging_temperature: *id007
-- dataset: creditcard
-  model: catboost
-  best_params: {}
-  param_grid:
-    outer_params: *id001
-    iterations: *id002
-    learning_rate: *id003
-    depth: *id004
-    l2_leaf_reg: *id005
-    min_child_samples: *id006
-    bagging_temperature: *id007
-- dataset: diabetes
-  model: fttransformer
-  best_params: {}
-  param_grid:
-    outer_params: &id008
-      hyperopt_evals: 50
+      hyperopt_evals: 10
       auto_lr_find: true
       precision: 16
       tol: 0.001
       max_epochs: 1000
       val_size: 0.15
       early_stopping_patience: 3
-      attn_feature_importance: false
-    batch_size: &id009
+    batch_size: &id002
     - 1024
     - 2048
-    num_heads: &id010
-    - 4
-    - 8
-    input_embed_dim_multiplier: &id011
-    - 2
-    - 6
-    embedding_initialization: &id012
+    - 4096
+    embedding_bias: &id003
+    - true
+    - false
+    embedding_initialization: &id004
     - kaiming_uniform
     - kaiming_normal
-    embedding_dropout: &id013
-    - 0.05
-    - 0.2
-    shared_embedding_fraction: &id014
+    shared_embedding_fraction: &id005
     - 0.125
     - 0.25
     - 0.5
-    num_attn_blocks: &id015
+    num_attn_blocks: &id006
     - 4
     - 7
-    attn_dropout: &id016
+    attn_dropout: &id007
     - 0.05
-    - 0.2
-    add_norm_dropout: &id017
+    - 0.3
+    add_norm_dropout: &id008
     - 0.05
-    - 0.2
-    ff_dropout: &id018
+    - 0.3
+    ff_dropout: &id009
     - 0.05
-    - 0.2
-    ff_hidden_multiplier: &id019
-    - 4
-    - 32
-    transformer_activation: &id020
+    - 0.3
+    ff_hidden_multiplier: &id010
+    - 2
+    - 6
+    transformer_activation: &id011
     - GEGLU
     - ReGLU
     - SwiGLU
-    optimizer_fn: &id021
+    embedding_dropout: &id012
+    - 0.05
+    - 0.3
+    optimizer_fn: &id013
       Adam:
         weight_decay:
         - 0.0001
@@ -107,7 +55,7 @@
         weight_decay:
         - 0.0001
         - 1.0e-05
-    scheduler_fn: &id022
+    scheduler_fn: &id014
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -120,96 +68,101 @@
         - 0.9
         - 0.99
 - dataset: covertype
-  model: fttransformer
+  model: tabnet
   best_params: {}
   param_grid:
-    outer_params: *id008
-    batch_size: *id009
-    num_heads: *id010
-    input_embed_dim_multiplier: *id011
-    embedding_initialization: *id012
-    embedding_dropout: *id013
-    shared_embedding_fraction: *id014
-    num_attn_blocks: *id015
-    attn_dropout: *id016
-    add_norm_dropout: *id017
-    ff_dropout: *id018
-    ff_hidden_multiplier: *id019
-    transformer_activation: *id020
-    optimizer_fn: *id021
-    scheduler_fn: *id022
-- dataset: creditcard
-  model: fttransformer
+    outer_params: *id001
+    batch_size: *id002
+    embedding_bias: *id003
+    embedding_initialization: *id004
+    shared_embedding_fraction: *id005
+    num_attn_blocks: *id006
+    attn_dropout: *id007
+    add_norm_dropout: *id008
+    ff_dropout: *id009
+    ff_hidden_multiplier: *id010
+    transformer_activation: *id011
+    embedding_dropout: *id012
+    optimizer_fn: *id013
+    scheduler_fn: *id014
+- dataset: covertype
+  model: autoint
   best_params: {}
   param_grid:
-    outer_params: *id008
-    batch_size: *id009
-    num_heads: *id010
-    input_embed_dim_multiplier: *id011
-    embedding_initialization: *id012
-    embedding_dropout: *id013
-    shared_embedding_fraction: *id014
-    num_attn_blocks: *id015
-    attn_dropout: *id016
-    add_norm_dropout: *id017
-    ff_dropout: *id018
-    ff_hidden_multiplier: *id019
-    transformer_activation: *id020
-    optimizer_fn: *id021
-    scheduler_fn: *id022
-- dataset: heloc
+    outer_params: *id001
+    batch_size: *id002
+    embedding_bias: *id003
+    embedding_initialization: *id004
+    shared_embedding_fraction: *id005
+    num_attn_blocks: *id006
+    attn_dropout: *id007
+    add_norm_dropout: *id008
+    ff_dropout: *id009
+    ff_hidden_multiplier: *id010
+    transformer_activation: *id011
+    embedding_dropout: *id012
+    optimizer_fn: *id013
+    scheduler_fn: *id014
+- dataset: covertype
   model: fttransformer
-  best_params: {}
-  param_grid:
-    outer_params: *id008
-    batch_size: *id009
-    num_heads: *id010
-    input_embed_dim_multiplier: *id011
-    embedding_initialization: *id012
-    embedding_dropout: *id013
-    shared_embedding_fraction: *id014
-    num_attn_blocks: *id015
-    attn_dropout: *id016
-    add_norm_dropout: *id017
-    ff_dropout: *id018
-    ff_hidden_multiplier: *id019
-    transformer_activation: *id020
-    optimizer_fn: *id021
-    scheduler_fn: *id022
-- dataset: heloc
-  model: resnet
   best_params: {}
   param_grid:
     outer_params:
-      hyperopt_evals: 50
+      hyperopt_evals: 10
+      auto_lr_find: true
+      precision: 16
+      tol: 0.001
       max_epochs: 1000
-      early_stopping: true
-      early_stopping_patience: 4
-      tol: 0.0001
-      validation_fraction: 0.15
+      val_size: 0.15
+      early_stopping_patience: 3
+      attn_feature_importance: false
     batch_size:
     - 1024
     - 2048
-    - 4096
-    resnet_depth:
-    - resnet18
-    - resnet34
-    - resnet50
+    num_heads:
+    - 4
+    - 6
+    input_embed_dim_multiplier:
+    - 2
+    - 4
+    embedding_initialization:
+    - kaiming_uniform
+    - kaiming_normal
+    embedding_dropout:
+    - 0.05
+    - 0.2
+    shared_embedding_fraction:
+    - 0.125
+    - 0.25
+    - 0.5
+    num_attn_blocks:
+    - 4
+    - 6
+    attn_dropout:
+    - 0.05
+    - 0.2
+    add_norm_dropout:
+    - 0.05
+    - 0.2
+    ff_dropout:
+    - 0.05
+    - 0.2
+    ff_hidden_multiplier:
+    - 4
+    - 32
+    transformer_activation:
+    - GEGLU
+    - ReGLU
+    - SwiGLU
     optimizer_fn:
       Adam:
         weight_decay:
-        - 1.0e-05
-        - 0.001
-        learning_rate:
         - 0.0001
-        - 0.001
+        - 1.0e-05
       AdamW:
         weight_decay:
-        - 1.0e-05
-        - 0.001
-        learning_rate:
         - 0.0001
-        - 0.001
+        - 1.0e-05
     scheduler_fn:
       ReduceLROnPlateau:
         factor:
@@ -222,3 +175,79 @@
         gamma:
         - 0.9
         - 0.99
+- dataset: covertype
+  model: gate
+  best_params: {}
+  param_grid:
+    outer_params:
+      hyperopt_evals: 10
+      auto_lr_find: true
+      precision: 16
+      tol: 0.001
+      max_epochs: 1000
+      val_size: 0.15
+      early_stopping_patience: 3
+    batch_size:
+    - 1024
+    - 2048
+    - 4096
+    tree_depth:
+    - 4
+    - 6
+    num_trees:
+    - 4
+    - 8
+    gflu_stages:
+    - 3
+    - 8
+    gflu_dropout:
+    - 0.0
+    - 0.05
+    tree_dropout:
+    - 0.0
+    - 0.05
+    tree_wise_attention_dropout:
+    - 0.0
+    - 0.05
+    embedding_dropout:
+    - 0
+    - 0.2
+    optimizer_fn:
+      Adam:
+        weight_decay:
+        - 0.0001
+        - 1.0e-05
+      AdamW:
+        weight_decay:
+        - 0.0001
+        - 1.0e-05
+    scheduler_fn:
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        - 0.9
+        patience:
+        - 3
+        - 5
+      ExponentialLR:
+        gamma:
+        - 0.9
+        - 0.99
+- dataset: covertype
+  model: tabtransformer
+  best_params: {}
+  param_grid:
+    outer_params: *id001
+    batch_size: *id002
+    embedding_bias: *id003
+    embedding_initialization: *id004
+    shared_embedding_fraction: *id005
+    num_attn_blocks: *id006
+    attn_dropout: *id007
+    add_norm_dropout: *id008
+    ff_dropout: *id009
+    ff_hidden_multiplier: *id010
+    transformer_activation: *id011
+    embedding_dropout: *id012
+    optimizer_fn: *id013
+    scheduler_fn: *id014
