@@ -1,107 +1,55 @@
 - dataset: diabetes
-  model: gate
-  best_params: {}
-  param_grid:
-    outer_params:
-      hyperopt_evals: 50
-      auto_lr_find: true
-      precision: 16
-      tol: 1.0e-05
-      max_epochs: 1000
-      val_size: 0.15
-      early_stopping_patience: 8
-    batch_size:
-    - 1024
-    - 2048
-    - 4096
-    embedding_bias:
-    - true
-    - false
-    embedding_initialization:
-    - kaiming_uniform
-    - kaiming_normal
-    shared_embedding_fraction:
-    - 0.125
-    - 0.25
-    - 0.5
-    num_attn_blocks:
-    - 4
-    - 7
-    attn_dropout:
-    - 0.05
-    - 0.3
-    add_norm_dropout:
-    - 0.05
-    - 0.3
-    ff_dropout:
-    - 0.05
-    - 0.3
-    ff_hidden_multiplier:
-    - 2
-    - 6
-    transformer_activation:
-    - GEGLU
-    - ReGLU
-    - SwiGLU
-    embedding_dropout:
-    - 0.05
-    - 0.3
-    optimizer_fn:
-      Adam:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-      AdamW:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-    scheduler_fn:
-      ReduceLROnPlateau:
-        factor:
-        - 0.1
-        - 0.9
-        patience:
-        - 3
-        - 5
-      ExponentialLR:
-        gamma:
-        - 0.9
-        - 0.99
-- dataset: diabetes
   model: tabnet
   best_params: {}
   param_grid:
-    outer_params:
+    outer_params: &id001
       hyperopt_evals: 50
+      auto_lr_find: true
+      precision: 16
+      tol: 0.001
       max_epochs: 1000
-      early_stopping: true
-      early_stopping_patience: 4
-      tol: 0.0001
-      validation_fraction: 0.15
-    batch_size:
+      val_size: 0.15
+      early_stopping_patience: 3
+    virtual_batch_size_ratio: &id002
+    - 0.125
+    - 0.25
+    - 0.5
+    - 1.0
+    batch_size: &id003
     - 1024
     - 2048
     - 4096
-    resnet_depth:
-    - resnet18
-    - resnet34
-    - resnet50
-    optimizer_fn:
+    weights: &id004
+    - 0
+    - 1
+    mask_type: &id005
+    - sparsemax
+    - entmax
+    n_d: &id006
+    - 6
+    - 24
+    n_steps: &id007
+    - 3
+    - 7
+    gamma: &id008
+    - 1.0
+    - 2.0
+    n_independent: &id009
+    - 2
+    - 3
+    n_shared: &id010
+    - 2
+    - 3
+    optimizer_fn: &id011
       Adam:
         weight_decay:
-        - 1.0e-05
-        - 0.001
-        learning_rate:
         - 0.0001
-        - 0.001
+        - 1.0e-05
       AdamW:
         weight_decay:
-        - 1.0e-05
-        - 0.001
-        learning_rate:
         - 0.0001
-        - 0.001
-    scheduler_fn:
+        - 1.0e-05
+    scheduler_fn: &id012
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -164,65 +112,18 @@
   model: tabnet
   best_params: {}
   param_grid:
-    outer_params: &id001
-      hyperopt_evals: 50
-      auto_lr_find: true
-      precision: 16
-      tol: 1.0e-05
-      max_epochs: 1000
-      val_size: 0.15
-      early_stopping_patience: 8
-    virtual_batch_size_ratio: &id002
-    - 0.125
-    - 0.25
-    - 0.5
-    - 1.0
-    batch_size: &id003
-    - 1024
-    - 2048
-    - 4096
-    weights: &id004
-    - 0
-    - 1
-    mask_type: &id005
-    - sparsemax
-    - entmax
-    n_d: &id006
-    - 6
-    - 24
-    n_steps: &id007
-    - 3
-    - 7
-    gamma: &id008
-    - 1.0
-    - 2.0
-    n_independent: &id009
-    - 2
-    - 3
-    n_shared: &id010
-    - 2
-    - 3
-    optimizer_fn: &id011
-      Adam:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-      AdamW:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-    scheduler_fn: &id012
-      ReduceLROnPlateau:
-        factor:
-        - 0.1
-        - 0.9
-        patience:
-        - 3
-        - 5
-      ExponentialLR:
-        gamma:
-        - 0.9
-        - 0.99
+    outer_params: *id001
+    virtual_batch_size_ratio: *id002
+    batch_size: *id003
+    weights: *id004
+    mask_type: *id005
+    n_d: *id006
+    n_steps: *id007
+    gamma: *id008
+    n_independent: *id009
+    n_shared: *id010
+    optimizer_fn: *id011
+    scheduler_fn: *id012
 - dataset: covertype
   model: tabnet
   best_params: {}
@@ -239,3 +140,61 @@
     n_shared: *id010
     optimizer_fn: *id011
     scheduler_fn: *id012
+- dataset: diabetes
+  model: gate
+  best_params: {}
+  param_grid:
+    outer_params:
+      hyperopt_evals: 50
+      auto_lr_find: true
+      precision: 16
+      tol: 0.001
+      max_epochs: 1000
+      val_size: 0.15
+      early_stopping_patience: 3
+    batch_size:
+    - 1024
+    - 2048
+    - 4096
+    tree_depth:
+    - 4
+    - 6
+    num_trees:
+    - 4
+    - 8
+    gflu_stages:
+    - 3
+    - 8
+    gflu_dropout:
+    - 0.0
+    - 0.05
+    tree_dropout:
+    - 0.0
+    - 0.05
+    tree_wise_attention_dropout:
+    - 0.0
+    - 0.05
+    embedding_dropout:
+    - 0
+    - 0.2
+    optimizer_fn:
+      Adam:
+        weight_decay:
+        - 0.0001
+        - 1.0e-05
+      AdamW:
+        weight_decay:
+        - 0.0001
+        - 1.0e-05
+    scheduler_fn:
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        - 0.9
+        patience:
+        - 3
+        - 5
+      ExponentialLR:
+        gamma:
+        - 0.9
+        - 0.99
