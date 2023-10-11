@@ -653,6 +653,11 @@ class SoftOrdering1DCNN:
             metric_dict = {}
 
             for fold, (train_idx, val_idx) in enumerate(kf.split(X, y)):
+
+                if fold > 2:
+                    self.logger.debug("QUICK EXIT")
+                    break
+                
                 if train_idx.shape[0] % params["batch_size"] == 1:
                     bs = params["batch_size"] + 1
                 else:

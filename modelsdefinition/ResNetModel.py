@@ -710,6 +710,10 @@ class ResNetTrainer:
             metric_dict = {}
 
             for fold, (train_idx, val_idx) in enumerate(kf.split(X, y)):
+                if fold > 2:
+                    self.logger.debug("QUICK EXIT")
+                    break
+
                 train_subsampler = torch.utils.data.SubsetRandomSampler(train_idx)
                 test_subsampler = torch.utils.data.SubsetRandomSampler(val_idx)
 

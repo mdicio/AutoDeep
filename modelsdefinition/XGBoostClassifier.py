@@ -331,6 +331,10 @@ class XGBoostClassifier(BaseModel):
             metric_dict = {}
 
             for fold, (train_idx, val_idx) in enumerate(kf.split(X, y)):
+                if fold > 2:
+                    self.logger.debug("QUICK EXIT")
+                    break
+
                 X_train = X.iloc[train_idx]
                 y_train = y.iloc[train_idx]
                 X_val = X.iloc[val_idx]

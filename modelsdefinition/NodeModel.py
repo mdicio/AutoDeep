@@ -505,6 +505,9 @@ class NodeTrainer(BaseModel):
             for fold, (train_idx, val_idx) in enumerate(
                 kf.split(train.drop(columns=["target"]), train["target"])
             ):
+                if fold > 2:
+                    self.logger.debug("QUICK EXIT")
+                    break
                 train_fold = train.iloc[train_idx]
                 val_fold = train.iloc[val_idx]
                 train_fold, val_fold = handle_rogue_batch_size(

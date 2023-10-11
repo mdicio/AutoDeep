@@ -1,63 +1,36 @@
-- dataset: diabetes
-  model: fttransformer
+- dataset: covertype
+  model: resnet
   best_params: {}
   param_grid:
     outer_params:
       hyperopt_evals: 10
-      auto_lr_find: true
-      precision: 16
-      tol: 0.001
       max_epochs: 1000
-      val_size: 0.15
-      early_stopping_patience: 3
-      attn_feature_importance: false
+      early_stopping: true
+      early_stopping_patience: 4
+      tol: 0.0001
+      validation_fraction: 0.15
     batch_size:
-    - 1024
     - 2048
-    num_heads:
-    - 4
-    - 6
-    input_embed_dim_multiplier:
-    - 2
-    - 4
-    embedding_initialization:
-    - kaiming_uniform
-    - kaiming_normal
-    embedding_dropout:
-    - 0.05
-    - 0.2
-    shared_embedding_fraction:
-    - 0.125
-    - 0.25
-    - 0.5
-    num_attn_blocks:
-    - 4
-    - 6
-    attn_dropout:
-    - 0.05
-    - 0.2
-    add_norm_dropout:
-    - 0.05
-    - 0.2
-    ff_dropout:
-    - 0.05
-    - 0.2
-    ff_hidden_multiplier:
-    - 4
-    - 32
-    transformer_activation:
-    - GEGLU
-    - ReGLU
-    - SwiGLU
+    - 4096
+    resnet_depth:
+    - resnet18
+    - resnet34
+    - resnet50
     optimizer_fn:
       Adam:
         weight_decay:
-        - 0.0001
         - 1.0e-05
+        - 0.001
+        learning_rate:
+        - 0.0001
+        - 0.001
       AdamW:
         weight_decay:
-        - 0.0001
         - 1.0e-05
+        - 0.001
+        learning_rate:
+        - 0.0001
+        - 0.001
     scheduler_fn:
       ReduceLROnPlateau:
         factor:
@@ -70,8 +43,8 @@
         gamma:
         - 0.9
         - 0.99
-- dataset: diabetes
-  model: gate
+- dataset: covertype
+  model: tabnet
   best_params: {}
   param_grid:
     outer_params:
@@ -82,31 +55,35 @@
       max_epochs: 1000
       val_size: 0.15
       early_stopping_patience: 3
+    virtual_batch_size_ratio:
+    - 0.125
+    - 0.25
+    - 0.5
+    - 1.0
     batch_size:
-    - 1024
     - 2048
     - 4096
-    tree_depth:
-    - 4
-    - 6
-    num_trees:
-    - 4
-    - 8
-    gflu_stages:
-    - 3
-    - 8
-    gflu_dropout:
-    - 0.0
-    - 0.05
-    tree_dropout:
-    - 0.0
-    - 0.05
-    tree_wise_attention_dropout:
-    - 0.0
-    - 0.05
-    embedding_dropout:
+    weights:
     - 0
-    - 0.2
+    - 1
+    mask_type:
+    - sparsemax
+    - entmax
+    n_d:
+    - 6
+    - 24
+    n_steps:
+    - 3
+    - 7
+    gamma:
+    - 1.0
+    - 2.0
+    n_independent:
+    - 2
+    - 3
+    n_shared:
+    - 2
+    - 3
     optimizer_fn:
       Adam:
         weight_decay:
@@ -141,7 +118,6 @@
       val_size: 0.15
       early_stopping_patience: 3
     batch_size:
-    - 1024
     - 2048
     - 4096
     embedding_bias:
@@ -176,6 +152,63 @@
     embedding_dropout:
     - 0.05
     - 0.3
+    optimizer_fn:
+      Adam:
+        weight_decay:
+        - 0.0001
+        - 1.0e-05
+      AdamW:
+        weight_decay:
+        - 0.0001
+        - 1.0e-05
+    scheduler_fn:
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        - 0.9
+        patience:
+        - 3
+        - 5
+      ExponentialLR:
+        gamma:
+        - 0.9
+        - 0.99
+- dataset: diabetes
+  model: gate
+  best_params: {}
+  param_grid:
+    outer_params:
+      hyperopt_evals: 10
+      auto_lr_find: true
+      precision: 16
+      tol: 0.001
+      max_epochs: 1000
+      val_size: 0.15
+      early_stopping_patience: 3
+    batch_size:
+    - 2048
+    - 4096
+    tree_depth:
+    - 4
+    - 6
+    num_trees:
+    - 4
+    - 8
+    gflu_stages:
+    - 3
+    - 8
+    gflu_dropout:
+    - 0.0
+    - 0.05
+    tree_dropout:
+    - 0.0
+    - 0.05
+    tree_wise_attention_dropout:
+    - 0.0
+    - 0.05
+    embedding_dropout:
+    - 0
+    - 0.2
     optimizer_fn:
       Adam:
         weight_decay:
