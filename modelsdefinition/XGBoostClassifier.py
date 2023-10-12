@@ -20,6 +20,7 @@ from modelutils.trainingutilities import (
     infer_hyperopt_space,
     stop_on_perfect_lossCondition,
 )
+import torch
 
 
 class XGBoostClassifier(BaseModel):
@@ -59,6 +60,7 @@ class XGBoostClassifier(BaseModel):
         num_cpu_cores = os.cpu_count()
         # Calculate the num_workers value as number of cores - 2
         self.num_workers = max(1, num_cpu_cores)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -324,6 +326,7 @@ class XGBoostClassifier(BaseModel):
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")
             # Create an XGBoost model with the given hyperparameters
+            params["device"] = self.device
             model = xgb.XGBClassifier(**params)
             # Fit the model on the training data
             kf = StratifiedKFold(n_splits=k_value, shuffle=True, random_state=42)

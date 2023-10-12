@@ -1,203 +1,79 @@
 - dataset: covertype
-  model: autoint
+  model: xgb
   best_params: {}
   param_grid:
     outer_params:
-      hyperopt_evals: 10
-      auto_lr_find: true
-      precision: 16
-      tol: 0.001
-      max_epochs: 1000
-      val_size: 0.15
-      early_stopping_patience: 3
-    batch_size:
-    - 1024
-    - 2048
-    - 3500
-    attn_embed_dim_multiplier:
-    - 2
-    - 16
-    num_heads:
-    - 2
-    - 8
-    num_attn_blocks:
-    - 2
-    - 6
-    attn_dropouts:
-    - 0.0
-    - 0.3
-    embedding_dim:
-    - 8
+      hyperopt_evals: 5
+      validation_fraction: 0.15
+      early_stopping_rounds: 50
+      verbose: false
+    n_estimators:
+    - 100
+    - 4000
+    max_bin:
+    - 256
     - 32
-    embedding_initialization:
-    - kaiming_uniform
-    - kaiming_normal
-    embedding_bias:
-    - true
-    - false
-    share_embedding:
-    - true
-    - false
-    share_embedding_strategy:
-    - add
-    - fraction
-    shared_embedding_fraction:
-    - 0.25
+    max_depth:
+    - 4
+    - 9
+    learning_rate:
     - 0.1
+    - 0.33
+    subsample:
+    - 0.7
+    - 1.0
+    colsample_bytree:
     - 0.5
-    deep_layers:
-    - true
-    - false
-    layers:
-    - 128-64-32
-    - 128-64-32-16
-    - 256-128-64
-    dropout:
+    - 1.0
+    min_child_weight:
+    - 1
+    - 10
+    alpha:
     - 0.0
-    - 0.3
-    activation:
-    - ReLU
-    - LeakyReLU
-    initialization:
-    - kaiming
-    - xavier
-    attention_pooling:
-    - true
-    - false
-    optimizer_fn:
-      Adam:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-      AdamW:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-    scheduler_fn:
-      ReduceLROnPlateau:
-        factor:
-        - 0.1
-        - 0.9
-        patience:
-        - 3
-        - 5
-      ExponentialLR:
-        gamma:
-        - 0.9
-        - 0.99
-- dataset: covertype
-  model: tabtransformer
+    - 5.0
+    gamma:
+    - 0.0
+    - 5.0
+    lambda:
+    - 0.0
+    - 5.0
+- dataset: creditcard
+  model: gate
   best_params: {}
   param_grid:
-    outer_params:
-      hyperopt_evals: 10
+    outer_params: &id001
+      hyperopt_evals: 5
       auto_lr_find: true
       precision: 16
-      tol: 0.001
+      tol: 1.0e-06
       max_epochs: 1000
       val_size: 0.15
       early_stopping_patience: 3
-    batch_size:
+    batch_size: &id002
     - 2048
     - 4096
-    embedding_bias:
-    - true
-    - false
-    embedding_initialization:
-    - kaiming_uniform
-    - kaiming_normal
-    shared_embedding_fraction:
-    - 0.125
-    - 0.25
-    - 0.5
-    num_attn_blocks:
+    tree_depth: &id003
     - 4
-    - 7
-    attn_dropout:
-    - 0.05
-    - 0.3
-    add_norm_dropout:
-    - 0.05
-    - 0.3
-    ff_dropout:
-    - 0.05
-    - 0.3
-    ff_hidden_multiplier:
-    - 2
     - 6
-    transformer_activation:
-    - GEGLU
-    - ReGLU
-    - SwiGLU
-    embedding_dropout:
-    - 0.05
-    - 0.3
-    optimizer_fn:
-      Adam:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-      AdamW:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-    scheduler_fn:
-      ReduceLROnPlateau:
-        factor:
-        - 0.1
-        - 0.9
-        patience:
-        - 3
-        - 5
-      ExponentialLR:
-        gamma:
-        - 0.9
-        - 0.99
-- dataset: covertype
-  model: node
-  best_params: {}
-  param_grid:
-    outer_params:
-      hyperopt_evals: 10
-      auto_lr_find: true
-      precision: 16
-      tol: 0.001
-      max_epochs: 1000
-      val_size: 0.15
-      early_stopping_patience: 3
-    batch_size:
-    - 800
-    - 1500
-    num_layers:
-    - 1
-    - 2
-    - 3
-    num_trees:
-    - 12
-    - 128
-    additional_tree_output_dim:
-    - 2
-    - 3
+    num_trees: &id004
     - 4
-    depth:
-    - 5
-    - 7
-    choice_function:
-    - entmax15
-    - sparsemax
-    bin_function:
-    - entmoid15
-    - sparsemoid
-    input_dropout:
+    - 8
+    gflu_stages: &id005
+    - 3
+    - 8
+    gflu_dropout: &id006
     - 0.0
-    - 0.1
-    embedding_dropout:
+    - 0.05
+    tree_dropout: &id007
     - 0.0
-    - 0.1
-    embed_categorical:
-    - true
-    - false
-    optimizer_fn:
+    - 0.05
+    tree_wise_attention_dropout: &id008
+    - 0.0
+    - 0.05
+    embedding_dropout: &id009
+    - 0
+    - 0.2
+    optimizer_fn: &id010
       Adam:
         weight_decay:
         - 0.0001
@@ -206,7 +82,7 @@
         weight_decay:
         - 0.0001
         - 1.0e-05
-    scheduler_fn:
+    scheduler_fn: &id011
       ReduceLROnPlateau:
         factor:
         - 0.1
@@ -218,15 +94,15 @@
         gamma:
         - 0.9
         - 0.99
-- dataset: covertype
+- dataset: creditcard
   model: fttransformer
   best_params: {}
   param_grid:
     outer_params:
-      hyperopt_evals: 10
+      hyperopt_evals: 5
       auto_lr_find: true
       precision: 16
-      tol: 0.001
+      tol: 1.0e-06
       max_epochs: 1000
       val_size: 0.15
       early_stopping_patience: 3
@@ -290,102 +166,33 @@
         gamma:
         - 0.9
         - 0.99
+- dataset: diabetes
+  model: gate
+  best_params: {}
+  param_grid:
+    outer_params: *id001
+    batch_size: *id002
+    tree_depth: *id003
+    num_trees: *id004
+    gflu_stages: *id005
+    gflu_dropout: *id006
+    tree_dropout: *id007
+    tree_wise_attention_dropout: *id008
+    embedding_dropout: *id009
+    optimizer_fn: *id010
+    scheduler_fn: *id011
 - dataset: covertype
   model: gate
   best_params: {}
   param_grid:
-    outer_params:
-      hyperopt_evals: 10
-      auto_lr_find: true
-      precision: 16
-      tol: 0.001
-      max_epochs: 1000
-      val_size: 0.15
-      early_stopping_patience: 3
-    batch_size:
-    - 2048
-    - 4096
-    tree_depth:
-    - 4
-    - 6
-    num_trees:
-    - 4
-    - 8
-    gflu_stages:
-    - 3
-    - 8
-    gflu_dropout:
-    - 0.0
-    - 0.05
-    tree_dropout:
-    - 0.0
-    - 0.05
-    tree_wise_attention_dropout:
-    - 0.0
-    - 0.05
-    embedding_dropout:
-    - 0
-    - 0.2
-    optimizer_fn:
-      Adam:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-      AdamW:
-        weight_decay:
-        - 0.0001
-        - 1.0e-05
-    scheduler_fn:
-      ReduceLROnPlateau:
-        factor:
-        - 0.1
-        - 0.9
-        patience:
-        - 3
-        - 5
-      ExponentialLR:
-        gamma:
-        - 0.9
-        - 0.99
-- dataset: covertype
-  model: xgb
-  best_params: {}
-  param_grid:
-    outer_params:
-      hyperopt_evals: 10
-      validation_fraction: 0.15
-      early_stopping_rounds: 50
-      verbose: false
-    n_estimators:
-    - 100
-    - 4000
-    max_bin:
-    - 256
-    - 32
-    tree_method:
-    - auto
-    - hist
-    max_depth:
-    - 4
-    - 9
-    learning_rate:
-    - 0.1
-    - 0.33
-    subsample:
-    - 0.7
-    - 1.0
-    colsample_bytree:
-    - 0.5
-    - 1.0
-    min_child_weight:
-    - 1
-    - 10
-    alpha:
-    - 0.0
-    - 5.0
-    gamma:
-    - 0.0
-    - 5.0
-    lambda:
-    - 0.0
-    - 5.0
+    outer_params: *id001
+    batch_size: *id002
+    tree_depth: *id003
+    num_trees: *id004
+    gflu_stages: *id005
+    gflu_dropout: *id006
+    tree_dropout: *id007
+    tree_wise_attention_dropout: *id008
+    embedding_dropout: *id009
+    optimizer_fn: *id010
+    scheduler_fn: *id011

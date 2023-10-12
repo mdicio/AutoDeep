@@ -246,7 +246,7 @@ class MLP(BaseModel):
             metric_dict = {}
 
             for fold, (train_idx, val_idx) in enumerate(kf.split(X, y)):
-                if fold > 2:
+                if fold > 1:
                     self.logger.debug("QUICK EXIT")
                     break
 
