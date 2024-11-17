@@ -327,23 +327,31 @@ class XGBoostClassifier(BaseModel):
             self.logger.info(f"Training with hyperparameters: {params}")
             # Create an XGBoost model with the given hyperparameters
             params["device"] = self.device
-            model = xgb.XGBClassifier(**params)
+
             # Fit the model on the training data
             kf = StratifiedKFold(n_splits=k_value, shuffle=True, random_state=42)
 
             metric_dict = {}
 
             for fold, (train_idx, val_idx) in enumerate(kf.split(X, y)):
-                if fold > 2:
-                    self.logger.debug("QUICK EXIT")
-                    break
-
                 X_train = X.iloc[train_idx]
                 y_train = y.iloc[train_idx]
                 X_val = X.iloc[val_idx]
                 y_val = y.iloc[val_idx]
 
                 eval_set = [(X_val, y_val)]
+
+                # Assuming you have a target array 'y'
+                num_positive_examples = sum(y_train)
+                num_negative_examples = len(y_train) - num_positive_examples
+
+                imbalance_ratio = num_negative_examples / num_positive_examples
+                class_weights = params.get("class_weights", False)
+                # Set the scale_pos_weight
+                if class_weights:
+                    params["scale_pos_weight"] = 1 / imbalance_ratio
+
+                model = xgb.XGBClassifier(**params)
 
                 model.fit(
                     X_train,

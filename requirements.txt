@@ -46,7 +46,7 @@ GitPython==3.1.32
 google-auth==2.22.0
 google-auth-oauthlib==1.0.0
 graphviz==0.20.1
-grpcio==1.56.2
+grpcio
 hyperopt==0.2.7
 idna==3.4
 ipykernel==6.25.1

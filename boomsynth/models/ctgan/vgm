@@ -1,0 +1,51 @@
+import torch
+import torch.nn as nn
+from torch.distributions import Normal, Categorical
+import numpy as np
+
+class VGM(nn.Module):
+    def __init__(self, input_size, num_modes):
+        super(VGM, self).__init__()
+        self.input_size = input_size
+        self.num_modes = num_modes
+        # Define your VGM parameters (mean, std dev, weights)
+        self.mu = nn.Parameter(torch.randn(num_modes, input_size))
+        self.sigma = nn.Parameter(torch.randn(num_modes, input_size))
+        self.weights = nn.Parameter(torch.ones(num_modes) / num_modes)
+
+    def forward(self, x):
+        # Calculate log probabilities for each mode
+        dists = Normal(self.mu, self.sigma)
+        log_probs = dists.log_prob(x.unsqueeze(1))  # Add dimension for modes
+        
+        # Weighted sum of log probabilities
+        weighted_log_probs = log_probs + torch.log_softmax(self.weights, dim=0)
+        log_prob_mix = torch.logsumexp(weighted_log_probs, dim=1)  # Sum along mode dimension
+
+        # Sample mode
+        mode_dist = Categorical(torch.softmax(self.weights, dim=0))
+        sampled_modes = mode_dist.sample((x.size(0),))  # Sample modes for each data point
+        
+        return log_prob_mix, sampled_modes
+
+# Example usage
+# Assuming continuous_data is your tensor of continuous values for column Ci
+
+# Generate random continuous data (replace with your actual data)
+continuous_data = torch.randn(10, 5)
+print(continuous_data)
+
+
+input_size = continuous_data.shape[1]
+num_modes = 3  # Example number of modes
+vgm_model = VGM(input_size, num_modes)
+
+
+# Calculate log probability mixture for each data point
+log_prob_mixtures, sampled_modes = vgm_model(continuous_data)
+print(log_prob_mixtures)
+print(sampled_modes)
+
+
+# Now you have log probability mixtures for each data point in continuous_data
+# You can use these mixtures for further processing such as sampling modes, normalization, etc.

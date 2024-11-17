@@ -5,6 +5,8 @@ data/
 output/modelsaves
 .pt_tmp/
 catboost_info/
+output/
+*.csv
 
 # Compiled Python files
 __pycache__/
