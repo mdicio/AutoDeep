@@ -3,6 +3,10 @@
 requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
+# Tell setuptools to find packages in the src directory
+[tool.setuptools.packages]
+find = { where = ["autodeep"] }
+
 [tool.poetry]
 # Metadata for the package
 name = "autodeep"  # This should be the name of your library

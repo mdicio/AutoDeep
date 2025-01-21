@@ -1,6 +1,0 @@
-Dataset,Total Samples,Total Features,Target Type,Num Classes,Num Categorical,Num Numerical
-creditcard,59720,30,Classification,2,0,30
-housing,20640,9,Regression,,0,9
-adult,32561,14,Classification,2,8,6
-heloc,10459,24,Classification,2,0,24
-covertype,581011,54,Classification,7,0,54

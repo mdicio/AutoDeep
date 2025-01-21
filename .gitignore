@@ -2,8 +2,9 @@
 data/
 output/
 notebooks/
-catboost_info/
+*/catboost_info/
 SCRATCH/
+logs/
 *.csv
 
 # Compiled Python files
