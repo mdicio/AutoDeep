@@ -1,0 +1,114 @@
+random_state: 4200
+retrain: True
+# List of models to include in the experiment
+include_models:
+  - XGB  # Extreme Gradient Boosting
+  - CatBoost
+  - MLP  # Multi-Layer Perceptron
+  - TabNet  # TabNet Classifier 
+  - GATE 
+  - resnet
+  - S1DCNN
+  - CategoryEmbedding
+  - FTTransformer
+  - TabTransformer
+  - GANDALF
+  - AutoInt
+  - Node
+
+  ####- MLPTorch
+  ####- squeezenet
+  ####- LightGBM
+
+model_configs:
+
+  catboost:
+    execution_mode: hyperopt_kfold
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+    retrain: False
+  
+  autoint:
+    execution_mode: hyperopt_kfold
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+    retrain: False
+
+  node:
+    execution_mode: hyperopt_kfold
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+    retrain: False
+
+  gandalf:
+    execution_mode: hyperopt_kfold
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+    retrain: False
+
+  fttransformer:
+    execution_mode: hyperopt_kfold
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+    retrain: False
+
+  tabtransformer:
+    execution_mode: hyperopt_kfold
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+    retrain: False
+
+  categoryembedding:
+    execution_mode: hyperopt_kfold
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+    retrain: False
+
+  gate:
+    execution_mode: hyperopt_kfold
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+    retrain: False
+  
+  xgb:
+    execution_mode: hyperopt_kfold
+    normalize_features: false
+    encode_categorical: True
+    return_extra_info: False
+    retrain: True
+
+  tabnet:
+    execution_mode: hyperopt_kfold
+    normalize_features: mean_std
+    encode_categorical: False
+    return_extra_info: True
+    retrain: False
+
+  mlp:
+    execution_mode: hyperopt_kfold
+    normalize_features: mean_std
+    encode_categorical: True
+    return_extra_info: False
+    retrain: True
+
+  resnet:
+    execution_mode: hyperopt_kfold
+    normalize_features: mean_std
+    encode_categorical: True
+    return_extra_info: True
+    retrain: False
+
+  s1dcnn:
+    execution_mode: hyperopt_kfold
+    normalize_features: mean_std
+    encode_categorical: True
+    return_extra_info: True
+    retrain: False

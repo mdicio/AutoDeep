@@ -1,0 +1,40 @@
+random_state: 4200
+# List of datasets to include in the experiment
+include_datasets:
+  - iris        # Iris flower dataset
+  - titanic
+  - breastcancer
+  
+dataset_configs:
+
+  iris: 
+    num_targets: 3
+    test_size: 0.25
+    problem_type: multiclass_classification
+    eval_metrics:
+      - accuracy
+      - f1
+      
+  titanic: 
+    test_size: 0.25
+    problem_type: binary_classification
+    eval_metrics:
+      - roc_auc
+      - lift
+      - accuracy
+      - f1
+      - area_under_pr
+      - precision
+      - recall
+      
+  breastcancer: 
+    test_size: 0.25
+    problem_type: binary_classification
+    eval_metrics:
+      - f1
+      - lift
+      - roc_auc
+      - area_under_pr
+      - accuracy
+      - precision
+      - recall

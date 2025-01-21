@@ -1,11 +1,9 @@
- 
-# Custom
-*.ckpt
+ # Custom
 data/
-output/modelsaves
-.pt_tmp/
-catboost_info/
 output/
+notebooks/
+catboost_info/
+SCRATCH/
 *.csv
 
 # Compiled Python files
@@ -14,6 +12,9 @@ __pycache__/
 *.pyo
 *.pyd
 __init__.pyc
+*.ckpt
+.pt_tmp/
+
 
 # Python environment
 venv/

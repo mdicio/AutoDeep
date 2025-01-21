@@ -1,0 +1,41 @@
+[build-system]
+# Defines the build system requirements
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.poetry]
+# Metadata for the package
+name = "autodeep"  # This should be the name of your library
+version = "0.1.0"  # Change the version number appropriately
+description = "A short description of your library."
+authors = ["Your Name <youremail@example.com>"]  # Add your details here
+license = "MIT"  # Choose the license that applies to your project
+repository = "https://github.com/yourusername/autodeep"  # Link to your repo
+homepage = "https://your-package-homepage.com"  # Homepage URL (optional)
+
+# Optional fields for additional metadata
+keywords = ["automl", "deep learning", "machine learning"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[tool.poetry.dependencies]
+# Dependencies for your library, including your desired version of Python
+python = "^3.10"
+torch = "^1.10.0"  # Include your required libraries here
+numpy = "^1.21.0"  # Add any other runtime dependencies here
+scikit-learn = "^0.24.0"  # Example: for ML libraries, add what your library needs
+pandas = "^1.3.0"  # Example: for data manipulation
+
+[tool.poetry.dev-dependencies]
+# Development dependencies, such as testing libraries or formatters
+pytest = "^6.2"  # If you are using pytest for testing
+black = "^21.9b0"  # If you use black for code formatting
+flake8 = "^3.9"  # If you use flake8 for linting
+
+[tool.poetry.urls]
+# Optional: Additional links related to your project
+Documentation = "https://your-package-docs.com"
