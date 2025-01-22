@@ -19,9 +19,9 @@ from sklearn.utils.class_weight import compute_class_weight
 from torch.optim import SGD, Adam
 from torch.optim.lr_scheduler import ExponentialLR, ReduceLROnPlateau, StepLR
 
-from evaluation.generalevaluator import Evaluator
-from modelsdefinition.CommonStructure import BaseModel
-from modelutils.trainingutilities import (
+from autodeep.evaluation.generalevaluator import Evaluator
+from autodeep.modelsdefinition.CommonStructure import BaseModel
+from autodeep.modelutils.trainingutilities import (
     calculate_possible_fold_sizes,
     handle_rogue_batch_size,
     infer_hyperopt_space_pytorch_tabular,

@@ -1,0 +1,477 @@
+- dataset: covertype
+  model: resnet
+  best_params: {}
+  param_grid:
+    outer_params: &id001
+      hyperopt_evals: 1
+      max_epochs: 1000
+      early_stopping: true
+      early_stopping_patience: 6
+      validation_fraction: 0.2
+    resnet_depth: &id002
+    - resnet18
+    batch_size: &id003
+    - 1024
+    optimizer_fn: &id004
+      Adam:
+        weight_decay:
+        - 0.0
+        learning_rate:
+        - 0.001
+    scheduler_fn: &id005
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        patience:
+        - 5
+- dataset: covertype
+  model: s1dcnn
+  best_params: {}
+  param_grid:
+    outer_params: &id006
+      hyperopt_evals: 1
+      max_epochs: 1
+      early_stopping: true
+      shuffle: true
+      validation_fraction: 0.15
+      early_stopping_patience: 5
+    batch_size: &id007
+    - 1024
+    hidden_size: &id008
+    - 4096
+    optimizer_fn: &id009
+      Adam:
+        weight_decay:
+        - 0.0
+        learning_rate:
+        - 0.001
+    scheduler_fn: &id010
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        patience:
+        - 5
+- dataset: covertype
+  model: tabnet
+  best_params: {}
+  param_grid:
+    outer_params: &id011
+      hyperopt_evals: 1
+      auto_lr_find: true
+      max_epochs: 1000
+      val_size: 0.15
+      early_stopping_patience: 5
+    batch_size: &id012
+    - 1024
+    optimizer_fn: &id013
+      Adam:
+        weight_decay:
+        - 0.0
+        learning_rate:
+        - 0.001
+    scheduler_fn: &id014
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        patience:
+        - 5
+- dataset: covertype
+  model: gate
+  best_params: {}
+  param_grid:
+    outer_params: &id015
+      hyperopt_evals: 1
+      auto_lr_find: true
+      max_epochs: 1000
+      val_size: 0.15
+      early_stopping_patience: 5
+    batch_size: &id016
+    - 1024
+    optimizer_fn: &id017
+      Adam:
+        weight_decay:
+        - 0.0
+        learning_rate:
+        - 0.001
+    scheduler_fn: &id018
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        patience:
+        - 5
+- dataset: covertype
+  model: fttransformer
+  best_params: {}
+  param_grid:
+    outer_params: &id019
+      hyperopt_evals: 1
+      auto_lr_find: true
+      max_epochs: 1000
+      val_size: 0.15
+      early_stopping_patience: 5
+    batch_size: &id020
+    - 1024
+    optimizer_fn: &id021
+      Adam:
+        weight_decay:
+        - 0.0
+        learning_rate:
+        - 0.001
+    scheduler_fn: &id022
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        patience:
+        - 5
+- dataset: covertype
+  model: categoryembedding
+  best_params: {}
+  param_grid:
+    outer_params: &id023
+      hyperopt_evals: 1
+      auto_lr_find: true
+      max_epochs: 1000
+      val_size: 0.15
+      early_stopping_patience: 5
+    batch_size: &id024
+    - 1024
+    optimizer_fn: &id025
+      Adam:
+        weight_decay:
+        - 0.0
+        learning_rate:
+        - 0.001
+    scheduler_fn: &id026
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        patience:
+        - 5
+- dataset: covertype
+  model: gandalf
+  best_params: {}
+  param_grid:
+    outer_params: &id027
+      hyperopt_evals: 1
+      auto_lr_find: true
+      max_epochs: 1000
+      val_size: 0.15
+      early_stopping_patience: 5
+    batch_size: &id028
+    - 1024
+    optimizer_fn: &id029
+      Adam:
+        weight_decay:
+        - 0.0
+        learning_rate:
+        - 0.001
+    scheduler_fn: &id030
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        patience:
+        - 5
+- dataset: covertype
+  model: node
+  best_params: {}
+  param_grid:
+    outer_params: &id031
+      hyperopt_evals: 1
+      auto_lr_find: true
+      max_epochs: 1000
+      val_size: 0.15
+      early_stopping_patience: 5
+    batch_size: &id032
+    - 1024
+    optimizer_fn: &id033
+      Adam:
+        weight_decay:
+        - 0.0
+        learning_rate:
+        - 0.001
+    scheduler_fn: &id034
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        patience:
+        - 5
+- dataset: covertype
+  model: autoint
+  best_params: {}
+  param_grid:
+    outer_params: &id035
+      hyperopt_evals: 1
+      auto_lr_find: true
+      max_epochs: 1000
+      val_size: 0.15
+      early_stopping_patience: 5
+    batch_size: &id036
+    - 1024
+    optimizer_fn: &id037
+      Adam:
+        weight_decay:
+        - 0.0
+        learning_rate:
+        - 0.001
+    scheduler_fn: &id038
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        patience:
+        - 5
+- dataset: covertype
+  model: tabtransformer
+  best_params: {}
+  param_grid:
+    outer_params: &id039
+      hyperopt_evals: 1
+      auto_lr_find: true
+      max_epochs: 1000
+      val_size: 0.15
+      early_stopping_patience: 5
+    batch_size: &id040
+    - 1024
+    optimizer_fn: &id041
+      Adam:
+        weight_decay:
+        - 0.0
+        learning_rate:
+        - 0.001
+    scheduler_fn: &id042
+      ReduceLROnPlateau:
+        factor:
+        - 0.1
+        patience:
+        - 5
+- dataset: covertype
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: &id043
+      hyperopt_evals: 1
+      validation_fraction: 0.15
+      early_stopping_rounds: 100
+      verbose: false
+    iterations: &id044
+    - 500
+- dataset: creditcard
+  model: xgb
+  best_params: {}
+  param_grid:
+    outer_params: &id045
+      hyperopt_evals: 1
+      validation_fraction: 0.15
+      early_stopping_rounds: 30
+      verbose: false
+    learning_rate: &id046
+    - 0.3
+- dataset: creditcard
+  model: mlp
+  best_params: {}
+  param_grid:
+    outer_params: &id047
+      hyperopt_evals: 1
+      early_stopping: true
+      cv_size: 4
+      validation_fraction: 0.15
+      n_iter_no_change: 10
+      max_iter: 1000
+    hidden_layer_sizes: &id048
+    - - 100
+    activation: &id049
+    - relu
+    solver: &id050
+    - adam
+    batch_size: &id051
+    - 1024
+- dataset: creditcard
+  model: resnet
+  best_params: {}
+  param_grid:
+    outer_params: *id001
+    resnet_depth: *id002
+    batch_size: *id003
+    optimizer_fn: *id004
+    scheduler_fn: *id005
+- dataset: creditcard
+  model: s1dcnn
+  best_params: {}
+  param_grid:
+    outer_params: *id006
+    batch_size: *id007
+    hidden_size: *id008
+    optimizer_fn: *id009
+    scheduler_fn: *id010
+- dataset: creditcard
+  model: tabnet
+  best_params: {}
+  param_grid:
+    outer_params: *id011
+    batch_size: *id012
+    optimizer_fn: *id013
+    scheduler_fn: *id014
+- dataset: creditcard
+  model: gate
+  best_params: {}
+  param_grid:
+    outer_params: *id015
+    batch_size: *id016
+    optimizer_fn: *id017
+    scheduler_fn: *id018
+- dataset: creditcard
+  model: fttransformer
+  best_params: {}
+  param_grid:
+    outer_params: *id019
+    batch_size: *id020
+    optimizer_fn: *id021
+    scheduler_fn: *id022
+- dataset: creditcard
+  model: categoryembedding
+  best_params: {}
+  param_grid:
+    outer_params: *id023
+    batch_size: *id024
+    optimizer_fn: *id025
+    scheduler_fn: *id026
+- dataset: creditcard
+  model: gandalf
+  best_params: {}
+  param_grid:
+    outer_params: *id027
+    batch_size: *id028
+    optimizer_fn: *id029
+    scheduler_fn: *id030
+- dataset: creditcard
+  model: node
+  best_params: {}
+  param_grid:
+    outer_params: *id031
+    batch_size: *id032
+    optimizer_fn: *id033
+    scheduler_fn: *id034
+- dataset: creditcard
+  model: autoint
+  best_params: {}
+  param_grid:
+    outer_params: *id035
+    batch_size: *id036
+    optimizer_fn: *id037
+    scheduler_fn: *id038
+- dataset: creditcard
+  model: tabtransformer
+  best_params: {}
+  param_grid:
+    outer_params: *id039
+    batch_size: *id040
+    optimizer_fn: *id041
+    scheduler_fn: *id042
+- dataset: creditcard
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id043
+    iterations: *id044
+- dataset: diabetes
+  model: xgb
+  best_params: {}
+  param_grid:
+    outer_params: *id045
+    learning_rate: *id046
+- dataset: diabetes
+  model: mlp
+  best_params: {}
+  param_grid:
+    outer_params: *id047
+    hidden_layer_sizes: *id048
+    activation: *id049
+    solver: *id050
+    batch_size: *id051
+- dataset: diabetes
+  model: resnet
+  best_params: {}
+  param_grid:
+    outer_params: *id001
+    resnet_depth: *id002
+    batch_size: *id003
+    optimizer_fn: *id004
+    scheduler_fn: *id005
+- dataset: diabetes
+  model: s1dcnn
+  best_params: {}
+  param_grid:
+    outer_params: *id006
+    batch_size: *id007
+    hidden_size: *id008
+    optimizer_fn: *id009
+    scheduler_fn: *id010
+- dataset: diabetes
+  model: tabnet
+  best_params: {}
+  param_grid:
+    outer_params: *id011
+    batch_size: *id012
+    optimizer_fn: *id013
+    scheduler_fn: *id014
+- dataset: diabetes
+  model: gate
+  best_params: {}
+  param_grid:
+    outer_params: *id015
+    batch_size: *id016
+    optimizer_fn: *id017
+    scheduler_fn: *id018
+- dataset: diabetes
+  model: fttransformer
+  best_params: {}
+  param_grid:
+    outer_params: *id019
+    batch_size: *id020
+    optimizer_fn: *id021
+    scheduler_fn: *id022
+- dataset: diabetes
+  model: categoryembedding
+  best_params: {}
+  param_grid:
+    outer_params: *id023
+    batch_size: *id024
+    optimizer_fn: *id025
+    scheduler_fn: *id026
+- dataset: diabetes
+  model: gandalf
+  best_params: {}
+  param_grid:
+    outer_params: *id027
+    batch_size: *id028
+    optimizer_fn: *id029
+    scheduler_fn: *id030
+- dataset: diabetes
+  model: node
+  best_params: {}
+  param_grid:
+    outer_params: *id031
+    batch_size: *id032
+    optimizer_fn: *id033
+    scheduler_fn: *id034
+- dataset: diabetes
+  model: autoint
+  best_params: {}
+  param_grid:
+    outer_params: *id035
+    batch_size: *id036
+    optimizer_fn: *id037
+    scheduler_fn: *id038
+- dataset: diabetes
+  model: tabtransformer
+  best_params: {}
+  param_grid:
+    outer_params: *id039
+    batch_size: *id040
+    optimizer_fn: *id041
+    scheduler_fn: *id042
+- dataset: diabetes
+  model: catboost
+  best_params: {}
+  param_grid:
+    outer_params: *id043
+    iterations: *id044

@@ -1,0 +1,152 @@
+random_state: 4200
+retrain: True
+
+include_models:
+  - XGB  # Extreme Gradient Boosting
+  - CatBoost
+  - MLP  # Multi-Layer Perceptron
+  - TabNet  # TabNet Classifier
+  - GATE
+  - resnet
+  - S1DCNN
+  - CategoryEmbedding
+  - FTTransformer
+  - TabTransformer
+  - GANDALF
+  - AutoInt
+  - Node
+
+model_configs:
+
+  catboost:
+    normalize_features: mean_std
+    encode_categorical: False  # for dataloader
+    return_extra_info: True  # for dataloader
+    retrain: False
+    validation_fraction: 0.15
+    early_stopping_rounds: 100
+    verbose: false
+
+    default_params:
+      validation_fraction: 0.15
+      early_stopping_rounds: 100
+      verbose: false
+      iterations: 500
+
+    param_grid:
+      validation_fraction: 
+        - 0.15
+        - 0.20
+      early_stopping_rounds: 
+        - 100
+        - 50
+      iterations:
+        - 100 
+        - 500
+
+  categoryembedding:
+    normalize_features: mean_std
+    encode_categorical: False  # for dataloader
+    return_extra_info: True  # for dataloader
+    retrain: False
+    auto_lr_find: true
+    max_epochs: 1000
+    val_size: 0.15
+    early_stopping_patience: 5
+
+    param_grid:
+      batch_size:
+        - 1024
+        - 2048
+      optimizer_fn:
+        Adam:
+          weight_decay:
+            - 0.0
+            - 0.00000001
+          learning_rate:
+            - 0.001
+            - 0.00001
+      scheduler_fn:
+        ReduceLROnPlateau:
+          factor:
+            - 0.1
+            - 0.01
+          patience:
+            - 5
+            - 10
+
+  xgb:
+    execution_mode: hyperopt_kfold
+    normalize_features: false
+    encode_categorical: True
+    return_extra_info: False
+    retrain: True
+
+    default_params:
+      hyperopt_evals: 1
+      validation_fraction: 0.15
+      early_stopping_rounds: 30
+      verbose: false
+      learning_rate: 0.3
+
+    param_grid:
+      hyperopt_evals:
+        - 1
+        - 5
+      validation_fraction:
+        - 0.15
+        - 0.20
+      early_stopping_rounds:
+        - 30
+        - 50
+      learning_rate:
+        - 0.3
+        - 0.01
+
+  mlp:
+    execution_mode: hyperopt_kfold
+    normalize_features: mean_std
+    encode_categorical: True
+    return_extra_info: False
+    retrain: True
+
+    default_params:
+      hyperopt_evals: 1
+      early_stopping: true
+      cv_size: 4
+      validation_fraction: 0.15
+      n_iter_no_change: 10
+      max_iter: 1000
+      hidden_layer_sizes: [100]
+      activation: relu
+      solver: adam
+      batch_size: 1024
+
+    param_grid:
+      early_stopping:
+        - true
+        - false
+      cv_size:
+        - 4
+        - 5
+      validation_fraction:
+        - 0.15
+        - 0.20
+      n_iter_no_change:
+        - 10
+        - 15
+      max_iter:
+        - 1000
+        - 2000
+      hidden_layer_sizes:
+        - [100]
+        - [200]
+      activation:
+        - relu
+        - tanh
+      solver:
+        - adam
+        - sgd
+      batch_size:
+        - 1024
+        - 2048

@@ -9,9 +9,9 @@ from hyperopt import STATUS_OK, Trials, fmin, hp, space_eval, tpe
 from hyperopt.pyll import scope
 from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
 
-from evaluation.generalevaluator import Evaluator
-from modelsdefinition.CommonStructure import BaseModel
-from modelutils.trainingutilities import (
+from autodeep.evaluation.generalevaluator import Evaluator
+from autodeep.modelsdefinition.CommonStructure import BaseModel
+from autodeep.modelutils.trainingutilities import (
     infer_hyperopt_space,
     stop_on_perfect_lossCondition,
 )

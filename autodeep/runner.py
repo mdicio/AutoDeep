@@ -1,7 +1,7 @@
 import yaml
 from datetime import datetime
 from uuid import uuid4
-from evaluation.generalevaluator import Evaluator
+from autodeep.evaluation.generalevaluator import Evaluator
 from outputhandler.outputwriter import OutputWriter
 from dataloaders.dataloader import *
 from autodeep.factory import (

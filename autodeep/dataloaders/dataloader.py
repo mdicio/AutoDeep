@@ -188,6 +188,71 @@ class DataLoader:
         return df
 
 
+class DynamicDataLoader(DataLoader):
+    def __init__(
+        self,
+        dataset_path,
+        target_column,
+        problem_type,
+        test_size,
+        return_extra_info=False,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.dataset_path = dataset_path
+        self.target_column = target_column
+        self.problem_type = problem_type
+        self.test_size = test_size
+
+    def load_data(self):
+
+        df = pd.read_csv(self.dataset_path)
+
+        # Automatically determine the target column if not specified
+        if self.target_column not in df.columns:
+            raise ValueError(
+                f"Target column '{self.target_column}' not found in dataset"
+            )
+
+        # Split into features and target
+        X = df.drop(columns=[self.target_column])
+        y = df[self.target_column]
+
+        # Handle categorical encoding if needed
+        if self.encode_categorical:
+            X = self.force_encode_categorical(X)
+
+        # Split into train and test sets
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=self.test_size, random_state=self.random_state, stratify=y
+        )
+
+        # Normalize features if requested
+        if self.normalize_features:
+            X_train, X_test = self.scale_features(
+                X_train, X_test, mode=self.normalize_features
+            )
+
+        # Optionally return extra info
+        extra_info = None
+        if self.return_extra_info:
+            extra_info = self.create_extra_info(
+                df, self.igtd_path, X_train.shape[0], X_train.shape[1]
+            )
+
+        extra_info = None
+        if self.return_extra_info:
+            extra_info = self.create_extra_info(
+                X_train,
+                img_rows=8,
+                img_columns=7,
+                igtd_path=f"{self.igtd_path}results/ageconditions_igtd_Euclidean_Euclidean/abs/_index.txt",
+            )
+            extra_info["num_targets"] = self.num_targets
+
+        return X_train, X_test, y_train, y_test, extra_info
+
+
 class KaggleAgeConditionsLoader(DataLoader):
     def __init__(
         self,

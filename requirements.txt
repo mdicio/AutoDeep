@@ -8,7 +8,8 @@ numpy==1.25.2
 pandas==2.0.3
 Pillow==10.0.0
 plotly==5.16.1
-pytorch-tabular @ git+https://github.com/manujosephv/pytorch_tabular.git@20499a473056ff75474cda1d8a9d3ac7a105ed20
+pytorch-tabular
+# pytorch-tabular @ git+https://github.com/manujosephv/pytorch_tabular.git@20499a473056ff75474cda1d8a9d3ac7a105ed20
 PyYAML==6.0.1
 scikit-learn==1.3.0
 scipy==1.11.1

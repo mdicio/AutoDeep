@@ -22,9 +22,9 @@ from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from torchvision.models import resnet18, resnet34, resnet50
 from tqdm import tqdm
 
-from evaluation.generalevaluator import *
-from modelsdefinition.CommonStructure import BaseModel
-from modelutils.trainingutilities import (
+from autodeep.evaluation.generalevaluator import *
+from autodeep.modelsdefinition.CommonStructure import BaseModel
+from autodeep.modelutils.trainingutilities import (
     infer_hyperopt_space_pytorch_custom,
     stop_on_perfect_lossCondition,
 )

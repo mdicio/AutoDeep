@@ -1,23 +1,32 @@
-from modelsdefinition.XGBoostClassifier import XGBoostClassifier
-from modelsdefinition.XGBoostRegressor import XGBoostRegressor
-from modelsdefinition.MLP import MLP
-from modelsdefinition.TabNetModel import TabNetTrainer
-from modelsdefinition.CategoryEmbeddingModel import CategoryEmbeddingtTrainer
-from modelsdefinition.ResNetModel import ResNetTrainer
-from modelsdefinition.FTTransformerModel import FTTransformerTrainer
-from modelsdefinition.GATE import GATE
-from modelsdefinition.NodeModel import NodeTrainer
-from modelsdefinition.AutomaticFeatureInteractionModel import AutoIntTrainer
-from modelsdefinition.TabTransformerModel import TabTransformerTrainer
-from modelsdefinition.GANDALF import GandalfTrainer
-from modelsdefinition.CatBoostModel import CatBoostTrainer
-
-# from SCRATCH.LightGBMModel import LightGBMTrainer
-from modelsdefinition.SoftOrdering1DCNN import SoftOrdering1DCNN
+from autodeep.modelsdefinition.XGBoostClassifier import XGBoostClassifier
+from autodeep.modelsdefinition.XGBoostRegressor import XGBoostRegressor
+from autodeep.modelsdefinition.MLP import MLP
+from autodeep.modelsdefinition.TabNetModel import TabNetTrainer
+from autodeep.modelsdefinition.CategoryEmbeddingModel import CategoryEmbeddingtTrainer
+from autodeep.modelsdefinition.ResNetModel import ResNetTrainer
+from autodeep.modelsdefinition.FTTransformerModel import FTTransformerTrainer
+from autodeep.modelsdefinition.GATE import GATE
+from autodeep.modelsdefinition.NodeModel import NodeTrainer
+from autodeep.modelsdefinition.AutomaticFeatureInteractionModel import AutoIntTrainer
+from autodeep.modelsdefinition.TabTransformerModel import TabTransformerTrainer
+from autodeep.modelsdefinition.GANDALF import GandalfTrainer
+from autodeep.modelsdefinition.CatBoostModel import CatBoostTrainer
+from autodeep.modelsdefinition.SoftOrdering1DCNN import SoftOrdering1DCNN
 
 # from SCRATCH.SqueezeNet import SqueezeNetTrainer
-from dataloaders.dataloader import *
-from dataloaders.fulldataloader import *
+from autodeep.dataloaders.dataloader import (
+    DynamicDataLoader,
+    IrisDataLoader,
+    KaggleAgeConditionsLoader,
+    BreastCancerDataLoader,
+    BufixDataLoader,
+    TitanicDataLoader,
+    CaliforniaHousingDataLoader,
+    CoverTypeDataLoader,
+    CreditDataLoader,
+    AdultDataLoader,
+    HelocDataLoader,
+)
 import os
 import torch
 import numpy as np
@@ -77,27 +86,27 @@ def create_model(model_name, problem_type, num_classes, **kwargs):
         return SoftOrdering1DCNN(
             problem_type=problem_type, num_targets=num_classes, **kwargs
         )
-    
-    #elif mname == "squeezenet":
+
+    # elif mname == "squeezenet":
     #    return SqueezeNetTrainer(
     #        problem_type=problem_type, num_targets=num_classes, **kwargs
-        )
-    #elif mname == "lightgbm":
+    #    )
+    # elif mname == "lightgbm":
     #    return LightGBMTrainer(problem_type, **kwargs)
-    
+
     else:
         raise ValueError(f"Invalid model: {model_name}")
 
 
-def create_data_loader(dataset_name, test_size=0.2, dynamic_loader=False, **kwargs):
+def create_dynamic_data_loader(dataset_path, target_column, problem_type, test_size):
+    print(f"Using dynamic loader for dataset: {dataset_path}")
+    # Create a dynamic data loader
+    return DynamicDataLoader(dataset_path, target_column, problem_type, test_size)
+
+
+def create_data_loader(dataset_name, test_size=0.2, **kwargs):
     dname = dataset_name.lower().strip()
 
-    # Check if the dynamic loader option is enabled and dataset is not recognized
-    if dynamic_loader:
-        print(f"Using dynamic loader for dataset: {dataset_name}")
-        # Create a dynamic data loader
-        return DataLoader(dataset_name, test_size=test_size, **kwargs)
-    
     # Predefined datasets
     if dname == "iris":
         return IrisDataLoader(test_size=test_size, **kwargs)
@@ -121,4 +130,3 @@ def create_data_loader(dataset_name, test_size=0.2, dynamic_loader=False, **kwar
         return HelocDataLoader(test_size=test_size, **kwargs)
     else:
         raise ValueError(f"Invalid dataset: {dataset_name}")
-

@@ -17,8 +17,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from tqdm import tqdm
 
-from evaluation.generalevaluator import *
-from modelutils.trainingutilities import (
+from autodeep.evaluation.generalevaluator import *
+from autodeep.modelutils.trainingutilities import (
     infer_hyperopt_space_pytorch_custom,
     stop_on_perfect_lossCondition,
     handle_rogue_batch_size_ptcustom,

@@ -15,12 +15,38 @@ include_models:
   - GANDALF
   - AutoInt
   - Node
-
+  
+  
+  
   ####- MLPTorch
   ####- squeezenet
   ####- LightGBM
 
+# List of datasets to include in the experiment
+include_datasets:
+  - iris        # Iris flower dataset
+  - titanic
+  - breastcancer
+  - ageconditions
+  - diabetes
+  - adult
+  - housing
+  - creditcard  # Credit card fraud dataset
+  - heloc
+  - covertype
+  
+  
+
 model_configs:
+
+
+  mlptorch:
+    execution_mode: hyperopt_kfold
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+    retrain: False
+  
 
   catboost:
     execution_mode: hyperopt_kfold
@@ -71,6 +97,13 @@ model_configs:
     return_extra_info: True # for dataloader
     retrain: False
 
+  squeezenet:
+    execution_mode: hyperopt_kfold
+    normalize_features: mean_std
+    encode_categorical: False  #for dataloader 
+    return_extra_info: True # for dataloader
+    retrain: False
+
   gate:
     execution_mode: hyperopt_kfold
     normalize_features: mean_std
@@ -112,3 +145,115 @@ model_configs:
     encode_categorical: True
     return_extra_info: True
     retrain: False
+
+dataset_configs:
+
+  diabetes: 
+    test_size: 0.2
+    problem_type: binary_classification
+    eval_metrics:
+      - lift
+      - roc_auc
+      - f1
+      - area_under_pr
+      - accuracy
+      - precision
+      - recall
+    
+  ageconditions: 
+    test_size: 0.25
+    problem_type: binary_classification
+    eval_metrics:
+      - f1
+      - lift
+      - roc_auc
+      - area_under_pr
+      - accuracy
+      - precision
+      - recall
+
+  creditcard: 
+    test_size: 0.25
+    problem_type: binary_classification
+    eval_metrics:
+      - lift
+      - accuracy
+      - roc_auc
+      - f1
+      - area_under_pr
+      - precision
+      - recall
+      
+  iris: 
+    num_targets: 3
+    test_size: 0.25
+    problem_type: multiclass_classification
+    eval_metrics:
+      - accuracy
+      - f1
+      
+  covertype: 
+    num_targets: 7
+    test_size: 0.25
+    problem_type: multiclass_classification
+    eval_metrics:
+      - accuracy
+      - f1
+      
+
+  titanic: 
+    test_size: 0.25
+    problem_type: binary_classification
+    eval_metrics:
+      - roc_auc
+      - lift
+      - accuracy
+      - f1
+      - area_under_pr
+      - precision
+      - recall
+
+  heloc: 
+    test_size: 0.25
+    problem_type: binary_classification
+    eval_metrics:
+      - lift
+      - roc_auc
+      - f1
+      - area_under_pr
+      - accuracy
+      - precision
+      - recall
+
+  housing: 
+    test_size: 0.25
+    problem_type: regression
+    eval_metrics:
+      - r2_score
+      - mse
+      - rmse
+      
+
+  breastcancer: 
+    test_size: 0.25
+    problem_type: binary_classification
+    eval_metrics:
+      - f1
+      - lift
+      - roc_auc
+      - area_under_pr
+      - accuracy
+      - precision
+      - recall
+
+  adult: 
+    test_size: 0.25
+    problem_type: binary_classification
+    eval_metrics:
+      - roc_auc
+      - f1
+      - lift
+      - area_under_pr
+      - accuracy
+      - precision
+      - recall
