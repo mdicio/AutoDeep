@@ -19,15 +19,13 @@ include_models:
 model_configs:
 
   catboost:
-    normalize_features: mean_std
-    encode_categorical: False  # for dataloader
-    return_extra_info: True  # for dataloader
-    retrain: False
-    validation_fraction: 0.15
-    early_stopping_rounds: 100
-    verbose: false
+    data_params:
+      normalize_features: mean_std
+      encode_categorical: False  # for dataloader
+      return_extra_info: True  # for dataloader
 
     default_params:
+      retrain: False
       validation_fraction: 0.15
       early_stopping_rounds: 100
       verbose: false
@@ -53,6 +51,12 @@ model_configs:
     max_epochs: 1000
     val_size: 0.15
     early_stopping_patience: 5
+
+    default_params:
+      validation_fraction: 0.15
+      early_stopping_rounds: 100
+      verbose: false
+      iterations: 500
 
     param_grid:
       batch_size:
@@ -83,16 +87,18 @@ model_configs:
     retrain: True
 
     default_params:
-      hyperopt_evals: 1
       validation_fraction: 0.15
       early_stopping_rounds: 30
       verbose: false
       learning_rate: 0.3
+      max_depth: 6
+      n_estimators: 100
+      min_child_weight: 1
+      subsample: 0.8
+      colsample_bytree: 0.8
+      gamma: 0.0
 
     param_grid:
-      hyperopt_evals:
-        - 1
-        - 5
       validation_fraction:
         - 0.15
         - 0.20
@@ -102,22 +108,44 @@ model_configs:
       learning_rate:
         - 0.3
         - 0.01
+      max_depth:
+        - 4
+        - 6
+        - 8
+      n_estimators:
+        - 50
+        - 100
+        - 200
+      min_child_weight:
+        - 1
+        - 5
+        - 10
+      subsample:
+        - 0.6
+        - 0.8
+        - 1.0
+      colsample_bytree:
+        - 0.6
+        - 0.8
+        - 1.0
+      gamma:
+        - 0.0
+        - 0.1
+        - 0.2
 
   mlp:
-    execution_mode: hyperopt_kfold
+
     normalize_features: mean_std
     encode_categorical: True
     return_extra_info: False
     retrain: True
 
     default_params:
-      hyperopt_evals: 1
       early_stopping: true
-      cv_size: 4
       validation_fraction: 0.15
       n_iter_no_change: 10
       max_iter: 1000
-      hidden_layer_sizes: [100]
+      hidden_layer_sizes: [32]
       activation: relu
       solver: adam
       batch_size: 1024
@@ -126,9 +154,6 @@ model_configs:
       early_stopping:
         - true
         - false
-      cv_size:
-        - 4
-        - 5
       validation_fraction:
         - 0.15
         - 0.20
@@ -139,8 +164,8 @@ model_configs:
         - 1000
         - 2000
       hidden_layer_sizes:
-        - [100]
-        - [200]
+        - [64,32]
+        - [128,64,32]
       activation:
         - relu
         - tanh

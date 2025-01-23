@@ -18,10 +18,8 @@ from autodeep.modelutils.trainingutilities import (
 
 
 class CatBoostTrainer(BaseModel):
-    def __init__(
-        self, problem_type="binary_classification", num_classes=None, **kwargs
-    ):
-        super().__init__(**kwargs)
+    def __init__(self, problem_type="binary_classification", num_classes=None):
+
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
         self.random_state = 4200
@@ -53,7 +51,7 @@ class CatBoostTrainer(BaseModel):
         self.device = "GPU" if torch.cuda.is_available() else "CPU"
         self.extra_info = None
         # self.gpu_ram_part = 0.3
-        num_cpu_cores = os.cpu_count()
+        num_cpu_cores = os.cpu_count() // 2
         # Calculate the num_workers value as number of cores - 2
         self.num_workers = max(1, num_cpu_cores)
 
@@ -73,9 +71,9 @@ class CatBoostTrainer(BaseModel):
         self.logger.info("Starting training")
 
         # Define the hyperparameter search space
-        self.outer_params = params["outer_params"]
-        early_stopping_rounds = self.outer_params.get("early_stopping_rounds", 100)
-        verbose = self.outer_params.get("verbose", False)
+        self.default_params = params["default_params"]
+        early_stopping_rounds = self.default_params.get("early_stopping_rounds", 100)
+        verbose = self.default_params.get("verbose", False)
 
         self.extra_info = extra_info
         self.cat_features = self.extra_info["cat_col_idx"]
@@ -120,7 +118,7 @@ class CatBoostTrainer(BaseModel):
         X_train, X_val, y_train, y_val = train_test_split(
             X_train,
             y_train,
-            test_size=self.outer_params["validation_fraction"],
+            test_size=self.default_params["validation_fraction"],
             random_state=self.random_state,
         )
         eval_set = [(X_val, y_val)]
@@ -191,9 +189,9 @@ class CatBoostTrainer(BaseModel):
         self.cat_features = self.extra_info["cat_col_idx"]
         # Define the hyperparameter search space
         # Define the hyperparameter search space
-        self.outer_params = param_grid["outer_params"]
-        early_stopping_rounds = self.outer_params.get("early_stopping_rounds", 100)
-        verbose = self.outer_params.get("verbose", False)
+        self.default_params = param_grid["default_params"]
+        early_stopping_rounds = self.default_params.get("early_stopping_rounds", 100)
+        verbose = self.default_params.get("verbose", False)
         space = infer_hyperopt_space(param_grid)
 
         self.num_classes = len(np.unique(y))
@@ -283,7 +281,7 @@ class CatBoostTrainer(BaseModel):
         )
 
         best_params = space_eval(space, best)
-        best_params["outer_params"] = self.outer_params
+        best_params["default_params"] = self.default_params
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]
         self.best_model = best_trial["result"]["trained_model"]
@@ -334,9 +332,10 @@ class CatBoostTrainer(BaseModel):
         self.extra_info = extra_info
         self.cat_features = self.extra_info["cat_col_idx"]
         # Define the hyperparameter search space
-        self.outer_params = param_grid["outer_params"]
-        early_stopping_rounds = self.outer_params.get("early_stopping_rounds", 100)
-        verbose = self.outer_params.get("verbose", False)
+
+        self.default_params = param_grid["default_params"]
+        early_stopping_rounds = self.default_params.get("early_stopping_rounds", 100)
+        verbose = self.default_params.get("verbose", False)
         space = infer_hyperopt_space(param_grid)
 
         self.logger.info(
@@ -465,7 +464,7 @@ class CatBoostTrainer(BaseModel):
 
         # Get the best hyperparameters and corresponding score
         best_params = space_eval(space, best)
-        best_params["outer_params"] = self.outer_params
+        best_params["default_params"] = self.default_params
 
         best_trial = trials.best_trial
 

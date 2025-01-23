@@ -21,9 +21,8 @@ class DataLoader:
         return_extra_info=False,
         encode_categorical=False,
         num_targets=None,
-        **kwargs,
     ):
-        super().__init__(**kwargs)
+
         self.target_column = target_column
         self.test_size = test_size
         self.normalize_features = normalize_features
@@ -196,9 +195,8 @@ class DynamicDataLoader(DataLoader):
         problem_type,
         test_size,
         return_extra_info=False,
-        **kwargs,
     ):
-        super().__init__(**kwargs)
+
         self.dataset_path = dataset_path
         self.target_column = target_column
         self.problem_type = problem_type
@@ -263,9 +261,8 @@ class KaggleAgeConditionsLoader(DataLoader):
         return_extra_info=False,
         encode_categorical=False,
         num_targets=1,
-        **kwargs,
     ):
-        super().__init__(**kwargs)
+
         self.target_column = target_column
         self.test_size = test_size
         self.random_state = random_state
@@ -339,9 +336,8 @@ class BufixDataLoader(DataLoader):
         return_extra_info=False,
         encode_categorical=False,
         num_targets=1,
-        **kwargs,
     ):
-        super().__init__(**kwargs)
+
         self.target_column = target_column
         self.test_size = test_size
         self.random_state = random_state
@@ -402,9 +398,8 @@ class TitanicDataLoader(DataLoader):
         return_extra_info=False,
         encode_categorical=False,
         num_targets=1,
-        **kwargs,
     ):
-        super().__init__(**kwargs)
+
         self.target_column = target_column
         self.test_size = test_size
         self.random_state = random_state
@@ -480,9 +475,8 @@ class BreastCancerDataLoader(DataLoader):
         return_extra_info=False,
         encode_categorical=False,
         num_targets=1,
-        **kwargs,
     ):
-        super().__init__(**kwargs)
+
         self.target_column = target_column
         self.test_size = test_size
         self.random_state = random_state
@@ -539,9 +533,8 @@ class CreditDataLoader(DataLoader):
         return_extra_info=False,
         encode_categorical=False,
         num_targets=1,
-        **kwargs,
     ):
-        super().__init__(**kwargs)
+
         self.target_column = target_column
         self.test_size = test_size
         self.random_state = random_state
@@ -603,9 +596,8 @@ class IrisDataLoader(DataLoader):
         return_extra_info=False,
         encode_categorical=False,
         num_targets=3,
-        **kwargs,
     ):
-        super().__init__(**kwargs)
+
         self.target_column = target_column
         self.test_size = test_size
         self.random_state = random_state
@@ -663,9 +655,8 @@ class CaliforniaHousingDataLoader(DataLoader):
         return_extra_info=False,
         encode_categorical=False,
         num_targets=1,
-        **kwargs,
     ):
-        super().__init__(**kwargs)
+
         self.target_column = target_column
         self.test_size = test_size
         self.random_state = random_state
@@ -724,9 +715,8 @@ class AdultDataLoader(DataLoader):
         return_extra_info=False,
         encode_categorical=False,
         num_targets=1,
-        **kwargs,
     ):
-        super().__init__(**kwargs)
+
         self.target_column = "target"
         self.test_size = test_size
         self.random_state = random_state
@@ -813,9 +803,8 @@ class CoverTypeDataLoader(DataLoader):
         return_extra_info=False,
         encode_categorical=False,
         num_targets=1,
-        **kwargs,
     ):
-        super().__init__(**kwargs)
+
         self.target_column = "target"
         self.test_size = test_size
         self.random_state = random_state
@@ -876,9 +865,8 @@ class HelocDataLoader(DataLoader):
         return_extra_info=False,
         encode_categorical=False,
         num_targets=1,
-        **kwargs,
     ):
-        super().__init__(**kwargs)
+
         self.target_column = "target"
         self.test_size = test_size
         self.random_state = random_state

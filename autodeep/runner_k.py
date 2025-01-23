@@ -98,7 +98,7 @@ for run in runs:
             )
 
         elif execution_mode == "hyperopt_kfold":
-            max_evals = run["param_grid"]["outer_params"]["hyperopt_evals"]
+            max_evals = run["param_grid"]["default_params"]["hyperopt_evals"]
             (
                 best_params,
                 best_score,

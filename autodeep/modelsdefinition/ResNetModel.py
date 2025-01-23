@@ -37,7 +37,6 @@ class ResNetModel(nn.Module):
         num_classes=1,
         depth="resnet18",
         pretrained=True,
-        **kwargs,
     ):
         super(ResNetModel, self).__init__()
 
@@ -87,7 +86,6 @@ class ResNetTrainer:
         batch_size=64,
         learning_rate=0.001,
         problem_type="binary_classification",
-        **kwargs,
     ):
         self.problem_type = problem_type
         self.num_targets = num_targets
@@ -377,7 +375,7 @@ class ResNetTrainer:
         return params
 
     def train(self, X_train, y_train, params: Dict, extra_info: Dict):
-        outer_params = params["outer_params"]
+        outer_params = params["default_params"]
         validation_fraction = outer_params.get("validation_fraction", 0.2)
         max_epochs = outer_params.get("max_epochs", 3)
         batch_size = params.get("batch_size", 32)
@@ -437,7 +435,7 @@ class ResNetTrainer:
                     val_loss = self.validate_step(val_loader)
                     self.scheduler.step(val_loss)
 
-                    if val_loss < best_val_loss + self.outer_params.get("tol", 0.0):
+                    if val_loss < best_val_loss + self.default_params.get("tol", 0.0):
                         best_val_loss = val_loss
                         best_epoch = epoch
                         current_patience = 0
@@ -476,11 +474,11 @@ class ResNetTrainer:
         extra_info=None,
         *kwargs,
     ):
-        self.outer_params = param_grid["outer_params"]
-        max_epochs = self.outer_params.get("max_epochs", 3)
-        early_stopping = self.outer_params.get("early_stopping", True)
-        patience = self.outer_params.get("early_stopping_patience", 5)
-        validation_fraction = self.outer_params.get("validation_fraction", 0.2)
+        self.default_params = param_grid["default_params"]
+        max_epochs = self.default_params.get("max_epochs", 3)
+        early_stopping = self.default_params.get("early_stopping", True)
+        patience = self.default_params.get("early_stopping_patience", 5)
+        validation_fraction = self.default_params.get("validation_fraction", 0.2)
 
         self.logger.debug(f"Training on {self.device} for dataset {self.dataset_name}")
         space = infer_hyperopt_space_pytorch_custom(param_grid)
@@ -543,7 +541,9 @@ class ResNetTrainer:
                         val_loss = self.validate_step(val_loader)
                         self.scheduler.step(val_loss)
 
-                        if val_loss < best_val_loss + self.outer_params.get("tol", 0.0):
+                        if val_loss < best_val_loss + self.default_params.get(
+                            "tol", 0.0
+                        ):
                             best_val_loss = val_loss
                             best_epoch = epoch
                             current_patience = 0
@@ -616,7 +616,7 @@ class ResNetTrainer:
         )
 
         best_params = space_eval(space, best)
-        best_params["outer_params"] = self.outer_params
+        best_params["default_params"] = self.default_params
 
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]
@@ -666,11 +666,11 @@ class ResNetTrainer:
             Dictionary containing the best hyperparameters and corresponding score.
         """
 
-        self.outer_params = param_grid["outer_params"]
-        max_epochs = self.outer_params.get("max_epochs", 3)
-        early_stopping = self.outer_params.get("early_stopping", True)
-        patience = self.outer_params.get("early_stopping_patience", 5)
-        validation_fraction = self.outer_params.get("validation_fraction", 0.2)
+        self.default_params = param_grid["default_params"]
+        max_epochs = self.default_params.get("max_epochs", 3)
+        early_stopping = self.default_params.get("early_stopping", True)
+        patience = self.default_params.get("early_stopping_patience", 5)
+        validation_fraction = self.default_params.get("validation_fraction", 0.2)
 
         self.logger.debug(f"Training on {self.device} for dataset {self.dataset_name}")
 
@@ -758,7 +758,7 @@ class ResNetTrainer:
                             self.scheduler.step(val_loss)
 
                             if (
-                                val_loss + self.outer_params.get("tol", 0.0)
+                                val_loss + self.default_params.get("tol", 0.0)
                                 < best_val_loss
                             ):
                                 best_val_loss = val_loss
@@ -861,7 +861,7 @@ class ResNetTrainer:
 
         # Get the best hyperparameters and corresponding score
         best_params = space_eval(space, best)
-        best_params["outer_params"] = self.outer_params
+        best_params["default_params"] = self.default_params
 
         best_trial = trials.best_trial
 

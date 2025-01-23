@@ -32,8 +32,8 @@ from autodeep.modelutils.trainingutilities import (
 class TabTransformerTrainer(BaseModel):
     """problem_type in {binary_classification}"""
 
-    def __init__(self, problem_type, num_classes=None, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, problem_type, num_classes=None):
+
         self.cv_size = None
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
@@ -264,7 +264,7 @@ class TabTransformerTrainer(BaseModel):
         X_train, X_val, y_train, y_val = train_test_split(
             X_train,
             y_train,
-            test_size=params["outer_params"]["val_size"],
+            test_size=params["default_params"]["val_size"],
             random_state=self.random_state,
         )
 
@@ -276,7 +276,7 @@ class TabTransformerTrainer(BaseModel):
 
         self._set_loss_function(y_train)
         self.model = self.prepare_tabular_model(
-            params, params["outer_params"], default=self.default
+            params, params["default_params"], default=self.default
         )
 
         self.train_df, self.validation_df = handle_rogue_batch_size(
@@ -329,7 +329,7 @@ class TabTransformerTrainer(BaseModel):
             f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset {self.dataset_name}"
         )
         self.extra_info = extra_info
-        self.outer_params = param_grid["outer_params"]
+        self.default_params = param_grid["default_params"]
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
 
@@ -337,7 +337,7 @@ class TabTransformerTrainer(BaseModel):
         X_train, X_val, y_train, y_val = train_test_split(
             X,
             y,
-            test_size=self.outer_params["val_size"],
+            test_size=self.default_params["val_size"],
             random_state=self.random_state,
         )
         # Merge X_train and y_train
@@ -350,7 +350,7 @@ class TabTransformerTrainer(BaseModel):
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")
             model = self.prepare_tabular_model(
-                params, self.outer_params, default=self.default
+                params, self.default_params, default=self.default
             )
 
             self.train_df, self.validation_df = handle_rogue_batch_size(
@@ -418,7 +418,7 @@ class TabTransformerTrainer(BaseModel):
 
         # Get the best hyperparameters and corresponding score
         best_params = space_eval(space, best)
-        best_params["outer_params"] = self.outer_params
+        best_params["default_params"] = self.default_params
 
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]
@@ -470,7 +470,7 @@ class TabTransformerTrainer(BaseModel):
             f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset {self.dataset_name}"
         )
         self.extra_info = extra_info
-        self.outer_params = param_grid["outer_params"]
+        self.default_params = param_grid["default_params"]
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
 
@@ -516,7 +516,7 @@ class TabTransformerTrainer(BaseModel):
                     ]
                 # Initialize the tabular model
                 model = self.prepare_tabular_model(
-                    params, self.outer_params, default=self.default
+                    params, self.default_params, default=self.default
                 )
                 # Fit the model
 
@@ -591,7 +591,7 @@ class TabTransformerTrainer(BaseModel):
 
         # Get the best hyperparameters and corresponding score
         best_params = space_eval(space, best)
-        best_params["outer_params"] = self.outer_params
+        best_params["default_params"] = self.default_params
 
         best_trial = trials.best_trial
 

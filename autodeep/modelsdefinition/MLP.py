@@ -27,10 +27,8 @@ from hyperopt.pyll import scope
 class MLP(BaseModel):
     """problem_type in {'binary_classification', 'multiclass_classification', 'regression'}"""
 
-    def __init__(
-        self, problem_type="binary_classification", num_classes=None, **kwargs
-    ):
-        super().__init__(**kwargs)
+    def __init__(self, problem_type="binary_classification", num_classes=None):
+
         self.problem_type = problem_type
         self.num_classes = num_classes
         self.logger = logging.getLogger(__name__)
@@ -106,9 +104,9 @@ class MLP(BaseModel):
         # Set up the parameters for the model
         self.logger.info("Starting training")
         params["random_state"] = self.random_state
-        outer_params = params["outer_params"]
-        if "outer_params" in params.keys():
-            params.pop("outer_params")
+        outer_params = params["default_params"]
+        if "default_params" in params.keys():
+            params.pop("default_params")
 
         # Create the MLP model based on problem_type
         if self.problem_type == "regression":
@@ -202,11 +200,11 @@ class MLP(BaseModel):
             Dictionary containing the best hyperparameters and corresponding score.
         """
 
-        self.outer_params = param_grid["outer_params"]
+        self.default_params = param_grid["default_params"]
         # Set the number of boosting rounds (iterations) to default or use value from config
-        early_stopping_rounds = self.outer_params.get("early_stopping_rounds", 100)
-        verbose = self.outer_params.get("verbose", False)
-        param_grid.pop("outer_params")
+        early_stopping_rounds = self.default_params.get("early_stopping_rounds", 100)
+        verbose = self.default_params.get("verbose", False)
+        param_grid.pop("default_params")
         # Define the hyperparameter search space
         space = infer_hyperopt_space(param_grid)
         self.logger.info(
@@ -222,8 +220,8 @@ class MLP(BaseModel):
                 model = MLPRegressor(
                     verbose=False,
                     early_stopping=True,
-                    n_iter_no_change=self.outer_params["n_iter_no_change"],
-                    max_iter=self.outer_params["max_iter"],
+                    n_iter_no_change=self.default_params["n_iter_no_change"],
+                    max_iter=self.default_params["max_iter"],
                     **params,
                 )
                 kf = KFold(n_splits=k_value, shuffle=True, random_state=42)
@@ -234,8 +232,8 @@ class MLP(BaseModel):
                 model = MLPClassifier(
                     verbose=False,
                     early_stopping=True,
-                    n_iter_no_change=self.outer_params["n_iter_no_change"],
-                    max_iter=self.outer_params["max_iter"],
+                    n_iter_no_change=self.default_params["n_iter_no_change"],
+                    max_iter=self.default_params["max_iter"],
                     **params,
                 )
                 kf = StratifiedKFold(n_splits=k_value, shuffle=True, random_state=42)
@@ -322,7 +320,7 @@ class MLP(BaseModel):
 
         # Get the best hyperparameters and corresponding score
         best_params = space_eval(space, best)
-        best_params["outer_params"] = self.outer_params
+        best_params["default_params"] = self.default_params
 
         best_trial = trials.best_trial
 
@@ -381,13 +379,13 @@ class MLP(BaseModel):
             Dictionary containing the best hyperparameters and corresponding score.
         """
         self.logger.info(f"Starting cross-validation maximising {metric} metric")
-        outer_params = param_grid["outer_params"]
+        outer_params = param_grid["default_params"]
         cv_size = outer_params["cv_size"]
         n_iter = outer_params["cv_iterations"]
         n_iter_no_change = outer_params["n_iter_no_change"]
         max_iter = outer_params["max_iter"]
-        if "outer_params" in param_grid.keys():
-            param_grid.pop("outer_params")
+        if "default_params" in param_grid.keys():
+            param_grid.pop("default_params")
 
         scoring_metric = self.metric_mapping[metric]
         # Create the MLP model based on problem_type
@@ -428,7 +426,7 @@ class MLP(BaseModel):
         random_search.fit(X, y)
 
         best_params = random_search.best_params_
-        best_params["outer_params"] = outer_params
+        best_params["default_params"] = outer_params
         best_score = random_search.best_score_
         self.best_model = random_search.best_estimator_
 

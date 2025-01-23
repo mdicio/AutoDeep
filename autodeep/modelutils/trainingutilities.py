@@ -131,7 +131,7 @@ def infer_cv_space_lightgbm(param_grid):
 def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
     # Define the hyperparameter search space
     space = {}
-    param_grid.pop("outer_params", None)
+    param_grid.pop("default_params", None)
 
     for param_name, param_values in param_grid.items():
         print(param_name, param_values)
@@ -226,7 +226,7 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
 def infer_hyperopt_space_pytorch_custom(param_grid: Dict):
     # Define the hyperparameter search space
     space = {}
-    param_grid.pop("outer_params", None)
+    param_grid.pop("default_params", None)
 
     for param_name, param_values in param_grid.items():
         print(param_name, param_values)
@@ -318,7 +318,7 @@ def infer_hyperopt_space_pytorch_custom(param_grid: Dict):
 def infer_hyperopt_space_pytorch_custom_old(param_grid: Dict):
     # Define the hyperparameter search space
     space = {}
-    param_grid.pop("outer_params", None)
+    param_grid.pop("default_params", None)
     for param_name, param_values in param_grid.items():
         min_value = min(param_values)
         max_value = max(param_values)
@@ -352,7 +352,7 @@ def infer_hyperopt_space_pytorch_custom_old(param_grid: Dict):
 def infer_hyperopt_space(param_grid: Dict):
     # Define the hyperparameter search space
     space = {}
-    param_grid.pop("outer_params", None)
+    param_grid.pop("default_params", None)
 
     for param_name, param_values in param_grid.items():
         min_value = min(param_values)

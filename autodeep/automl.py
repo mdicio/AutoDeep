@@ -87,7 +87,7 @@ class AutoRunner:
 
                 run_id = datetime.now().strftime("%Y%m-%d%H-%M%S-") + str(uuid4())
                 model_config = self.model_config.get(model_name, {})
-                execution_mode = model_config.get("execution_mode", self.execution_mode)
+                execution_mode = self.execution_mode
 
                 data_loader = self.data_loader(
                     dataset_path,
@@ -102,7 +102,6 @@ class AutoRunner:
                     random_state=self.random_state,
                     problem_type=data_config["problem_type"],
                     num_classes=data_config.get("num_targets", 1),
-                    model_config=model_config,  # Ensure model-specific params are passed
                 )
 
                 # Handle new execution modes
