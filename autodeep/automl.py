@@ -51,6 +51,7 @@ class AutoRunner:
         self.random_state = random_state
         self.output_file_format = output_file_format
         self.results = []
+        self.random_state = self.model_config.get("random_state", 42)
         self._initialize()
 
     def _initialize(self):
@@ -86,14 +87,26 @@ class AutoRunner:
                 print(f"Running {model_name} on {dataset_name}...")
 
                 run_id = datetime.now().strftime("%Y%m-%d%H-%M%S-") + str(uuid4())
-                model_config = self.model_config.get(model_name, {})
+                print(self.model_config)
+                model_config = self.model_config.get("model_configs").get(model_name)
+                print(model_config)
                 execution_mode = self.execution_mode
 
                 data_loader = self.data_loader(
-                    dataset_path,
-                    data_config["target_col"],
-                    data_config["problem_type"],
-                    data_config["test_size"],
+                    dataset_path=data_config.get("dataset_path"),
+                    target_column=data_config.get("target_col"),
+                    test_size=data_config.get("test_size"),
+                    random_state=self.random_state,
+                    normalize_features=model_config.get("data_params").get(
+                        "normalize_features"
+                    ),
+                    return_extra_info=model_config.get("data_params").get(
+                        "return_extra_info"
+                    ),
+                    encode_categorical=model_config.get("data_params").get(
+                        "encode_categorical"
+                    ),
+                    num_targets=data_config.get("num_targets"),
                 )
                 X_train, X_test, y_train, y_test, extra_info = data_loader.load_data()
 
@@ -114,30 +127,19 @@ class AutoRunner:
                     ) = model.hyperopt_search_kfold(
                         X_train,
                         y_train,
-                        param_grid=run["param_grid"],
-                        metric=dmetric,
-                        eval_metrics=dataset_configs["eval_metrics"],
+                        model_config=model_config,
+                        metric=data_config["metric"],
+                        eval_metrics=data_config["eval_metrics"],
                         k_value=5,
-                        max_evals=max_evals,
-                        problem_type=dataset_task,
+                        max_evals=self.max_evals,
+                        problem_type=data_config["problem_type"],
                         extra_info=extra_info,
                     )
-                elif execution_mode == "cv":
-                    model.cross_validate(
-                        X_train,
-                        y_train,
-                        param_grid=model_config.get("param_grid", {}),
-                        metric=self.eval_metrics[0],
-                        problem_type=config["problem_type"],
-                        extra_info=extra_info,
-                    )
-                elif execution_mode == "new_mode":  # Handle new mode if applicable
-                    model.new_mode_execution(X_train, y_train, model_config)
                 else:
                     model.train(X_train, y_train)
 
                 # Handle model prediction
-                if config["problem_type"] == "binary_classification":
+                if data_config["problem_type"] == "binary_classification":
                     y_pred, y_prob = model.predict(X_test, predict_proba=True)
                 else:
                     y_pred = model.predict(X_test)
@@ -149,8 +151,8 @@ class AutoRunner:
                     y_pred=y_pred,
                     y_prob=y_prob,
                     run_metrics=self.eval_metrics,
-                    metric=self.eval_metrics[0],
-                    problem_type=config["problem_type"],
+                    metric=data_config["metric"],
+                    problem_type=data_config["problem_type"],
                 )
                 output_metrics = evaluator.evaluate_model()
 

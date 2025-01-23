@@ -140,7 +140,7 @@ class GATE(BaseModel):
 
     # Define the data configuration
     def prepare_tabular_model(self, params, outer_params, default=False):
-        self.logger.debug(f"Training on {self.device} for dataset {self.dataset_name}")
+        self.logger.debug(f"Training on {self.device} for dataset")
         data_config = DataConfig(
             target=["target"],
             continuous_cols=[
@@ -305,7 +305,7 @@ class GATE(BaseModel):
         self,
         X,
         y,
-        param_grid,
+        model_config,
         metric,
         max_evals=16,
         problem_type="binary_classification",
@@ -333,10 +333,11 @@ class GATE(BaseModel):
             Dictionary containing the best hyperparameters and corresponding score.
         """
         self.logger.info(
-            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset {self.dataset_name}"
+            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset"
         )
         self.extra_info = extra_info
-        self.default_params = param_grid["default_params"]
+        self.default_params = model_config["default_params"]
+        param_grid = model_config["param_grid"]
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
 
@@ -443,7 +444,7 @@ class GATE(BaseModel):
         self,
         X,
         y,
-        param_grid,
+        model_config,
         metric,
         eval_metrics,
         k_value=5,
@@ -474,10 +475,11 @@ class GATE(BaseModel):
         """
 
         self.logger.info(
-            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset {self.dataset_name}"
+            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset"
         )
         self.extra_info = extra_info
-        self.default_params = param_grid["default_params"]
+        self.default_params = model_config["default_params"]
+        param_grid = model_config["param_grid"]
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
 
@@ -608,9 +610,7 @@ class GATE(BaseModel):
         score_std = best_trial["result"]["score_std"]
         full_metrics = best_trial["result"]["full_metrics"]
 
-        self.logger.info(
-            f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}"
-        )
+        self.logger.info(f"CRUCIAL INFO FINAL METRICS : {full_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 

@@ -451,14 +451,14 @@ class SoftOrdering1DCNN:
         self,
         X,
         y,
-        param_grid,
+        model_config,
         metric,
         max_evals=100,
         problem_type="binary_classification",
         extra_info=None,
         *kwargs,
     ):
-        self.default_params = param_grid["default_params"]
+        self.default_params = model_config["default_params"]
         max_epochs = self.default_params.get("max_epochs", 3)
         early_stopping = self.default_params.get("early_stopping", True)
         patience = self.default_params.get("early_stopping_patience", 5)
@@ -467,7 +467,7 @@ class SoftOrdering1DCNN:
         self.num_features = extra_info["num_features"]
 
         self._set_loss_function(y)
-        self.logger.debug(f"Training on {self.device} for dataset {self.dataset_name}")
+        self.logger.debug(f"Training on {self.device} for dataset")
 
         train_dataset, val_dataset = self._pandas_to_torch_datasets(
             X, y, validation_fraction
@@ -600,7 +600,7 @@ class SoftOrdering1DCNN:
         self,
         X,
         y,
-        param_grid,
+        model_config,
         metric,
         eval_metrics,
         k_value=5,
@@ -630,7 +630,7 @@ class SoftOrdering1DCNN:
             Dictionary containing the best hyperparameters and corresponding score.
         """
 
-        self.default_params = param_grid["default_params"]
+        self.default_params = model_config["default_params"]
         max_epochs = self.default_params.get("max_epochs", 3)
         early_stopping = self.default_params.get("early_stopping", True)
         patience = self.default_params.get("early_stopping_patience", 5)
@@ -639,7 +639,7 @@ class SoftOrdering1DCNN:
         self.num_features = extra_info["num_features"]
 
         self._set_loss_function(y)
-        self.logger.debug(f"Training on {self.device} for dataset {self.dataset_name}")
+        self.logger.debug(f"Training on {self.device} for dataset")
 
         self.torch_dataset = self._single_pandas_to_torch_image_dataset(X, y)
 
@@ -815,9 +815,7 @@ class SoftOrdering1DCNN:
         score_std = best_trial["result"]["score_std"]
         full_metrics = best_trial["result"]["full_metrics"]
 
-        self.logger.info(
-            f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}"
-        )
+        self.logger.info(f"CRUCIAL INFO FINAL METRICS : {full_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 

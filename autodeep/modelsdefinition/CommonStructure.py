@@ -8,7 +8,7 @@ class BaseModel:
     Base class for all models.
     """
 
-    def __init__(self, random_state=4200, problem_type=None, **kwargs):
+    def __init__(self, random_state=4200, problem_type=None):
         super(BaseModel, self).__init__()
         """
         Constructor for the base model class.

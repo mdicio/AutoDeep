@@ -38,7 +38,7 @@ class DataLoader:
     def load_data(self):
         raise NotImplementedError
 
-    def create_extra_info(self, df, igtd_path, img_rows, img_columns):
+    def create_extra_info(self, df, igtd_path=None, img_rows=None, img_columns=None):
         # Get the unique values for each categorical column
         # Get the categorical and numerical columns
         cat_cols = df.select_dtypes(include=["object", "category"]).columns
@@ -55,14 +55,15 @@ class DataLoader:
             "num_col_idx": list(df.columns.get_indexer(num_cols)),
         }
         extra_info = column_info
-
-        with open(igtd_path) as f:
-            extra_info["column_ordering"] = list(
-                map(int, f.readlines()[-1].strip().split())
-            )
-        extra_info["img_rows"] = img_rows
-        extra_info["img_columns"] = img_columns
         extra_info["num_features"] = len(df.columns)
+
+        if igtd_path:
+            with open(igtd_path) as f:
+                extra_info["column_ordering"] = list(
+                    map(int, f.readlines()[-1].strip().split())
+                )
+            extra_info["img_rows"] = img_rows
+            extra_info["img_columns"] = img_columns
 
         return extra_info
 
@@ -191,16 +192,23 @@ class DynamicDataLoader(DataLoader):
     def __init__(
         self,
         dataset_path,
-        target_column,
-        problem_type,
-        test_size,
+        target_column="target",
+        test_size=0.2,
+        random_state=42,
+        normalize_features="mean_std",
         return_extra_info=False,
+        encode_categorical=False,
+        num_targets=1,
     ):
 
         self.dataset_path = dataset_path
         self.target_column = target_column
-        self.problem_type = problem_type
         self.test_size = test_size
+        self.random_state = random_state
+        self.normalize_features = normalize_features
+        self.return_extra_info = return_extra_info
+        self.encode_categorical = encode_categorical
+        self.num_targets = num_targets
 
     def load_data(self):
 
@@ -234,19 +242,7 @@ class DynamicDataLoader(DataLoader):
         # Optionally return extra info
         extra_info = None
         if self.return_extra_info:
-            extra_info = self.create_extra_info(
-                df, self.igtd_path, X_train.shape[0], X_train.shape[1]
-            )
-
-        extra_info = None
-        if self.return_extra_info:
-            extra_info = self.create_extra_info(
-                X_train,
-                img_rows=8,
-                img_columns=7,
-                igtd_path=f"{self.igtd_path}results/ageconditions_igtd_Euclidean_Euclidean/abs/_index.txt",
-            )
-            extra_info["num_targets"] = self.num_targets
+            extra_info = self.create_extra_info(df)
 
         return X_train, X_test, y_train, y_test, extra_info
 

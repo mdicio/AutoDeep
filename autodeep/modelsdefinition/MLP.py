@@ -170,7 +170,7 @@ class MLP(BaseModel):
         self,
         X,
         y,
-        param_grid,
+        model_config,
         metric,
         eval_metrics,
         k_value=5,
@@ -200,15 +200,15 @@ class MLP(BaseModel):
             Dictionary containing the best hyperparameters and corresponding score.
         """
 
-        self.default_params = param_grid["default_params"]
+        self.default_params = model_config["default_params"]
+        param_grid = model_config["param_grid"]
         # Set the number of boosting rounds (iterations) to default or use value from config
-        early_stopping_rounds = self.default_params.get("early_stopping_rounds", 100)
         verbose = self.default_params.get("verbose", False)
-        param_grid.pop("default_params")
+
         # Define the hyperparameter search space
         space = infer_hyperopt_space(param_grid)
         self.logger.info(
-            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset {self.dataset_name}"
+            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset"
         )
 
         # Define the objective function for hyperopt search
@@ -216,13 +216,24 @@ class MLP(BaseModel):
             self.logger.info(f"Training with hyperparameters: {params}")
             # Create an XGBoost model with the given hyperparameters
             # Create the MLP model based on problem_type
+            n_iter_no_change = params.get(
+                "n_iter_no_change", self.default_params.get("n_iter_no_change", 10)
+            )
+            max_iter = params.get("max_iter", self.default_params.get("max_iter", 100))
+
+            filtered_params = {
+                k: v
+                for k, v in params.items()
+                if k not in {"n_iter_no_change", "max_iter"}
+            }
+
             if self.problem_type == "regression":
                 model = MLPRegressor(
                     verbose=False,
                     early_stopping=True,
-                    n_iter_no_change=self.default_params["n_iter_no_change"],
-                    max_iter=self.default_params["max_iter"],
-                    **params,
+                    n_iter_no_change=n_iter_no_change,
+                    max_iter=max_iter,
+                    **filtered_params,
                 )
                 kf = KFold(n_splits=k_value, shuffle=True, random_state=42)
             elif self.problem_type in [
@@ -232,9 +243,9 @@ class MLP(BaseModel):
                 model = MLPClassifier(
                     verbose=False,
                     early_stopping=True,
-                    n_iter_no_change=self.default_params["n_iter_no_change"],
-                    max_iter=self.default_params["max_iter"],
-                    **params,
+                    n_iter_no_change=n_iter_no_change,
+                    max_iter=max_iter,
+                    **filtered_params,
                 )
                 kf = StratifiedKFold(n_splits=k_value, shuffle=True, random_state=42)
             else:
@@ -244,9 +255,6 @@ class MLP(BaseModel):
             metric_dict = {}
 
             for fold, (train_idx, val_idx) in enumerate(kf.split(X, y)):
-                if fold > 1:
-                    self.logger.debug("QUICK EXIT")
-                    break
 
                 X_train = X.iloc[train_idx]
                 y_train = y.iloc[train_idx]
@@ -330,9 +338,7 @@ class MLP(BaseModel):
         score_std = best_trial["result"]["score_std"]
         full_metrics = best_trial["result"]["full_metrics"]
 
-        self.logger.info(
-            f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}"
-        )
+        self.logger.info(f"CRUCIAL INFO FINAL METRICS : {full_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
@@ -347,7 +353,7 @@ class MLP(BaseModel):
         self,
         X,
         y,
-        param_grid,
+        model_config,
         metric="accuracy",
         random_state=42,
         problem_type="binary_classification",
@@ -379,7 +385,7 @@ class MLP(BaseModel):
             Dictionary containing the best hyperparameters and corresponding score.
         """
         self.logger.info(f"Starting cross-validation maximising {metric} metric")
-        outer_params = param_grid["default_params"]
+        outer_params = model_config["default_params"]
         cv_size = outer_params["cv_size"]
         n_iter = outer_params["cv_iterations"]
         n_iter_no_change = outer_params["n_iter_no_change"]

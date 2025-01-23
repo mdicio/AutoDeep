@@ -16,7 +16,7 @@ from pytorch_tabular.config import OptimizerConfig, TrainerConfig
 from pytorch_tabular.models import CategoryEmbeddingModelConfig
 from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
 from sklearn.utils.class_weight import compute_class_weight
-from torch.optim import SGD, Adam
+from torch.optim import SGD, Adam, AdamW
 from torch.optim.lr_scheduler import ExponentialLR, ReduceLROnPlateau, StepLR
 
 from autodeep.evaluation.generalevaluator import Evaluator
@@ -68,7 +68,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
         self.problem_type = problem_type
         self.num_classes = num_classes
         self.extra_info = None
-        self.save_path = None
+        self.save_path = "ptabular_checkpoints"
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.logger.info(f"Device {self.device} is available")
         self.task = [
@@ -139,6 +139,10 @@ class CategoryEmbeddingtTrainer(BaseModel):
 
     # Define the data configuration
     def prepare_tabular_model(self, params, outer_params, default=False):
+        print("tabular model params")
+        print(params)
+        print("tabular model outer params")
+        print(outer_params)
         data_config = DataConfig(
             target=["target"],
             continuous_cols=[
@@ -168,12 +172,16 @@ class CategoryEmbeddingtTrainer(BaseModel):
             precision=outer_params.get("precision", 32),  # 16, 32, 64
         )
 
-        if params["optimizer_fn"] == torch.optim.Adam:
+        if params["optimizer_fn"] == Adam:
+            params["optimizer_fn_name"] = "Adam"
             params["optimizer_params"] = dict(weight_decay=params["Adam_weight_decay"])
-        elif params["optimizer_fn"] == torch.optim.SGD:
+        elif params["optimizer_fn"] == SGD:
+            params["optimizer_fn_name"] = "SGD"
             params["optimizer_params"] = dict(momentum=params["SGD_momentum"])
-        elif params["optimizer_fn"] == torch.optim.AdamW:
+        elif params["optimizer_fn"] == AdamW:
+            params["optimizer_fn_name"] = "AdamW"
             params["optimizer_params"] = dict(weight_decay=params["AdamW_weight_decay"])
+
         if params["scheduler_fn"] == torch.optim.lr_scheduler.StepLR:
             params["scheduler_fn"] = "StepLR"
             params["scheduler_params"] = dict(
@@ -196,14 +204,16 @@ class CategoryEmbeddingtTrainer(BaseModel):
         # DEBUG OPTIMIZER
         # https://pytorch-tabular.readthedocs.io/en/latest/optimizer/
         optimizer_config = OptimizerConfig(
-            # optimizer="Adam",
-            # optimizer_params={"weight_decay": params["adam_weight_decay"]},
+            optimizer=params["optimizer_fn_name"],
+            optimizer_params=params["optimizer_params"],
             lr_scheduler=params["scheduler_fn"],
             lr_scheduler_params=params["scheduler_params"],
             lr_scheduler_monitor_metric="valid_loss",
         )
 
         valid_params = inspect.signature(CategoryEmbeddingModelConfig).parameters
+        self.logger.debug(f"valid_params: {valid_params}")
+
         compatible_params = {
             param: value for param, value in params.items() if param in valid_params
         }
@@ -216,13 +226,18 @@ class CategoryEmbeddingtTrainer(BaseModel):
         if self.task == "regression":
             compatible_params["target_range"] = self.target_range
 
-        self.logger.debug(f"valid parameters: {compatible_params}")
+        self.logger.debug(f"compatible parameters: {compatible_params}")
         model_config = CategoryEmbeddingModelConfig(task=self.task, **compatible_params)
 
         # override if we want to use default parameters
         if default:
             model_config = CategoryEmbeddingModelConfig(task=self.task)
             optimizer_config = OptimizerConfig()
+
+        print(data_config)
+        print(model_config)
+        print(optimizer_config)
+        print(trainer_config)
 
         tabular_model = TabularModel(
             data_config=data_config,
@@ -299,7 +314,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
         self,
         X,
         y,
-        param_grid,
+        model_config,
         metric,
         max_evals=16,
         problem_type="binary_classification",
@@ -327,10 +342,11 @@ class CategoryEmbeddingtTrainer(BaseModel):
             Dictionary containing the best hyperparameters and corresponding score.
         """
         self.logger.info(
-            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset {self.dataset_name}"
+            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset"
         )
         self.extra_info = extra_info
-        self.default_params = param_grid["default_params"]
+        self.default_params = model_config["default_params"]
+        param_grid = model_config["param_grid"]
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
 
@@ -439,7 +455,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
         self,
         X,
         y,
-        param_grid,
+        model_config,
         metric,
         eval_metrics,
         k_value=5,
@@ -470,10 +486,11 @@ class CategoryEmbeddingtTrainer(BaseModel):
         """
 
         self.logger.info(
-            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset {self.dataset_name}"
+            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset"
         )
         self.extra_info = extra_info
-        self.default_params = param_grid["default_params"]
+        self.default_params = model_config["default_params"]
+        param_grid = model_config["param_grid"]
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
 
@@ -604,9 +621,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
         score_std = best_trial["result"]["score_std"]
         full_metrics = best_trial["result"]["full_metrics"]
 
-        self.logger.info(
-            f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}"
-        )
+        self.logger.info(f"CRUCIAL INFO FINAL METRICS : {full_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 

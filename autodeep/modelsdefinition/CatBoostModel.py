@@ -71,9 +71,10 @@ class CatBoostTrainer(BaseModel):
         self.logger.info("Starting training")
 
         # Define the hyperparameter search space
-        self.default_params = params["default_params"]
+        self.default_params = model_config["default_params"]
         early_stopping_rounds = self.default_params.get("early_stopping_rounds", 100)
         verbose = self.default_params.get("verbose", False)
+        param_grid = model_config["param_grid"]
 
         self.extra_info = extra_info
         self.cat_features = self.extra_info["cat_col_idx"]
@@ -155,7 +156,7 @@ class CatBoostTrainer(BaseModel):
         self,
         X,
         y,
-        param_grid,
+        model_config,
         metric,
         max_evals=100,
         random_state=42,
@@ -189,9 +190,10 @@ class CatBoostTrainer(BaseModel):
         self.cat_features = self.extra_info["cat_col_idx"]
         # Define the hyperparameter search space
         # Define the hyperparameter search space
-        self.default_params = param_grid["default_params"]
+        self.default_params = model_config["default_params"]
         early_stopping_rounds = self.default_params.get("early_stopping_rounds", 100)
         verbose = self.default_params.get("verbose", False)
+        param_grid = model_config["param_grid"]
         space = infer_hyperopt_space(param_grid)
 
         self.num_classes = len(np.unique(y))
@@ -298,7 +300,7 @@ class CatBoostTrainer(BaseModel):
         self,
         X,
         y,
-        param_grid,
+        model_config,
         metric,
         eval_metrics,
         k_value=5,
@@ -333,13 +335,14 @@ class CatBoostTrainer(BaseModel):
         self.cat_features = self.extra_info["cat_col_idx"]
         # Define the hyperparameter search space
 
-        self.default_params = param_grid["default_params"]
+        self.default_params = model_config["default_params"]
         early_stopping_rounds = self.default_params.get("early_stopping_rounds", 100)
         verbose = self.default_params.get("verbose", False)
+        param_grid = model_config["param_grid"]
         space = infer_hyperopt_space(param_grid)
 
         self.logger.info(
-            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset {self.dataset_name}"
+            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset"
         )
 
         # Define the objective function for hyperopt search
@@ -349,9 +352,7 @@ class CatBoostTrainer(BaseModel):
             params["cat_features"] = self.cat_features
 
             if self.problem_type == "binary_classification":
-                catboost_model = CatBoostClassifier(
-                    od_type="Iter", od_wait=20, task_type=self.device, **params
-                )
+                catboost_model = CatBoostClassifier(task_type=self.device, **params)
                 # Fit the model on the training data
                 kf = StratifiedKFold(n_splits=k_value, shuffle=True, random_state=42)
 
@@ -361,8 +362,6 @@ class CatBoostTrainer(BaseModel):
                 catboost_model = CatBoostClassifier(
                     loss_function="MultiClass",
                     classes_count=self.num_classes,
-                    od_type="Iter",
-                    od_wait=20,
                     task_type=self.device,
                     **params,
                 )
@@ -371,9 +370,7 @@ class CatBoostTrainer(BaseModel):
 
             elif self.problem_type == "regression":
                 params.pop("scale_pos_weight", None)
-                catboost_model = CatBoostRegressor(
-                    od_type="Iter", od_wait=20, task_type=self.device, **params
-                )
+                catboost_model = CatBoostRegressor(task_type=self.device, **params)
                 # Fit the model on the training data
                 kf = KFold(n_splits=k_value, shuffle=True, random_state=42)
             else:
@@ -474,9 +471,7 @@ class CatBoostTrainer(BaseModel):
         score_std = best_trial["result"]["score_std"]
         full_metrics = best_trial["result"]["full_metrics"]
 
-        self.logger.info(
-            f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}"
-        )
+        self.logger.info(f"CRUCIAL INFO FINAL METRICS : {full_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 

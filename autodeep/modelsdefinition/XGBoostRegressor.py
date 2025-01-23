@@ -23,7 +23,7 @@ from autodeep.modelutils.trainingutilities import (
 
 
 class XGBoostRegressor(BaseModel):
-    def __init__(self, **kwargs):
+    def __init__(self):
 
         self.cv_size = None
         self.logger = logging.getLogger(__name__)
@@ -85,9 +85,10 @@ class XGBoostRegressor(BaseModel):
         """
         self.logger.info("Starting training")
         # Define the hyperparameter search space
-        self.default_params = params["default_params"]
+        self.default_params = model_config["default_params"]
         early_stopping_rounds = self.default_params.get("early_stopping_rounds", 100)
         verbose = self.default_params.get("verbose", False)
+        param_grid = model_config["param_grid"]
         params.pop("default_params", None)
 
         X_train, X_val, y_train, y_val = train_test_split(
@@ -144,7 +145,7 @@ class XGBoostRegressor(BaseModel):
         self,
         X,
         y,
-        param_grid,
+        model_config,
         metric,
         max_evals=100,
         random_state=42,
@@ -176,9 +177,10 @@ class XGBoostRegressor(BaseModel):
         # Split the data into training and validation sets
 
         # Define the hyperparameter search space
-        self.default_params = param_grid["default_params"]
+        self.default_params = model_config["default_params"]
         early_stopping_rounds = self.default_params.get("early_stopping_rounds", 100)
         verbose = self.default_params.get("verbose", False)
+        param_grid = model_config["param_grid"]
         space = infer_hyperopt_space(param_grid)
         param_grid.pop("default_params", None)
 
@@ -257,7 +259,7 @@ class XGBoostRegressor(BaseModel):
         self,
         X,
         y,
-        param_grid,
+        model_config,
         metric,
         eval_metrics,
         k_value=5,
@@ -287,16 +289,17 @@ class XGBoostRegressor(BaseModel):
             Dictionary containing the best hyperparameters and corresponding score.
         """
 
-        self.default_params = param_grid["default_params"]
+        self.default_params = model_config["default_params"]
         # Set the number of boosting rounds (iterations) to default or use value from config
         early_stopping_rounds = self.default_params.get("early_stopping_rounds", 100)
         verbose = self.default_params.get("verbose", False)
+        param_grid = model_config["param_grid"]
         param_grid.pop("default_params")
         # Define the hyperparameter search space
         space = infer_hyperopt_space(param_grid)
 
         self.logger.info(
-            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset {self.dataset_name}"
+            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset"
         )
 
         # Define the objective function for hyperopt search
@@ -401,9 +404,7 @@ class XGBoostRegressor(BaseModel):
         score_std = best_trial["result"]["score_std"]
         full_metrics = best_trial["result"]["full_metrics"]
 
-        self.logger.info(
-            f"CRUCIAL INFO FINAL METRICS {self.dataset_name}: {full_metrics}"
-        )
+        self.logger.info(f"CRUCIAL INFO FINAL METRICS : {full_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 

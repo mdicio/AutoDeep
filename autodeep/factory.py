@@ -44,89 +44,105 @@ def seed_everything(seed=4200):
         torch.cuda.manual_seed_all(seed)
 
 
-def create_model(model_name, problem_type, num_classes, **kwargs):
+def create_model(model_name, problem_type, num_classes, random_state=42):
     mname = model_name.lower().strip()
     if mname == "xgb":
         if problem_type == "regression":
             return XGBoostRegressor()
         elif problem_type in ["binary_classification", "multiclass_classification"]:
-            return XGBoostClassifier(problem_type, **kwargs)
+            return XGBoostClassifier(problem_type)
     elif mname == "resnet":
         return ResNetTrainer(
-            problem_type=problem_type, num_targets=num_classes, depth=mname, **kwargs
+            problem_type=problem_type, num_targets=num_classes, depth=mname
         )
     elif mname == "catboost":
-        return CatBoostTrainer(problem_type, **kwargs)
+        return CatBoostTrainer(problem_type)
 
     elif mname == "mlp":
-        return MLP(problem_type, **kwargs)
+        return MLP(problem_type)
     elif mname == "tabnet":
-        return TabNetTrainer(problem_type, **kwargs)
+        return TabNetTrainer(problem_type)
 
     elif mname == "categoryembedding":
-        return CategoryEmbeddingtTrainer(problem_type, **kwargs)
+        return CategoryEmbeddingtTrainer(problem_type)
 
     elif mname == "fttransformer":
-        return FTTransformerTrainer(problem_type, **kwargs)
+        return FTTransformerTrainer(problem_type)
 
     elif mname == "gandalf":
-        return GandalfTrainer(problem_type, **kwargs)
+        return GandalfTrainer(problem_type)
 
     elif mname == "node":
-        return NodeTrainer(problem_type, **kwargs)
+        return NodeTrainer(problem_type)
 
     elif mname == "gate":
-        return GATE(problem_type=problem_type, **kwargs)
+        return GATE(problem_type=problem_type)
     elif mname == "tabtransformer":
-        return TabTransformerTrainer(problem_type=problem_type, **kwargs)
+        return TabTransformerTrainer(problem_type=problem_type)
     elif mname == "autoint":
-        return AutoIntTrainer(problem_type=problem_type, **kwargs)
+        return AutoIntTrainer(problem_type=problem_type)
 
     elif mname == "s1dcnn":
-        return SoftOrdering1DCNN(
-            problem_type=problem_type, num_targets=num_classes, **kwargs
-        )
+        return SoftOrdering1DCNN(problem_type=problem_type, num_targets=num_classes)
 
     # elif mname == "squeezenet":
     #    return SqueezeNetTrainer(
-    #        problem_type=problem_type, num_targets=num_classes, **kwargs
+    #        problem_type=problem_type, num_targets=num_classes
     #    )
     # elif mname == "lightgbm":
-    #    return LightGBMTrainer(problem_type, **kwargs)
+    #    return LightGBMTrainer(problem_type)
 
     else:
         raise ValueError(f"Invalid model: {model_name}")
 
 
-def create_dynamic_data_loader(dataset_path, target_column, problem_type, test_size):
+def create_dynamic_data_loader(
+    dataset_path,
+    target_column,
+    test_size,
+    random_state,
+    normalize_features,
+    return_extra_info,
+    encode_categorical,
+    num_targets,
+):
     print(f"Using dynamic loader for dataset: {dataset_path}")
     # Create a dynamic data loader
-    return DynamicDataLoader(dataset_path, target_column, problem_type, test_size)
+    return DynamicDataLoader(
+        dataset_path,
+        target_column,
+        test_size,
+        random_state,
+        normalize_features,
+        return_extra_info,
+        encode_categorical,
+        num_targets,
+    )
 
 
-def create_data_loader(dataset_name, test_size=0.2, **kwargs):
+def create_data_loader(dataset_name, test_size=0.2):
     dname = dataset_name.lower().strip()
 
     # Predefined datasets
     if dname == "iris":
-        return IrisDataLoader(test_size=test_size, **kwargs)
+        return IrisDataLoader(test_size=test_size)
     elif dname == "creditcard":
-        return CreditDataLoader(test_size=test_size, **kwargs)
+        return CreditDataLoader(test_size=test_size)
     elif dname == "bufix":
-        return BufixDataLoader(test_size=test_size, **kwargs)
+        return BufixDataLoader(test_size=test_size)
     elif dname == "housing":
-        return CaliforniaHousingDataLoader(test_size=test_size, **kwargs)
+        return CaliforniaHousingDataLoader(test_size=test_size)
     elif dname == "breastcancer":
-        return BreastCancerDataLoader(test_size=test_size, **kwargs)
+        return BreastCancerDataLoader(test_size=test_size)
     elif dname == "titanic":
-        return TitanicDataLoader(test_size=test_size, **kwargs)
+        return TitanicDataLoader(test_size=test_size)
     elif dname == "ageconditions":
-        return KaggleAgeConditionsLoader(test_size=test_size, **kwargs)
+        return KaggleAgeConditionsLoader(test_size=test_size)
     elif dname == "adult":
-        return AdultDataLoader(test_size=test_size, **kwargs)
+        return AdultDataLoader(test_size=test_size)
     elif dname == "covertype":
-        return CoverTypeDataLoader(test_size=test_size, **kwargs)
+        return CoverTypeDataLoader(test_size=test_size)
     elif dname == "heloc":
-        return HelocDataLoader(test_size=test_size, **kwargs)
+        return HelocDataLoader(test_size=test_size)
     else:
         raise ValueError(f"Invalid dataset: {dataset_name}")

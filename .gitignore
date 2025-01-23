@@ -2,6 +2,7 @@
 data/
 output/
 notebooks/
+examples/
 */catboost_info/
 SCRATCH/
 logs/

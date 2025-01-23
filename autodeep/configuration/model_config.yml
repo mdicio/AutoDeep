@@ -32,9 +32,6 @@ model_configs:
       iterations: 500
 
     param_grid:
-      validation_fraction: 
-        - 0.15
-        - 0.20
       early_stopping_rounds: 
         - 100
         - 50
@@ -43,20 +40,22 @@ model_configs:
         - 500
 
   categoryembedding:
-    normalize_features: mean_std
-    encode_categorical: False  # for dataloader
-    return_extra_info: True  # for dataloader
-    retrain: False
-    auto_lr_find: true
-    max_epochs: 1000
-    val_size: 0.15
-    early_stopping_patience: 5
+
+    data_params:
+      normalize_features: mean_std
+      encode_categorical: False  # for dataloader
+      return_extra_info: True  # for dataloader
+    
 
     default_params:
-      validation_fraction: 0.15
-      early_stopping_rounds: 100
+      early_stopping_rounds: 10
       verbose: false
-      iterations: 500
+      iterations: 20
+      retrain: False
+      auto_lr_find: False
+      max_epochs: 1000
+      val_size: 0.15
+      early_stopping_patience: 2
 
     param_grid:
       batch_size:
@@ -80,14 +79,14 @@ model_configs:
             - 10
 
   xgb:
-    execution_mode: hyperopt_kfold
-    normalize_features: false
-    encode_categorical: True
-    return_extra_info: False
-    retrain: True
+
+    data_params:
+      normalize_features: false
+      encode_categorical: True
+      return_extra_info: False
 
     default_params:
-      validation_fraction: 0.15
+      retrain: True
       early_stopping_rounds: 30
       verbose: false
       learning_rate: 0.3
@@ -99,9 +98,6 @@ model_configs:
       gamma: 0.0
 
     param_grid:
-      validation_fraction:
-        - 0.15
-        - 0.20
       early_stopping_rounds:
         - 30
         - 50
@@ -134,15 +130,13 @@ model_configs:
         - 0.2
 
   mlp:
-
-    normalize_features: mean_std
-    encode_categorical: True
-    return_extra_info: False
-    retrain: True
+    data_params:
+      normalize_features: mean_std
+      encode_categorical: True
+      return_extra_info: False
 
     default_params:
-      early_stopping: true
-      validation_fraction: 0.15
+      early_stopping: True
       n_iter_no_change: 10
       max_iter: 1000
       hidden_layer_sizes: [32]
@@ -151,12 +145,6 @@ model_configs:
       batch_size: 1024
 
     param_grid:
-      early_stopping:
-        - true
-        - false
-      validation_fraction:
-        - 0.15
-        - 0.20
       n_iter_no_change:
         - 10
         - 15
