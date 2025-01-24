@@ -55,7 +55,7 @@ model_configs:
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.15
-      early_stopping_patience: 2
+      early_stopping_patience: 20
 
     param_grid:
       batch_size:
@@ -65,7 +65,24 @@ model_configs:
         Adam:
           weight_decay:
             - 0.0
-            - 0.00000001
+            - 0.0000001
+          learning_rate:
+            - 0.001
+            - 0.00001
+        SGD:
+          weight_decay:
+            - 0.0
+            - 0.0000001
+          momentum:
+            - 0.0
+            - 0.9
+          learning_rate:
+            - 0.001
+            - 0.00001
+        AdamW:
+          weight_decay:
+            - 0.0
+            - 0.0000001
           learning_rate:
             - 0.001
             - 0.00001
@@ -77,6 +94,17 @@ model_configs:
           patience:
             - 5
             - 10
+        StepLR:
+          step_size:
+            - 10
+            - 30
+          gamma:
+            - 0.1
+            - 0.5
+        ExponentialLR:
+          gamma:
+            - 0.9
+            - 0.99
 
   xgb:
 

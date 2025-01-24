@@ -172,41 +172,67 @@ class CategoryEmbeddingtTrainer(BaseModel):
             precision=outer_params.get("precision", 32),  # 16, 32, 64
         )
 
-        if params["optimizer_fn"] == Adam:
-            params["optimizer_fn_name"] = "Adam"
-            params["optimizer_params"] = dict(weight_decay=params["Adam_weight_decay"])
-        elif params["optimizer_fn"] == SGD:
-            params["optimizer_fn_name"] = "SGD"
-            params["optimizer_params"] = dict(momentum=params["SGD_momentum"])
-        elif params["optimizer_fn"] == AdamW:
-            params["optimizer_fn_name"] = "AdamW"
-            params["optimizer_params"] = dict(weight_decay=params["AdamW_weight_decay"])
+        if isinstance(params["optimizer_fn"], dict):
+            optimizer_details = params["optimizer_fn"]
+            params["optimizer_fn"] = optimizer_details["optimizer_fn"]
 
-        if params["scheduler_fn"] == torch.optim.lr_scheduler.StepLR:
-            params["scheduler_fn"] = "StepLR"
-            params["scheduler_params"] = dict(
-                step_size=params["StepLR_step_size"], gamma=params["StepLR_gamma"]
-            )
-        elif params["scheduler_fn"] == torch.optim.lr_scheduler.ExponentialLR:
-            params["scheduler_fn"] = "ExponentialLR"
-            params["scheduler_params"] = dict(gamma=params["ExponentialLR_gamma"])
+            if params["optimizer_fn"] == Adam:
+                params["optimizer_fn_name"] = "Adam"
+                params["optimizer_params"] = dict(
+                    weight_decay=optimizer_details.get("Adam_weight_decay", 0.0)
+                )
+                params["learning_rate"] = optimizer_details.get(
+                    "Adam_learning_rate", 0.001
+                )
+            elif params["optimizer_fn"] == SGD:
+                params["optimizer_fn_name"] = "SGD"
+                params["optimizer_params"] = dict(
+                    weight_decay=optimizer_details.get("SGD_weight_decay", 0.0),
+                    momentum=optimizer_details.get("SGD_momentum", 0.0),
+                )
+                params["learning_rate"] = optimizer_details.get(
+                    "SGD_learning_rate", 0.01
+                )
+            elif params["optimizer_fn"] == AdamW:
+                params["optimizer_fn_name"] = "AdamW"
+                params["optimizer_params"] = dict(
+                    weight_decay=optimizer_details.get("AdamW_weight_decay", 0.01)
+                )
+                params["learning_rate"] = optimizer_details.get(
+                    "AdamW_learning_rate", 0.001
+                )
 
-        elif params["scheduler_fn"] == torch.optim.lr_scheduler.ReduceLROnPlateau:
-            params["scheduler_fn"] = "ReduceLROnPlateau"
-            params["scheduler_params"] = dict(
-                factor=params["ReduceLROnPlateau_factor"],
-                patience=params["ReduceLROnPlateau_patience"],
-                min_lr=0.0000001,
-                verbose=True,
-                mode="min",
-            )
+        if isinstance(params["scheduler_fn"], dict):
+            scheduler_details = params["scheduler_fn"]
+            params["scheduler_fn"] = scheduler_details["scheduler_fn"]
+
+            if params["scheduler_fn"] == StepLR:
+                params["scheduler_fn_name"] = "StepLR"
+                params["scheduler_params"] = dict(
+                    step_size=scheduler_details.get("StepLR_step_size", 10),
+                    gamma=scheduler_details.get("StepLR_gamma", 0.1),
+                )
+            elif params["scheduler_fn"] == ExponentialLR:
+                params["scheduler_fn_name"] = "ExponentialLR"
+                params["scheduler_params"] = dict(
+                    gamma=scheduler_details.get("ExponentialLR_gamma", 0.9)
+                )
+            elif params["scheduler_fn"] == ReduceLROnPlateau:
+                params["scheduler_fn_name"] = "ReduceLROnPlateau"
+                params["scheduler_params"] = dict(
+                    factor=scheduler_details.get("ReduceLROnPlateau_factor", 0.1),
+                    patience=scheduler_details.get("ReduceLROnPlateau_patience", 5),
+                    min_lr=0.0000001,
+                    verbose=True,
+                    mode="min",
+                )
 
         # DEBUG OPTIMIZER
         # https://pytorch-tabular.readthedocs.io/en/latest/optimizer/
         optimizer_config = OptimizerConfig(
             optimizer=params["optimizer_fn_name"],
             optimizer_params=params["optimizer_params"],
-            lr_scheduler=params["scheduler_fn"],
+            lr_scheduler=params["scheduler_fn_name"],
             lr_scheduler_params=params["scheduler_params"],
             lr_scheduler_monitor_metric="valid_loss",
         )
@@ -226,8 +252,11 @@ class CategoryEmbeddingtTrainer(BaseModel):
         if self.task == "regression":
             compatible_params["target_range"] = self.target_range
 
+        print("lr", params["learning_rate"], type(params["learning_rate"]))
         self.logger.debug(f"compatible parameters: {compatible_params}")
-        model_config = CategoryEmbeddingModelConfig(task=self.task, **compatible_params)
+        model_config = CategoryEmbeddingModelConfig(
+            task=self.task, learning_rate=params["learning_rate"]
+        )
 
         # override if we want to use default parameters
         if default:
@@ -309,147 +338,6 @@ class CategoryEmbeddingtTrainer(BaseModel):
             # lr_scheduler_params=params["scheduler_params"],
         )
         self.logger.debug("Training completed successfully")
-
-    def hyperopt_search(
-        self,
-        X,
-        y,
-        model_config,
-        metric,
-        max_evals=16,
-        problem_type="binary_classification",
-        extra_info=None,
-    ):
-        """
-        Method to perform hyperopt search cross-validation on the TabNet model using input data.
-
-        Parameters
-        ----------
-        X : ndarray
-            Input data for cross-validation.
-        y : ndarray
-            Labels for input data.
-        metric : str, optional
-            Scoring metric to use for cross-validation. Default is 'accuracy'.
-        n_iter : int, optional
-            Maximum number of evaluations of the objective function. Default is 10.
-        random_state : int, optional
-            Seed for reproducibility. Default is 42.
-
-        Returns
-        -------
-        dict
-            Dictionary containing the best hyperparameters and corresponding score.
-        """
-        self.logger.info(
-            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset"
-        )
-        self.extra_info = extra_info
-        self.default_params = model_config["default_params"]
-        param_grid = model_config["param_grid"]
-        space = infer_hyperopt_space_pytorch_tabular(param_grid)
-        self._set_loss_function(y)
-
-        # Split the train data into training and validation sets
-        X_train, X_val, y_train, y_val = train_test_split(
-            X,
-            y,
-            test_size=self.default_params["val_size"],
-            random_state=self.random_state,
-        )
-
-        # Merge X_train and y_train
-        self.train_df = pd.concat([X_train, y_train], axis=1)
-
-        # Merge X_val and y_val
-        self.validation_df = pd.concat([X_val, y_val], axis=1)
-
-        # Define the objective function for hyperopt search
-        def objective(params):
-            self.logger.info(f"Training with hyperparameters: {params}")
-            model = self.prepare_tabular_model(
-                params, self.default_params, default=self.default
-            )
-
-            self.train_df, self.validation_df = handle_rogue_batch_size(
-                self.train_df, self.validation_df, params["batch_size"]
-            )
-            if (self.problem_type == "regression") and not hasattr(
-                self, "target_range"
-            ):
-                self.target_range = [
-                    (
-                        float(np.min(self.train_df["target"]) * 0.8),
-                        float(np.max(self.train_df["target"]) * 1.2),
-                    )
-                ]
-
-            model.fit(
-                train=self.train_df,
-                validation=self.validation_df,
-                loss=self.loss_fn,
-                optimizer=params["optimizer_fn"],
-                optimizer_params=params["optimizer_params"],
-                # lr_scheduler=params["scheduler_fn"],
-                # lr_scheduler_params=params["scheduler_params"],
-            )
-
-            # Predict the labels of the validation data
-            pred_df = model.predict(self.validation_df)
-            predictions = pred_df[self.prediction_col].values
-            if self.problem_type == "binary_classification":
-                probabilities = pred_df["1_probability"].fillna(0).values
-                self.evaluator.y_prob = probabilities
-
-            # Calculate the score using the specified metric
-            self.evaluator.y_true = pred_df["target"].values
-            self.evaluator.y_pred = predictions
-
-            score = self.evaluator.evaluate_metric(metric_name=metric)
-            self.logger.debug(f"metric {metric}, score {score}")
-            if self.evaluator.maximize[metric][0]:
-                self.logger.debug("times -1")
-                score = -1 * score
-
-            # Return the negative score (to minimize)
-            return {
-                "loss": score,
-                "params": params,
-                "status": STATUS_OK,
-                "trained_model": model,
-            }
-
-        # Define the trials object to keep track of the results
-        trials = Trials()
-        self.evaluator = Evaluator(problem_type=problem_type)
-        threshold = float(-1.0 * self.evaluator.maximize[metric][1])
-
-        # Run the hyperopt search
-        best = fmin(
-            objective,
-            space=space,
-            algo=tpe.suggest,
-            max_evals=max_evals,
-            trials=trials,
-            rstate=np.random.default_rng(self.random_state),
-            early_stop_fn=lambda x: stop_on_perfect_lossCondition(x, threshold),
-        )
-
-        # Get the best hyperparameters and corresponding score
-        best_params = space_eval(space, best)
-        best_params["default_params"] = self.default_params
-
-        best_trial = trials.best_trial
-        best_score = best_trial["result"]["loss"]
-        self.best_model = best_trial["result"]["trained_model"]
-        self._load_best_model()
-
-        self.logger.info(f"Best hyperparameters: {best_params}")
-        self.logger.info(
-            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
-        )
-
-        return best_params, best_score
 
     def hyperopt_search_kfold(
         self,
@@ -544,8 +432,8 @@ class CategoryEmbeddingtTrainer(BaseModel):
                     train=train_fold,
                     validation=val_fold,
                     loss=self.loss_fn,
-                    optimizer=params["optimizer_fn"],
-                    optimizer_params=params["optimizer_params"],
+                    # optimizer=params["optimizer_fn"],
+                    # optimizer_params=params["optimizer_params"],
                 )
 
                 # Predict the labels of the validation data

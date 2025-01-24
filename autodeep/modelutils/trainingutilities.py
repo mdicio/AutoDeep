@@ -126,9 +126,122 @@ def infer_cv_space_lightgbm(param_grid):
         else:
             param_dist[param_name] = param_values
     return param_dist
-
-
 def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
+    # Define the hyperparameter search space
+    space = {}
+    param_grid.pop("default_params", None)
+
+    def ensure_min_max(param_range):
+        """Ensure (min, max) ordering for numerical parameter ranges."""
+        if isinstance(param_range[0], (float, int)):
+            return min(param_range), max(param_range)
+        return param_range
+
+    for param_name, param_values in param_grid.items():
+        if isinstance(param_values, dict):
+            if param_name == "optimizer_fn":
+                # Nested parameters for optimizers
+                space[param_name] = hp.choice(
+                    param_name,
+                    [
+                        {
+                            "optimizer_fn": map_optimizer_str_to_class(opt_name),
+                            **{
+                                f"{opt_name}_{sub_param}": (
+                                    hp.uniform(f"{opt_name}_{sub_param}", *ensure_min_max(param_range))
+                                    if isinstance(param_range[0], float)
+                                    else scope.int(
+                                        hp.quniform(f"{opt_name}_{sub_param}", *ensure_min_max(param_range), 1)
+                                    )
+                                )
+                                for sub_param, param_range in opt_params.items()
+                            },
+                        }
+                        for opt_name, opt_params in param_values.items()
+                    ],
+                )
+
+            elif param_name == "scheduler_fn":
+                # Nested parameters for schedulers
+                space[param_name] = hp.choice(
+                    param_name,
+                    [
+                        {
+                            "scheduler_fn": map_scheduler_str_to_class(sched_name),
+                            **{
+                                f"{sched_name}_{sub_param}": (
+                                    hp.uniform(f"{sched_name}_{sub_param}", *ensure_min_max(param_range))
+                                    if isinstance(param_range[0], float)
+                                    else scope.int(
+                                        hp.quniform(f"{sched_name}_{sub_param}", *ensure_min_max(param_range), 1)
+                                    )
+                                )
+                                for sub_param, param_range in sched_params.items()
+                            },
+                        }
+                        for sched_name, sched_params in param_values.items()
+                    ],
+                )
+
+            else:
+                for sparam, svalue in param_values.items():
+                    for subsparam, subvalue in svalue.items():
+                        subvalue = ensure_min_max(subvalue)
+                        min_value, max_value = subvalue
+                        newname = f"{sparam}_{subsparam.lower()}"
+                        if isinstance(subvalue[0], (str, bool)):
+                            space[newname] = hp.choice(newname, subvalue)
+                        elif isinstance(subvalue[0], int):
+                            space[newname] = (
+                                min_value
+                                if min_value == max_value
+                                else scope.int(hp.quniform(newname, min_value, max_value, 1))
+                            )
+                        else:
+                            space[newname] = (
+                                min_value
+                                if min_value == max_value
+                                else scope.float(
+                                    hp.loguniform(newname, np.log(min_value), np.log(max_value))
+                                    if min_value > 0.0
+                                    else hp.uniform(newname, min_value, max_value)
+                                )
+                            )
+        elif (
+            isinstance(param_values[0], (str, bool, list))
+            or param_name in ["virtual_batch_size_ratio", "weights", "input_embed_dim_multiplier"]
+            or any(value is None for value in param_values)
+        ):
+            if param_name in ["weights"]:
+                space[param_name] = scope.int(hp.choice(param_name, param_values))
+            else:
+                space[param_name] = hp.choice(param_name, param_values)
+
+        elif isinstance(param_values[0], int):
+            min_value, max_value = ensure_min_max(param_values)
+            space[param_name] = (
+                min_value
+                if min_value == max_value
+                else scope.int(hp.quniform(param_name, min_value, max_value, 1))
+            )
+        else:
+            min_value, max_value = ensure_min_max(param_values)
+            space[param_name] = (
+                min_value
+                if min_value == max_value
+                else scope.float(
+                    hp.loguniform(param_name, np.log(min_value), np.log(max_value))
+                    if min_value > 0.0
+                    else hp.uniform(param_name, min_value, max_value)
+                )
+            )
+
+    print("SPACE ######################################################")
+    print(space)
+    return space
+
+
+def infer_hyperopt_space_pytorch_tabular_old1(param_grid: Dict):
     # Define the hyperparameter search space
     space = {}
     param_grid.pop("default_params", None)
@@ -219,7 +332,8 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
                     space[param_name] = scope.float(
                         hp.loguniform(param_name, np.log(min_value), np.log(max_value))
                     )
-
+    print("SPACE ######################################################")
+    print(space)
     return space
 
 
