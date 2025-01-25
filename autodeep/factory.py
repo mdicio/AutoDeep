@@ -1,36 +1,37 @@
-from autodeep.modelsdefinition.XGBoostClassifier import XGBoostClassifier
-from autodeep.modelsdefinition.XGBoostRegressor import XGBoostRegressor
-from autodeep.modelsdefinition.MLP import MLP
-from autodeep.modelsdefinition.TabNetModel import TabNetTrainer
-from autodeep.modelsdefinition.CategoryEmbeddingModel import CategoryEmbeddingtTrainer
-from autodeep.modelsdefinition.ResNetModel import ResNetTrainer
-from autodeep.modelsdefinition.FTTransformerModel import FTTransformerTrainer
-from autodeep.modelsdefinition.GATE import GATE
-from autodeep.modelsdefinition.NodeModel import NodeTrainer
-from autodeep.modelsdefinition.AutomaticFeatureInteractionModel import AutoIntTrainer
-from autodeep.modelsdefinition.TabTransformerModel import TabTransformerTrainer
-from autodeep.modelsdefinition.GANDALF import GandalfTrainer
-from autodeep.modelsdefinition.CatBoostModel import CatBoostTrainer
-from autodeep.modelsdefinition.SoftOrdering1DCNN import SoftOrdering1DCNN
+import os
+import random
+
+import numpy as np
+import torch
 
 # from SCRATCH.SqueezeNet import SqueezeNetTrainer
 from autodeep.dataloaders.dataloader import (
-    DynamicDataLoader,
-    IrisDataLoader,
-    KaggleAgeConditionsLoader,
+    AdultDataLoader,
     BreastCancerDataLoader,
     BufixDataLoader,
-    TitanicDataLoader,
     CaliforniaHousingDataLoader,
     CoverTypeDataLoader,
     CreditDataLoader,
-    AdultDataLoader,
+    DynamicDataLoader,
     HelocDataLoader,
+    IrisDataLoader,
+    KaggleAgeConditionsLoader,
+    TitanicDataLoader,
 )
-import os
-import torch
-import numpy as np
-import random
+from autodeep.modelsdefinition.AutomaticFeatureInteractionModel import AutoIntTrainer
+from autodeep.modelsdefinition.CatBoostModel import CatBoostTrainer
+from autodeep.modelsdefinition.CategoryEmbeddingModel import CategoryEmbeddingtTrainer
+from autodeep.modelsdefinition.FTTransformerModel import FTTransformerTrainer
+from autodeep.modelsdefinition.GANDALF import GandalfTrainer
+from autodeep.modelsdefinition.GATE import GATE
+from autodeep.modelsdefinition.MLP import MLP
+from autodeep.modelsdefinition.NodeModel import NodeTrainer
+from autodeep.modelsdefinition.ResNetModel import ResNetTrainer
+from autodeep.modelsdefinition.SoftOrdering1DCNN import SoftOrdering1DCNN
+from autodeep.modelsdefinition.TabNetModel import TabNetTrainer
+from autodeep.modelsdefinition.TabTransformerModel import TabTransformerTrainer
+from autodeep.modelsdefinition.XGBoostClassifier import XGBoostClassifier
+from autodeep.modelsdefinition.XGBoostRegressor import XGBoostRegressor
 
 
 def seed_everything(seed=4200):

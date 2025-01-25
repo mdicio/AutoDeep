@@ -1,15 +1,12 @@
-import yaml
-from datetime import datetime
-from uuid import uuid4
-from autodeep.evaluation.generalevaluator import Evaluator
-from outputhandler.outputwriter import OutputWriter
-from autodeep.factory import (
-    create_full_data_loader,
-    create_model,
-    seed_everything,
-)
 import os
 import time
+from datetime import datetime
+from uuid import uuid4
+
+import yaml
+from autodeep.evaluation.generalevaluator import Evaluator
+from autodeep.factory import create_full_data_loader, create_model, seed_everything
+from outputhandler.outputwriter import OutputWriter
 
 full_load_mode = True
 output_results_filename = "REALRUN"

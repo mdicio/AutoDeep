@@ -5,15 +5,6 @@ from typing import Dict
 
 import joblib
 import numpy as np
-from sklearn.model_selection import (
-    KFold,
-    RandomizedSearchCV,
-    StratifiedKFold,
-    cross_val_score,
-    train_test_split,
-)
-from sklearn.neural_network import MLPClassifier, MLPRegressor
-
 from autodeep.evaluation.generalevaluator import Evaluator
 from autodeep.modelsdefinition.CommonStructure import BaseModel
 from autodeep.modelutils.trainingutilities import (
@@ -22,6 +13,14 @@ from autodeep.modelutils.trainingutilities import (
 )
 from hyperopt import STATUS_OK, Trials, fmin, hp, space_eval, tpe
 from hyperopt.pyll import scope
+from sklearn.model_selection import (
+    KFold,
+    RandomizedSearchCV,
+    StratifiedKFold,
+    cross_val_score,
+    train_test_split,
+)
+from sklearn.neural_network import MLPClassifier, MLPRegressor
 
 
 class MLP(BaseModel):

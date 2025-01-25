@@ -1,14 +1,15 @@
-import pandas as pd
-from typing import Dict
 import os
+from typing import Dict
+
 import numpy as np
+import pandas as pd
+from autodeep.factory import create_full_data_loader
+from dataloaders.fulldataloader import *
 from Scripts.IGTD_Functions import (
+    drop_numerical_outliers,
     min_max_transform,
     table_to_image,
-    drop_numerical_outliers,
 )
-from dataloaders.fulldataloader import *
-from autodeep.factory import create_full_data_loader
 
 # Create an instance of the specified data loader class
 dataset_name = "diabetes"

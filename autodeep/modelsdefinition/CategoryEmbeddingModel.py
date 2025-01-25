@@ -7,26 +7,20 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
-
-# pip install pytorch_tabular[extra]
-from pytorch_tabular import TabularModel
-from pytorch_tabular.config import DataConfig  # ExperimentConfig,
-from pytorch_tabular.config import OptimizerConfig, TrainerConfig
-from pytorch_tabular.models import CategoryEmbeddingModelConfig
-from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
-from sklearn.utils.class_weight import compute_class_weight
-from torch.optim import SGD, Adam, AdamW
-from torch.optim.lr_scheduler import ExponentialLR, ReduceLROnPlateau, StepLR
-
 from autodeep.evaluation.generalevaluator import Evaluator
 from autodeep.modelsdefinition.CommonStructure import BaseModel
 from autodeep.modelutils.trainingutilities import (
-    calculate_possible_fold_sizes,
     handle_rogue_batch_size,
     infer_hyperopt_space_pytorch_tabular,
+    prepare_shared_tabular_configs,
     stop_on_perfect_lossCondition,
 )
+from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
+from pytorch_tabular import TabularModel
+from pytorch_tabular.config import OptimizerConfig
+from pytorch_tabular.models import CategoryEmbeddingModelConfig
+from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
+from sklearn.utils.class_weight import compute_class_weight
 
 
 class CategoryEmbeddingtTrainer(BaseModel):
@@ -95,7 +89,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
             data_config=self.data_config,
             model_config=self.model_config,
             optimizer_config=self.optimizer_config,
-            trainer_config=self.train_dfer_config,
+            trainer_config=self.trainer_config,
         ).load_model(model_path)
         self.logger.debug("Model loaded successfully")
 
@@ -137,111 +131,39 @@ class CategoryEmbeddingtTrainer(BaseModel):
                 "Invalid problem_type. Supported values are 'binary', 'multiclass', and 'regression'."
             )
 
-    # Define the data configuration
     def prepare_tabular_model(self, params, outer_params, default=False):
+        """
+        Prepare a TabularModel instance for the CategoryEmbeddingModel.
+
+        Parameters
+        ----------
+        params : dict
+            Hyperparameters for the model.
+        outer_params : dict
+            Outer configuration parameters.
+        default : bool, optional
+            Whether to use default configurations.
+
+        Returns
+        -------
+        TabularModel
+            Configured tabular model instance.
+        """
         print("tabular model params")
         print(params)
         print("tabular model outer params")
         print(outer_params)
-        data_config = DataConfig(
-            target=["target"],
-            continuous_cols=[
-                i for i in self.extra_info["num_col_names"] if i != "target"
-            ],
-            categorical_cols=self.extra_info["cat_col_names"],
-            num_workers=self.num_workers,
-        )
 
-        trainer_config = TrainerConfig(
-            auto_lr_find=outer_params[
-                "auto_lr_find"
-            ],  # Runs the LRFinder to automatically derive a learning rate
-            batch_size=params["batch_size"],
-            max_epochs=outer_params["max_epochs"],
-            early_stopping="valid_loss",  # Monitor valid_loss for early stopping
-            early_stopping_mode="min",  # Set the mode as min because for val_loss, lower is better
-            early_stopping_patience=outer_params[
-                "early_stopping_patience"
-            ],  # No. of epochs of degradation training will wait before terminating
-            early_stopping_min_delta=outer_params.get(
-                "tol", 0.0
-            ),  # No. of epochs of degradation training will wait before terminating
-            checkpoints="valid_loss",
-            checkpoints_every_n_epochs=10,
-            checkpoints_path=self.save_path,  # Save best checkpoint monitoring val_loss
-            load_best=True,  # After training, load the best checkpoint
-            progress_bar=outer_params.get("progress_bar", "rich"),  # none, simple, rich
-            precision=outer_params.get("precision", 32),  # 16, 32, 64
-        )
-
-        if isinstance(params["optimizer_fn"], dict):
-            optimizer_details = params["optimizer_fn"]
-            params["optimizer_fn"] = optimizer_details["optimizer_fn"]
-
-            if params["optimizer_fn"] == Adam:
-                params["optimizer_fn_name"] = "Adam"
-                params["optimizer_params"] = dict(
-                    weight_decay=optimizer_details.get("Adam_weight_decay", 0.0)
-                )
-                params["learning_rate"] = optimizer_details.get(
-                    "Adam_learning_rate", 0.001
-                )
-            elif params["optimizer_fn"] == SGD:
-                params["optimizer_fn_name"] = "SGD"
-                params["optimizer_params"] = dict(
-                    weight_decay=optimizer_details.get("SGD_weight_decay", 0.0),
-                    momentum=optimizer_details.get("SGD_momentum", 0.0),
-                )
-                params["learning_rate"] = optimizer_details.get(
-                    "SGD_learning_rate", 0.01
-                )
-            elif params["optimizer_fn"] == AdamW:
-                params["optimizer_fn_name"] = "AdamW"
-                params["optimizer_params"] = dict(
-                    weight_decay=optimizer_details.get("AdamW_weight_decay", 0.01)
-                )
-                params["learning_rate"] = optimizer_details.get(
-                    "AdamW_learning_rate", 0.001
-                )
-
-        if isinstance(params["scheduler_fn"], dict):
-            scheduler_details = params["scheduler_fn"]
-            params["scheduler_fn"] = scheduler_details["scheduler_fn"]
-
-            if params["scheduler_fn"] == StepLR:
-                params["scheduler_fn_name"] = "StepLR"
-                params["scheduler_params"] = dict(
-                    step_size=scheduler_details.get("StepLR_step_size", 10),
-                    gamma=scheduler_details.get("StepLR_gamma", 0.1),
-                )
-            elif params["scheduler_fn"] == ExponentialLR:
-                params["scheduler_fn_name"] = "ExponentialLR"
-                params["scheduler_params"] = dict(
-                    gamma=scheduler_details.get("ExponentialLR_gamma", 0.9)
-                )
-            elif params["scheduler_fn"] == ReduceLROnPlateau:
-                params["scheduler_fn_name"] = "ReduceLROnPlateau"
-                params["scheduler_params"] = dict(
-                    factor=scheduler_details.get("ReduceLROnPlateau_factor", 0.1),
-                    patience=scheduler_details.get("ReduceLROnPlateau_patience", 5),
-                    min_lr=0.00000001,
-                    verbose=True,
-                    mode="min",
-                )
-
-        # DEBUG OPTIMIZER
-        # https://pytorch-tabular.readthedocs.io/en/latest/optimizer/
-        optimizer_config = OptimizerConfig(
-            optimizer=params["optimizer_fn_name"],
-            optimizer_params=params["optimizer_params"],
-            lr_scheduler=params["scheduler_fn_name"],
-            lr_scheduler_params=params["scheduler_params"],
-            lr_scheduler_monitor_metric="valid_loss",
+        # Prepare shared configurations
+        data_config, trainer_config, optimizer_config = prepare_shared_tabular_configs(
+            params=params,
+            outer_params=outer_params,
+            extra_info=self.extra_info,
+            save_path=self.save_path,
+            task=self.task,
         )
 
         valid_params = inspect.signature(CategoryEmbeddingModelConfig).parameters
-        self.logger.debug(f"valid_params: {valid_params}")
-
         compatible_params = {
             param: value for param, value in params.items() if param in valid_params
         }
@@ -251,11 +173,12 @@ class CategoryEmbeddingtTrainer(BaseModel):
         self.logger.warning(
             f"You are passing some invalid parameters to the model {invalid_params}"
         )
+
         if self.task == "regression":
             compatible_params["target_range"] = self.target_range
 
-        print("lr", params["learning_rate"], type(params["learning_rate"]))
         self.logger.debug(f"compatible parameters: {compatible_params}")
+
         model_config = CategoryEmbeddingModelConfig(
             task=self.task,
             learning_rate=params["learning_rate"],
@@ -263,7 +186,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
             activation=params["activation"],
         )
 
-        # override if we want to use default parameters
+        # Override if default configurations are used
         if default:
             model_config = CategoryEmbeddingModelConfig(task=self.task)
             optimizer_config = OptimizerConfig()

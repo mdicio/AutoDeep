@@ -12,6 +12,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torchvision.transforms as transforms
+from autodeep.evaluation.generalevaluator import *
+from autodeep.modelsdefinition.CommonStructure import BaseModel
+from autodeep.modelutils.trainingutilities import (
+    infer_hyperopt_space_pytorch_custom,
+    stop_on_perfect_lossCondition,
+)
 from hyperopt import STATUS_OK, Trials, fmin, hp, space_eval, tpe
 from hyperopt.pyll import scope
 from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
@@ -21,13 +27,6 @@ from torch.profiler import ProfilerActivity, profile, record_function
 from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from torchvision.models import resnet18, resnet34, resnet50
 from tqdm import tqdm
-
-from autodeep.evaluation.generalevaluator import *
-from autodeep.modelsdefinition.CommonStructure import BaseModel
-from autodeep.modelutils.trainingutilities import (
-    infer_hyperopt_space_pytorch_custom,
-    stop_on_perfect_lossCondition,
-)
 
 
 class ResNetModel(nn.Module):

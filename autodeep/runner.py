@@ -1,17 +1,13 @@
-import yaml
-from datetime import datetime
-from uuid import uuid4
-from autodeep.evaluation.generalevaluator import Evaluator
-from outputhandler.outputwriter import OutputWriter
-from dataloaders.dataloader import *
-from autodeep.factory import (
-    create_data_loader,
-    create_model,
-    seed_everything,
-)
 import os
 import time
+from datetime import datetime
+from uuid import uuid4
 
+import yaml
+from autodeep.evaluation.generalevaluator import Evaluator
+from autodeep.factory import create_data_loader, create_model, seed_everything
+from dataloaders.dataloader import *
+from outputhandler.outputwriter import OutputWriter
 
 output_results_filename = "sanity_check"
 DEFAULT = False

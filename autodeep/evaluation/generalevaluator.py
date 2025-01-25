@@ -1,15 +1,15 @@
 import numpy as np
 from sklearn.metrics import (
-    mean_squared_error,
-    mean_absolute_error,
-    r2_score,
     accuracy_score,
-    recall_score,
-    precision_score,
-    f1_score,
-    roc_auc_score,
     average_precision_score,
+    f1_score,
+    mean_absolute_error,
+    mean_squared_error,
     multilabel_confusion_matrix,
+    precision_score,
+    r2_score,
+    recall_score,
+    roc_auc_score,
 )
 
 

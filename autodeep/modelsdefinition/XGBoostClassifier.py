@@ -4,7 +4,14 @@ import os
 from typing import Dict
 
 import numpy as np
+import torch
 import xgboost as xgb
+from autodeep.evaluation.generalevaluator import Evaluator
+from autodeep.modelsdefinition.CommonStructure import BaseModel
+from autodeep.modelutils.trainingutilities import (
+    infer_hyperopt_space,
+    stop_on_perfect_lossCondition,
+)
 from hyperopt import STATUS_OK, Trials, fmin, hp, space_eval, tpe
 from hyperopt.pyll import scope
 from sklearn.model_selection import (
@@ -13,14 +20,6 @@ from sklearn.model_selection import (
     StratifiedKFold,
     train_test_split,
 )
-
-from autodeep.evaluation.generalevaluator import Evaluator
-from autodeep.modelsdefinition.CommonStructure import BaseModel
-from autodeep.modelutils.trainingutilities import (
-    infer_hyperopt_space,
-    stop_on_perfect_lossCondition,
-)
-import torch
 
 
 class XGBoostClassifier(BaseModel):

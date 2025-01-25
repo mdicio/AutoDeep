@@ -1,36 +1,35 @@
-from keras import backend
-from keras import optimizers
-from keras.models import Model, load_model
+import configparser
+import os
+import shutil
+from typing import Dict
+
+import keras
+import numpy as np
+import pandas as pd
+from keras import backend, optimizers
+from keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from keras.layers import (
-    Input,
+    AlphaDropout,
+    BatchNormalization,
+    Conv2D,
     Dense,
     Dropout,
-    concatenate,
-    Conv2D,
-    BatchNormalization,
-    ReLU,
-    MaxPooling2D,
     Flatten,
-    AlphaDropout,
+    Input,
+    MaxPooling2D,
+    ReLU,
+    concatenate,
 )
-from keras.callbacks import ModelCheckpoint, CSVLogger, ReduceLROnPlateau, EarlyStopping
+from keras.models import Model, load_model
 from scipy import stats
 from sklearn.metrics import (
-    r2_score,
-    mean_squared_error,
-    mean_absolute_error,
-    roc_auc_score,
     accuracy_score,
     matthews_corrcoef,
+    mean_absolute_error,
+    mean_squared_error,
+    r2_score,
+    roc_auc_score,
 )
-
-import configparser
-import numpy as np
-import keras
-import os
-import pandas as pd
-from typing import Dict
-import shutil
 
 
 def ID_mapping(l1, l2):

@@ -1,12 +1,13 @@
-import yaml
 import os
 import time
 from datetime import datetime
-from uuid import uuid4
-from autodeep.evaluation.generalevaluator import Evaluator
-from autodeep.outputhandler.outputwriter import OutputWriter
-from autodeep.factory import create_dynamic_data_loader, create_model, seed_everything
 from pathlib import Path
+from uuid import uuid4
+
+import yaml
+from autodeep.evaluation.generalevaluator import Evaluator
+from autodeep.factory import create_dynamic_data_loader, create_model, seed_everything
+from autodeep.outputhandler.outputwriter import OutputWriter
 
 DEFAULT_MODELS = [
     "xgb",

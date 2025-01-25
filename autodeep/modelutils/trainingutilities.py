@@ -1,12 +1,15 @@
+import random
+from typing import Dict
+
+import numpy as np
+import pandas as pd
 from hyperopt import hp
 from hyperopt.pyll import scope
-from typing import Dict
-import numpy as np
-from torch.optim import Adam, SGD, AdamW
-from torch.optim.lr_scheduler import StepLR, ReduceLROnPlateau, ExponentialLR
+from pytorch_tabular.config import DataConfig  # ExperimentConfig,
+from pytorch_tabular.config import OptimizerConfig, TrainerConfig
 from scipy.stats import randint, uniform
-import random
-import pandas as pd
+from torch.optim import SGD, Adam, AdamW
+from torch.optim.lr_scheduler import ExponentialLR, ReduceLROnPlateau, StepLR
 
 
 def remainder_equal_one(batch_size, virtual_batch_size_ratio):
@@ -98,6 +101,122 @@ def map_scheduler_str_to_class(scheduler_str):
     return scheduler_mapping[scheduler_str]
 
 
+def prepare_shared_tabular_configs(params, outer_params, extra_info, save_path, task):
+    """
+    Prepare shared configurations for tabular models.
+
+    Parameters
+    ----------
+    params : dict
+        Model-specific parameters.
+    outer_params : dict
+        Outer configuration parameters.
+    extra_info : dict
+        Extra information such as column names.
+    save_path : str
+        Path to save checkpoints.
+    task : str
+        Task type (e.g., "regression", "binary_classification").
+
+    Returns
+    -------
+    tuple
+        A tuple containing data_config, trainer_config, and optimizer_config.
+    """
+    # DataConfig setup
+    data_config = DataConfig(
+        target=["target"],
+        continuous_cols=[i for i in extra_info["num_col_names"] if i != "target"],
+        categorical_cols=extra_info["cat_col_names"],
+        num_workers=outer_params.get("num_workers", 4),
+    )
+
+    # TrainerConfig setup
+    trainer_config = TrainerConfig(
+        auto_lr_find=outer_params.get("auto_lr_find", False),
+        batch_size=params.get("batch_size", 32),
+        max_epochs=outer_params.get("max_epochs", 100),
+        early_stopping="valid_loss",
+        early_stopping_mode="min",
+        early_stopping_patience=outer_params.get("early_stopping_patience", 10),
+        early_stopping_min_delta=outer_params.get("tol", 0.0),
+        checkpoints="valid_loss",
+        checkpoints_every_n_epochs=10,
+        checkpoints_path=save_path,
+        load_best=True,
+        progress_bar=outer_params.get("progress_bar", "rich"),
+        precision=outer_params.get("precision", 32),
+    )
+
+    # Optimizer and Scheduler setup
+    optimizer_fn_name, optimizer_params = prepare_optimizer(params["optimizer_fn"])
+    scheduler_fn_name, scheduler_params = prepare_scheduler(params["scheduler_fn"])
+
+    optimizer_config = OptimizerConfig(
+        optimizer=optimizer_fn_name,
+        optimizer_params=optimizer_params,
+        lr_scheduler=scheduler_fn_name,
+        lr_scheduler_params=scheduler_params,
+        lr_scheduler_monitor_metric="valid_loss",
+    )
+
+    return data_config, trainer_config, optimizer_config
+
+
+def prepare_optimizer(optimizer_fn):
+    """
+    Prepare optimizer configuration based on the input optimizer function.
+    """
+    if isinstance(optimizer_fn, dict):
+        optimizer_details = optimizer_fn
+        optimizer_fn = optimizer_details["optimizer_fn"]
+
+        if optimizer_fn == Adam:
+            return "Adam", {
+                "weight_decay": optimizer_details.get("Adam_weight_decay", 0.0)
+            }
+        elif optimizer_fn == SGD:
+            return "SGD", {
+                "weight_decay": optimizer_details.get("SGD_weight_decay", 0.0),
+                "momentum": optimizer_details.get("SGD_momentum", 0.0),
+            }
+        elif optimizer_fn == AdamW:
+            return "AdamW", {
+                "weight_decay": optimizer_details.get("AdamW_weight_decay", 0.01)
+            }
+
+    return None, {}
+
+
+def prepare_scheduler(scheduler_fn):
+    """
+    Prepare scheduler configuration based on the input scheduler function.
+    """
+    if isinstance(scheduler_fn, dict):
+        scheduler_details = scheduler_fn
+        scheduler_fn = scheduler_details["scheduler_fn"]
+
+        if scheduler_fn == StepLR:
+            return "StepLR", {
+                "step_size": scheduler_details.get("StepLR_step_size", 10),
+                "gamma": scheduler_details.get("StepLR_gamma", 0.1),
+            }
+        elif scheduler_fn == ExponentialLR:
+            return "ExponentialLR", {
+                "gamma": scheduler_details.get("ExponentialLR_gamma", 0.9),
+            }
+        elif scheduler_fn == ReduceLROnPlateau:
+            return "ReduceLROnPlateau", {
+                "factor": scheduler_details.get("ReduceLROnPlateau_factor", 0.1),
+                "patience": scheduler_details.get("ReduceLROnPlateau_patience", 5),
+                "min_lr": 0.00000001,
+                "verbose": True,
+                "mode": "min",
+            }
+
+    return None, {}
+
+
 def calculate_possible_fold_sizes(n_samples, k):
     base_fold_size = n_samples // k
     extra_samples = n_samples % k
@@ -127,6 +246,7 @@ def infer_cv_space_lightgbm(param_grid):
             param_dist[param_name] = param_values
     return param_dist
 
+
 def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
     # Define the hyperparameter search space
     space = {}
@@ -149,10 +269,17 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
                             "optimizer_fn": map_optimizer_str_to_class(opt_name),
                             **{
                                 f"{opt_name}_{sub_param}": (
-                                    hp.uniform(f"{opt_name}_{sub_param}", *ensure_min_max(param_range))
+                                    hp.uniform(
+                                        f"{opt_name}_{sub_param}",
+                                        *ensure_min_max(param_range),
+                                    )
                                     if isinstance(param_range[0], float)
                                     else scope.int(
-                                        hp.quniform(f"{opt_name}_{sub_param}", *ensure_min_max(param_range), 1)
+                                        hp.quniform(
+                                            f"{opt_name}_{sub_param}",
+                                            *ensure_min_max(param_range),
+                                            1,
+                                        )
                                     )
                                 )
                                 for sub_param, param_range in opt_params.items()
@@ -171,10 +298,17 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
                             "scheduler_fn": map_scheduler_str_to_class(sched_name),
                             **{
                                 f"{sched_name}_{sub_param}": (
-                                    hp.uniform(f"{sched_name}_{sub_param}", *ensure_min_max(param_range))
+                                    hp.uniform(
+                                        f"{sched_name}_{sub_param}",
+                                        *ensure_min_max(param_range),
+                                    )
                                     if isinstance(param_range[0], float)
                                     else scope.int(
-                                        hp.quniform(f"{sched_name}_{sub_param}", *ensure_min_max(param_range), 1)
+                                        hp.quniform(
+                                            f"{sched_name}_{sub_param}",
+                                            *ensure_min_max(param_range),
+                                            1,
+                                        )
                                     )
                                 )
                                 for sub_param, param_range in sched_params.items()
@@ -196,21 +330,26 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
                             space[newname] = (
                                 min_value
                                 if min_value == max_value
-                                else scope.int(hp.quniform(newname, min_value, max_value, 1))
+                                else scope.int(
+                                    hp.quniform(newname, min_value, max_value, 1)
+                                )
                             )
                         else:
                             space[newname] = (
                                 min_value
                                 if min_value == max_value
                                 else scope.float(
-                                    hp.loguniform(newname, np.log(min_value), np.log(max_value))
+                                    hp.loguniform(
+                                        newname, np.log(min_value), np.log(max_value)
+                                    )
                                     if min_value > 0.0
                                     else hp.uniform(newname, min_value, max_value)
                                 )
                             )
         elif (
             isinstance(param_values[0], (str, bool, list))
-            or param_name in ["virtual_batch_size_ratio", "weights", "input_embed_dim_multiplier"]
+            or param_name
+            in ["virtual_batch_size_ratio", "weights", "input_embed_dim_multiplier"]
             or any(value is None for value in param_values)
         ):
             if param_name in ["weights"]:
