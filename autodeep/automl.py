@@ -135,6 +135,23 @@ class AutoRunner:
                         problem_type=data_config["problem_type"],
                         extra_info=extra_info,
                     )
+                # Handle new execution modes
+                elif execution_mode == "hyperopt":
+                    (
+                        best_params,
+                        best_score,
+                        full_metrics,
+                    ) = model.hyperopt_search(
+                        X_train,
+                        y_train,
+                        val_size=model_config["default_params"]["val_size"],
+                        model_config=model_config,
+                        metric=data_config["metric"],
+                        eval_metrics=data_config["eval_metrics"],
+                        max_evals=self.max_evals,
+                        problem_type=data_config["problem_type"],
+                        extra_info=extra_info,
+                    )
                 else:
                     model.train(X_train, y_train)
 

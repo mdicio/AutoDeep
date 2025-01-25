@@ -126,6 +126,7 @@ def infer_cv_space_lightgbm(param_grid):
         else:
             param_dist[param_name] = param_values
     return param_dist
+
 def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
     # Define the hyperparameter search space
     space = {}

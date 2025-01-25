@@ -78,7 +78,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
             "target_prediction" if self.problem_type == "regression" else "prediction"
         ][0]
         self.default = False
-        num_cpu_cores = os.cpu_count()
+        num_cpu_cores = os.cpu_count() // 2
         # Calculate the num_workers value as number of cores - 2
         self.num_workers = max(1, num_cpu_cores)
 
@@ -149,6 +149,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
                 i for i in self.extra_info["num_col_names"] if i != "target"
             ],
             categorical_cols=self.extra_info["cat_col_names"],
+            num_workers=self.num_workers,
         )
 
         trainer_config = TrainerConfig(
@@ -166,6 +167,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
                 "tol", 0.0
             ),  # No. of epochs of degradation training will wait before terminating
             checkpoints="valid_loss",
+            checkpoints_every_n_epochs=10,
             checkpoints_path=self.save_path,  # Save best checkpoint monitoring val_loss
             load_best=True,  # After training, load the best checkpoint
             progress_bar=outer_params.get("progress_bar", "rich"),  # none, simple, rich
@@ -222,7 +224,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
                 params["scheduler_params"] = dict(
                     factor=scheduler_details.get("ReduceLROnPlateau_factor", 0.1),
                     patience=scheduler_details.get("ReduceLROnPlateau_patience", 5),
-                    min_lr=0.0000001,
+                    min_lr=0.00000001,
                     verbose=True,
                     mode="min",
                 )
@@ -255,7 +257,10 @@ class CategoryEmbeddingtTrainer(BaseModel):
         print("lr", params["learning_rate"], type(params["learning_rate"]))
         self.logger.debug(f"compatible parameters: {compatible_params}")
         model_config = CategoryEmbeddingModelConfig(
-            task=self.task, learning_rate=params["learning_rate"]
+            task=self.task,
+            learning_rate=params["learning_rate"],
+            layers=params["layers"],
+            activation=params["activation"],
         )
 
         # override if we want to use default parameters
@@ -339,6 +344,159 @@ class CategoryEmbeddingtTrainer(BaseModel):
         )
         self.logger.debug("Training completed successfully")
 
+    def hyperopt_search(
+        self,
+        X,
+        y,
+        model_config,
+        metric,
+        eval_metrics,
+        val_size=0.2,
+        max_evals=16,
+        problem_type="binary_classification",
+        extra_info=None,
+    ):
+        """
+        Method to perform hyperopt search without cross-validation on the TabNet model using a train-test split.
+
+        Parameters
+        ----------
+        X : ndarray
+            Input data for training and validation.
+        y : ndarray
+            Labels for input data.
+        metric : str
+            Scoring metric to use for evaluation.
+        test_size : float, optional
+            Proportion of the data to use as the test set. Default is 0.2.
+        max_evals : int, optional
+            Maximum number of evaluations of the objective function. Default is 16.
+        problem_type : str, optional
+            Type of problem ("binary_classification", "multiclass_classification", "regression").
+        extra_info : dict, optional
+            Additional information for logging or debugging.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the best hyperparameters and corresponding score.
+        """
+
+        self.logger.info(
+            f"Starting hyperopt search {max_evals} evals maximizing {metric} metric on dataset"
+        )
+        self.extra_info = extra_info
+        self.default_params = model_config["default_params"]
+        param_grid = model_config["param_grid"]
+        space = infer_hyperopt_space_pytorch_tabular(param_grid)
+        self._set_loss_function(y)
+
+        # Merge X and y
+        data = pd.concat([X, y], axis=1)
+        data.reset_index(drop=True, inplace=True)
+
+        self.logger.debug(f"Full dataset shape : {data.shape}")
+
+        # Split the data into train and test sets
+        train_data_op, test_data_op = train_test_split(
+            data, test_size=val_size, random_state=42, stratify=y
+        )
+
+        self.logger.debug(
+            f"Train set shape: {train_data_op.shape}, Test set shape: {test_data_op.shape}"
+        )
+
+        # Define the objective function for hyperopt search
+        def objective(params):
+            self.logger.info(f"Training with hyperparameters: {params}")
+
+            train_data, test_data = handle_rogue_batch_size(
+                train_data_op.copy(), test_data_op.copy(), params["batch_size"]
+            )
+
+            if self.problem_type == "regression" and not hasattr(self, "target_range"):
+                self.target_range = [
+                    (
+                        float(np.min(train_data["target"]) * 0.8),
+                        float(np.max(train_data["target"]) * 1.2),
+                    )
+                ]
+
+            # Initialize the tabular model
+            model = self.prepare_tabular_model(
+                params, self.default_params, default=self.default
+            )
+            # Fit the model
+            model.fit(
+                train=train_data,
+                validation=test_data,
+                loss=self.loss_fn,
+            )
+
+            # Predict the labels of the test data
+            pred_df = model.predict(test_data)
+            predictions = pred_df[self.prediction_col].values
+            if self.problem_type == "binary_classification":
+                probabilities = pred_df["1_probability"].fillna(0).values
+                self.evaluator.y_prob = probabilities
+
+            # Calculate the score using the specified metric
+            self.evaluator.y_true = test_data["target"].values
+            self.evaluator.y_pred = predictions
+            self.evaluator.run_metrics = eval_metrics
+
+            metrics = self.evaluator.evaluate_model()
+            score = metrics[metric]
+            self.logger.info(f"Validation metrics: {metrics}")
+
+            if self.evaluator.maximize[metric][0]:
+                score = -1 * score
+
+            return {
+                "loss": score,
+                "params": params,
+                "status": STATUS_OK,
+                "trained_model": model,
+                "full_metrics": metrics,
+            }
+
+        # Define the trials object to keep track of the results
+        trials = Trials()
+        self.evaluator = Evaluator(problem_type=problem_type)
+        threshold = float(-1.0 * self.evaluator.maximize[metric][1])
+
+        # Run the hyperopt search
+        best = fmin(
+            objective,
+            space=space,
+            algo=tpe.suggest,
+            max_evals=max_evals,
+            trials=trials,
+            rstate=np.random.default_rng(self.random_state),
+            early_stop_fn=lambda x: stop_on_perfect_lossCondition(x, threshold),
+        )
+
+        # Get the best hyperparameters and corresponding score
+        best_params = space_eval(space, best)
+        best_params["default_params"] = self.default_params
+
+        best_trial = trials.best_trial
+        best_score = best_trial["result"]["loss"]
+        if self.evaluator.maximize[metric][0]:
+            best_score = -1 * best_score
+        full_metrics = best_trial["result"]["full_metrics"]
+
+        self.logger.info(f"Final metrics: {full_metrics}")
+        self.best_model = best_trial["result"]["trained_model"]
+        self._load_best_model()
+
+        self.logger.info(f"Best hyperparameters: {best_params}")
+        self.logger.info(
+            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
+        )
+
+        return best_params, best_score, full_metrics
+
     def hyperopt_search_kfold(
         self,
         X,
@@ -408,11 +566,7 @@ class CategoryEmbeddingtTrainer(BaseModel):
                 train_fold, val_fold = handle_rogue_batch_size(
                     train_fold, val_fold, params["batch_size"]
                 )
-                self.logger.debug(f"Train fold shape : {train_fold.shape}")
-                self.logger.debug(f"Val fold shape : {val_fold.shape}")
-                self.logger.debug(
-                    f"Train fold target shape : {train_fold['target'].shape}"
-                )
+
                 if (self.problem_type == "regression") and not hasattr(
                     self, "target_range"
                 ):
