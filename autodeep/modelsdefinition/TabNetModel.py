@@ -7,14 +7,6 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from autodeep.evaluation.generalevaluator import Evaluator
-from autodeep.modelsdefinition.CommonStructure import BaseModel
-from autodeep.modelutils.trainingutilities import (
-    calculate_possible_fold_sizes,
-    handle_rogue_batch_size,
-    infer_hyperopt_space_pytorch_tabular,
-    stop_on_perfect_lossCondition,
-)
 from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
 
 # pip install pytorch_tabular[extra]
@@ -24,8 +16,14 @@ from pytorch_tabular.config import OptimizerConfig, TrainerConfig
 from pytorch_tabular.models import TabNetModelConfig
 from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
 from sklearn.utils.class_weight import compute_class_weight
-from torch.optim import SGD, Adam
-from torch.optim.lr_scheduler import ExponentialLR, ReduceLROnPlateau, StepLR
+
+from autodeep.evaluation.generalevaluator import Evaluator
+from autodeep.modelsdefinition.CommonStructure import BaseModel
+from autodeep.modelutils.trainingutilities import (
+    handle_rogue_batch_size,
+    infer_hyperopt_space_pytorch_tabular,
+    stop_on_perfect_lossCondition,
+)
 
 
 class TabNetTrainer(BaseModel):

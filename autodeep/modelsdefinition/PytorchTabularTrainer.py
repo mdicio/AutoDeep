@@ -1,6 +1,5 @@
 import logging
 import os
-from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -14,6 +13,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 
 from autodeep.evaluation.generalevaluator import Evaluator
+from autodeep.modelsdefinition.CommonStructure import BaseModel
 from autodeep.modelutils.trainingutilities import (
     handle_rogue_batch_size,
     infer_hyperopt_space_pytorch_tabular,
@@ -21,61 +21,11 @@ from autodeep.modelutils.trainingutilities import (
 )
 
 
-class BaseModel:
-    """
-    Base class for all models.
-    """
-
-    def __init__(self, random_state=4200, problem_type=None):
-        super(BaseModel, self).__init__()
-        """
-        Constructor for the base model class.
-        
-        Parameters
-        ----------
-        model_params : dict
-            Dictionary containing the hyperparameters for the model.
-        """
-        self.parameters = None
-        self.model = None
-        self.random_state = random_state
-        self.problem_type = problem_type
-
-    def train(self, X_train, y_train):
-        """
-        Method to train the model on training data.
-
-        Parameters
-        ----------
-        X_train : ndarray
-            Training data input.
-        y_train : ndarray
-            Training data labels.
-        """
-        raise NotImplementedError
-
-    def predict(self, X_test, predict_proba=False):
-        """
-        Method to generate predictions on test data.
-
-        Parameters
-        ----------
-        X_test : ndarray
-            Test data input.
-
-        Returns
-        -------
-        ndarray
-            Array of model predictions.
-        """
-        raise NotImplementedError
-
-
-class PytorchTabularTrainer:
+class CommonTrainer(BaseModel):
     """Common base class for trainers."""
 
     def __init__(self, problem_type, num_classes=None):
-        super(PytorchTabularTrainer, self).__init__()
+        super().__init__()
         self.cv_size = None
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
@@ -160,104 +110,6 @@ class PytorchTabularTrainer:
             raise ValueError(
                 "Invalid problem_type. Supported values are 'binary_classification', 'multiclass_classification', and 'regression'."
             )
-
-    def train(self, X_train, y_train, params: Dict, extra_info: Dict):
-        """
-        Method to train the TabNet model on training data.
-
-        Parameters
-        ----------
-        X_train : ndarray
-            Training data input.
-        y_train : ndarray
-            Training data labels.
-        params : dict, optional
-            Dictionary of hyperparameters for the model.
-            Default is {"n_d":8, "n_a":8, "n_steps":3, "gamma":1.3, "n_independent":2, "n_shared":2, "lambda_sparse":0, "optimizer_fn":optim.Adam, "optimizer_params":dict(lr=2e-2), "mask_type":"entmax", "scheduler_params":dict(mode="min", patience=5, min_lr=1e-5, factor=0.9), "scheduler_fn":torch.optim.lr_scheduler.ReduceLROnPlateau, "verbose":1}.
-        random_state : int, optional
-            Seed for reproducibility. Default is 42.
-
-        Returns
-        -------
-        model : GATE
-            Trained TabNet model.
-        """
-        # Set up the parameters for the model
-        self.logger.info("Starting training")
-        self.extra_info = extra_info
-        # Split the train data into training and validation sets
-        if (self.problem_type == "regression") and not hasattr(self, "target_range"):
-            self.target_range = [
-                (float(np.min(y_train) * 0.5), float(np.max(y_train) * 1.5))
-            ]
-
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_train,
-            y_train,
-            test_size=params["default_params"]["val_size"],
-            random_state=self.random_state,
-        )
-
-        self.logger.debug(
-            f"Train and val shapes {X_train.shape}, {X_val.shape}, batch size {params['batch_size']}"
-        )
-        # Merge X_train and y_train
-        self.train_df = pd.concat([X_train, y_train], axis=1)
-
-        # Merge X_val and y_val
-        self.validation_df = pd.concat([X_val, y_val], axis=1)
-
-        self._set_loss_function(y_train)
-        self.model = self.prepare_tabular_model(
-            params, params["default_params"], default=self.default
-        )
-
-        self.train_df, self.validation_df = handle_rogue_batch_size(
-            self.train_df, self.validation_df, params["batch_size"]
-        )
-
-        self.model.fit(
-            train=self.train_df,
-            validation=self.validation_df,
-            loss=self.loss_fn,
-            optimizer=params["optimizer_fn"],
-            optimizer_params=params["optimizer_params"],
-            # lr_scheduler=params["scheduler_fn"],
-            # lr_scheduler_params=params["scheduler_params"],
-        )
-        self.logger.debug("Training completed successfully")
-
-    def predict(self, X_test, predict_proba=False):
-        """
-        Method to generate predictions on test data using the trained TabNet model.
-
-        Parameters
-        ----------
-        model : TabNetClassifier
-            Trained TabNet model.
-        X_test : ndarray
-            Test data input.
-
-        Returns
-        -------
-        ndarray
-            Array of model predictions.
-        """
-        self.logger.info("Computing predictions")
-        # Make predictions using the trained model
-        pred_df = self.model.predict(X_test)
-        probabilities = None
-        predictions = pred_df[self.prediction_col].values
-        if predict_proba:
-            probabilities = pred_df["1_probability"].fillna(0).values
-
-        self.logger.debug(f"{predictions[:10]}")
-        self.logger.debug("Computed predictions successfully")
-
-        if predict_proba:
-            return predictions, probabilities
-        else:
-            return predictions
 
     def hyperopt_search(
         self,

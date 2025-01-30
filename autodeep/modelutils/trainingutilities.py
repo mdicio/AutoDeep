@@ -149,8 +149,13 @@ def prepare_shared_tabular_configs(params, outer_params, extra_info, save_path, 
     )
 
     # Optimizer and Scheduler setup
-    optimizer_fn_name, optimizer_params = prepare_optimizer(params["optimizer_fn"])
-    scheduler_fn_name, scheduler_params = prepare_scheduler(params["scheduler_fn"])
+    optimizer_fn_name, optimizer_params, learning_rate = prepare_optimizer(
+        params["optimizer_fn"]
+    )
+    (
+        scheduler_fn_name,
+        scheduler_params,
+    ) = prepare_scheduler(params["scheduler_fn"])
 
     optimizer_config = OptimizerConfig(
         optimizer=optimizer_fn_name,
@@ -160,7 +165,7 @@ def prepare_shared_tabular_configs(params, outer_params, extra_info, save_path, 
         lr_scheduler_monitor_metric="valid_loss",
     )
 
-    return data_config, trainer_config, optimizer_config
+    return data_config, trainer_config, optimizer_config, learning_rate
 
 
 def prepare_optimizer(optimizer_fn):
@@ -172,18 +177,31 @@ def prepare_optimizer(optimizer_fn):
         optimizer_fn = optimizer_details["optimizer_fn"]
 
         if optimizer_fn == Adam:
-            return "Adam", {
-                "weight_decay": optimizer_details.get("Adam_weight_decay", 0.0)
-            }
+            return (
+                "Adam",
+                {
+                    "weight_decay": optimizer_details.get("Adam_weight_decay", 0.0),
+                },
+                optimizer_details.get("Adam_learning_rate", 0.0),
+            )
         elif optimizer_fn == SGD:
-            return "SGD", {
-                "weight_decay": optimizer_details.get("SGD_weight_decay", 0.0),
-                "momentum": optimizer_details.get("SGD_momentum", 0.0),
-            }
+            return (
+                "SGD",
+                {
+                    "weight_decay": optimizer_details.get("SGD_weight_decay", 0.0),
+                    "momentum": optimizer_details.get("SGD_momentum", 0.0),
+                },
+                optimizer_details.get("SGD_learning_rate", 0.0),
+            )
+
         elif optimizer_fn == AdamW:
-            return "AdamW", {
-                "weight_decay": optimizer_details.get("AdamW_weight_decay", 0.01)
-            }
+            return (
+                "AdamW",
+                {
+                    "weight_decay": optimizer_details.get("AdamW_weight_decay", 0.01),
+                },
+                optimizer_details.get("AdamW_learning_rate", 0.0),
+            )
 
     return None, {}
 

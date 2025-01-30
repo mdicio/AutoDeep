@@ -1,11 +1,10 @@
-import os
 from collections import Counter
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from sklearn.datasets import fetch_california_housing, load_breast_cancer, load_iris
+from sklearn.datasets import load_breast_cancer, load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.utils import shuffle

@@ -7,25 +7,23 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from autodeep.evaluation.generalevaluator import Evaluator
-from autodeep.modelsdefinition.CommonStructure import BaseModel
-from autodeep.modelutils.trainingutilities import (
-    calculate_possible_fold_sizes,
-    handle_rogue_batch_size,
-    infer_hyperopt_space_pytorch_tabular,
-    stop_on_perfect_lossCondition,
-)
 from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
 
 # pip install pytorch_tabular[extra]
 from pytorch_tabular import TabularModel
-from pytorch_tabular.config import DataConfig  # ExperimentConfig,
-from pytorch_tabular.config import OptimizerConfig, TrainerConfig
+from pytorch_tabular.config import OptimizerConfig
 from pytorch_tabular.models import FTTransformerConfig
 from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
 from sklearn.utils.class_weight import compute_class_weight
-from torch.optim import SGD, Adam
-from torch.optim.lr_scheduler import ExponentialLR, ReduceLROnPlateau, StepLR
+
+from autodeep.evaluation.generalevaluator import Evaluator
+from autodeep.modelsdefinition.CommonStructure import BaseModel
+from autodeep.modelutils.trainingutilities import (
+    handle_rogue_batch_size,
+    infer_hyperopt_space_pytorch_tabular,
+    prepare_shared_tabular_configs,
+    stop_on_perfect_lossCondition,
+)
 
 
 class FTTransformerTrainer(BaseModel):
@@ -138,68 +136,18 @@ class FTTransformerTrainer(BaseModel):
 
     # Define the data configuration
     def prepare_tabular_model(self, params, outer_params, default=False):
-        data_config = DataConfig(
-            target=["target"],
-            continuous_cols=[
-                i for i in self.extra_info["num_col_names"] if i != "target"
-            ],
-            categorical_cols=self.extra_info["cat_col_names"],
-        )
+        print("tabular model params")
+        print(params)
+        print("tabular model outer params")
+        print(outer_params)
 
-        trainer_config = TrainerConfig(
-            auto_lr_find=outer_params[
-                "auto_lr_find"
-            ],  # Runs the LRFinder to automatically derive a learning rate
-            batch_size=params["batch_size"],
-            max_epochs=outer_params["max_epochs"],
-            early_stopping="valid_loss",  # Monitor valid_loss for early stopping
-            early_stopping_mode="min",  # Set the mode as min because for val_loss, lower is better
-            early_stopping_patience=outer_params[
-                "early_stopping_patience"
-            ],  # No. of epochs of degradation training will wait before terminating
-            early_stopping_min_delta=outer_params.get(
-                "tol", 0.0
-            ),  # No. of epochs of degradation training will wait before terminating
-            checkpoints="valid_loss",
-            checkpoints_path=self.save_path,  # Save best checkpoint monitoring val_loss
-            load_best=True,  # After training, load the best checkpoint
-            progress_bar=outer_params.get("progress_bar", "rich"),  # none, simple, rich
-            precision=outer_params.get("precision", 32),  # 16, 32, 64
-        )
-
-        if params["optimizer_fn"] == torch.optim.Adam:
-            params["optimizer_params"] = dict(weight_decay=params["Adam_weight_decay"])
-        elif params["optimizer_fn"] == torch.optim.SGD:
-            params["optimizer_params"] = dict(momentum=params["SGD_momentum"])
-        elif params["optimizer_fn"] == torch.optim.AdamW:
-            params["optimizer_params"] = dict(weight_decay=params["AdamW_weight_decay"])
-        if params["scheduler_fn"] == torch.optim.lr_scheduler.StepLR:
-            params["scheduler_fn"] = "StepLR"
-            params["scheduler_params"] = dict(
-                step_size=params["StepLR_step_size"], gamma=params["StepLR_gamma"]
-            )
-        elif params["scheduler_fn"] == torch.optim.lr_scheduler.ExponentialLR:
-            params["scheduler_fn"] = "ExponentialLR"
-            params["scheduler_params"] = dict(gamma=params["ExponentialLR_gamma"])
-
-        elif params["scheduler_fn"] == torch.optim.lr_scheduler.ReduceLROnPlateau:
-            params["scheduler_fn"] = "ReduceLROnPlateau"
-            params["scheduler_params"] = dict(
-                factor=params["ReduceLROnPlateau_factor"],
-                patience=params["ReduceLROnPlateau_patience"],
-                min_lr=0.0000001,
-                verbose=True,
-                mode="min",
-            )
-
-        # DEBUG OPTIMIZER
-        # https://pytorch-tabular.readthedocs.io/en/latest/optimizer/
-        optimizer_config = OptimizerConfig(
-            # optimizer="Adam",
-            # optimizer_params={"weight_decay": params["adam_weight_decay"]},
-            lr_scheduler=params["scheduler_fn"],
-            lr_scheduler_params=params["scheduler_params"],
-            lr_scheduler_monitor_metric="valid_loss",
+        # Prepare shared configurations
+        data_config, trainer_config, optimizer_config = prepare_shared_tabular_configs(
+            params=params,
+            outer_params=outer_params,
+            extra_info=self.extra_info,
+            save_path=self.save_path,
+            task=self.task,
         )
 
         iedm = params.get(
@@ -312,33 +260,40 @@ class FTTransformerTrainer(BaseModel):
         y,
         model_config,
         metric,
+        eval_metrics,
+        val_size=0.2,
         max_evals=16,
         problem_type="binary_classification",
         extra_info=None,
     ):
         """
-        Method to perform hyperopt search cross-validation on the TabNet model using input data.
+        Method to perform hyperopt search without cross-validation on the TabNet model using a train-test split.
 
         Parameters
         ----------
         X : ndarray
-            Input data for cross-validation.
+            Input data for training and validation.
         y : ndarray
             Labels for input data.
-        metric : str, optional
-            Scoring metric to use for cross-validation. Default is 'accuracy'.
-        n_iter : int, optional
-            Maximum number of evaluations of the objective function. Default is 10.
-        random_state : int, optional
-            Seed for reproducibility. Default is 42.
+        metric : str
+            Scoring metric to use for evaluation.
+        test_size : float, optional
+            Proportion of the data to use as the test set. Default is 0.2.
+        max_evals : int, optional
+            Maximum number of evaluations of the objective function. Default is 16.
+        problem_type : str, optional
+            Type of problem ("binary_classification", "multiclass_classification", "regression").
+        extra_info : dict, optional
+            Additional information for logging or debugging.
 
         Returns
         -------
         dict
             Dictionary containing the best hyperparameters and corresponding score.
         """
+
         self.logger.info(
-            f"Starting hyperopt search {max_evals} evals maximising {metric} metric on dataset"
+            f"Starting hyperopt search {max_evals} evals maximizing {metric} metric on dataset"
         )
         self.extra_info = extra_info
         self.default_params = model_config["default_params"]
@@ -346,71 +301,73 @@ class FTTransformerTrainer(BaseModel):
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
 
-        # Split the train data into training and validation sets
-        X_train, X_val, y_train, y_val = train_test_split(
-            X,
-            y,
-            test_size=self.default_params["val_size"],
-            random_state=self.random_state,
-        )
-        # Merge X_train and y_train
-        self.train_df = pd.concat([X_train, y_train], axis=1)
+        # Merge X and y
+        data = pd.concat([X, y], axis=1)
+        data.reset_index(drop=True, inplace=True)
 
-        # Merge X_val and y_val
-        self.validation_df = pd.concat([X_val, y_val], axis=1)
+        self.logger.debug(f"Full dataset shape : {data.shape}")
+
+        # Split the data into train and test sets
+        train_data_op, test_data_op = train_test_split(
+            data, test_size=val_size, random_state=42, stratify=y
+        )
+
+        self.logger.debug(
+            f"Train set shape: {train_data_op.shape}, Test set shape: {test_data_op.shape}"
+        )
 
         # Define the objective function for hyperopt search
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")
-            model = self.prepare_tabular_model(
-                params, self.default_params, default=self.default
+
+            train_data, test_data = handle_rogue_batch_size(
+                train_data_op.copy(), test_data_op.copy(), params["batch_size"]
             )
 
-            self.train_df, self.validation_df = handle_rogue_batch_size(
-                self.train_df, self.validation_df, params["batch_size"]
-            )
-            if (self.problem_type == "regression") and not hasattr(
-                self, "target_range"
-            ):
+            if self.problem_type == "regression" and not hasattr(self, "target_range"):
                 self.target_range = [
                     (
-                        float(np.min(self.train_df["target"]) * 0.8),
-                        float(np.max(self.train_df["target"]) * 1.2),
+                        float(np.min(train_data["target"]) * 0.8),
+                        float(np.max(train_data["target"]) * 1.2),
                     )
                 ]
 
+            # Initialize the tabular model
+            model = self.prepare_tabular_model(
+                params, self.default_params, default=self.default
+            )
+            # Fit the model
             model.fit(
-                train=self.train_df,
-                validation=self.validation_df,
+                train=train_data,
+                validation=test_data,
                 loss=self.loss_fn,
-                optimizer=params["optimizer_fn"],
-                optimizer_params=params["optimizer_params"],
-                # lr_scheduler=params["scheduler_fn"],
-                # lr_scheduler_params=params["scheduler_params"],
             )
 
-            # Predict the labels of the validation data
-            pred_df = model.predict(self.validation_df)
+            # Predict the labels of the test data
+            pred_df = model.predict(test_data)
             predictions = pred_df[self.prediction_col].values
             if self.problem_type == "binary_classification":
                 probabilities = pred_df["1_probability"].fillna(0).values
                 self.evaluator.y_prob = probabilities
 
             # Calculate the score using the specified metric
-            self.evaluator.y_true = pred_df["target"].values
+            self.evaluator.y_true = test_data["target"].values
             self.evaluator.y_pred = predictions
+            self.evaluator.run_metrics = eval_metrics
 
-            score = self.evaluator.evaluate_metric(metric_name=metric)
+            metrics = self.evaluator.evaluate_model()
+            score = metrics[metric]
+            self.logger.info(f"Validation metrics: {metrics}")
 
             if self.evaluator.maximize[metric][0]:
                 score = -1 * score
 
-            # Return the negative score (to minimize)
             return {
                 "loss": score,
                 "params": params,
                 "status": STATUS_OK,
                 "trained_model": model,
+                "full_metrics": metrics,
             }
 
         # Define the trials object to keep track of the results
@@ -435,6 +392,11 @@ class FTTransformerTrainer(BaseModel):
 
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]
+        if self.evaluator.maximize[metric][0]:
+            best_score = -1 * best_score
+        full_metrics = best_trial["result"]["full_metrics"]
+
+        self.logger.info(f"Final metrics: {full_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
@@ -443,7 +405,7 @@ class FTTransformerTrainer(BaseModel):
             f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
         )
 
-        return best_params, best_score
+        return best_params, best_score, full_metrics
 
     def hyperopt_search_kfold(
         self,

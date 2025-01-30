@@ -20,7 +20,7 @@ from autodeep.dataloaders.dataloader import (
 )
 from autodeep.modelsdefinition.AutomaticFeatureInteractionModel import AutoIntTrainer
 from autodeep.modelsdefinition.CatBoostModel import CatBoostTrainer
-from autodeep.modelsdefinition.CategoryEmbeddingModel import CategoryEmbeddingtTrainer
+from autodeep.modelsdefinition.CategoryEmbeddingModel import CategoryEmbeddingTrainer
 from autodeep.modelsdefinition.FTTransformerModel import FTTransformerTrainer
 from autodeep.modelsdefinition.GANDALF import GandalfTrainer
 from autodeep.modelsdefinition.GATE import GATE
@@ -65,7 +65,7 @@ def create_model(model_name, problem_type, num_classes, random_state=42):
         return TabNetTrainer(problem_type)
 
     elif mname == "categoryembedding":
-        return CategoryEmbeddingtTrainer(problem_type)
+        return CategoryEmbeddingTrainer(problem_type)
 
     elif mname == "fttransformer":
         return FTTransformerTrainer(problem_type)
