@@ -193,6 +193,9 @@ class DynamicDataLoader(DataLoader):
         dataset_path,
         target_column="target",
         test_size=0.2,
+        split_col=None,
+        train_value=None,
+        test_value=None,
         random_state=42,
         normalize_features="mean_std",
         return_extra_info=False,
@@ -202,6 +205,9 @@ class DynamicDataLoader(DataLoader):
 
         self.dataset_path = dataset_path
         self.target_column = target_column
+        self.split_col = split_col
+        self.train_value = train_value
+        self.test_value = test_value
         self.test_size = test_size
         self.random_state = random_state
         self.normalize_features = normalize_features
@@ -227,10 +233,31 @@ class DynamicDataLoader(DataLoader):
         if self.encode_categorical:
             X = self.force_encode_categorical(X)
 
-        # Split into train and test sets
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=self.test_size, random_state=self.random_state, stratify=y
-        )
+        if self.split_col and self.split_col in df.columns:
+            if self.train_value is None or self.test_value is None:
+                raise ValueError(
+                    "When using split_col, you must specify train_value and test_value."
+                )
+
+            unique_values = df[self.split_col].unique()
+            if set(unique_values) != {self.train_value, self.test_value}:
+                raise ValueError(
+                    f"split_col must contain exactly two values: {unique_values}, but expected {self.train_value} and {self.test_value}."
+                )
+
+            train_mask = df[self.split_col] == self.train_value
+            test_mask = df[self.split_col] == self.test_value
+
+            X_train, X_test = X[train_mask], X[test_mask]
+            y_train, y_test = y[train_mask], y[test_mask]
+        else:
+            X_train, X_test, y_train, y_test = train_test_split(
+                X,
+                y,
+                test_size=self.test_size,
+                random_state=self.random_state,
+                stratify=y,
+            )
 
         # Normalize features if requested
         if self.normalize_features:

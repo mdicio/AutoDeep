@@ -23,7 +23,7 @@ from autodeep.modelsdefinition.CatBoostModel import CatBoostTrainer
 from autodeep.modelsdefinition.CategoryEmbeddingModel import CategoryEmbeddingTrainer
 from autodeep.modelsdefinition.FTTransformerModel import FTTransformerTrainer
 from autodeep.modelsdefinition.GANDALF import GandalfTrainer
-from autodeep.modelsdefinition.GATE import GATE
+from autodeep.modelsdefinition.GATE import GateTrainer
 from autodeep.modelsdefinition.MLP import MLP
 from autodeep.modelsdefinition.NodeModel import NodeTrainer
 from autodeep.modelsdefinition.ResNetModel import ResNetTrainer
@@ -77,7 +77,7 @@ def create_model(model_name, problem_type, num_classes, random_state=42):
         return NodeTrainer(problem_type)
 
     elif mname == "gate":
-        return GATE(problem_type=problem_type)
+        return GateTrainer(problem_type=problem_type)
     elif mname == "tabtransformer":
         return TabTransformerTrainer(problem_type=problem_type)
     elif mname == "autoint":
@@ -101,6 +101,9 @@ def create_dynamic_data_loader(
     dataset_path,
     target_column,
     test_size,
+    split_col,
+    train_value,
+    test_value,
     random_state,
     normalize_features,
     return_extra_info,
@@ -113,6 +116,9 @@ def create_dynamic_data_loader(
         dataset_path,
         target_column,
         test_size,
+        split_col,
+        train_value,
+        test_value,
         random_state,
         normalize_features,
         return_extra_info,

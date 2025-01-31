@@ -1,10 +1,10 @@
 import os
-import time
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 
 import yaml
+
 from autodeep.evaluation.generalevaluator import Evaluator
 from autodeep.factory import create_dynamic_data_loader, create_model, seed_everything
 from autodeep.outputhandler.outputwriter import OutputWriter
@@ -96,7 +96,10 @@ class AutoRunner:
                 data_loader = self.data_loader(
                     dataset_path=data_config.get("dataset_path"),
                     target_column=data_config.get("target_col"),
-                    test_size=data_config.get("test_size"),
+                    split_col=data_config.get("split_col", None),
+                    test_size=data_config.get("test_size", None),
+                    train_value=data_config.get("train_value", None),
+                    test_value=data_config.get("test_value", None),
                     random_state=self.random_state,
                     normalize_features=model_config.get("data_params").get(
                         "normalize_features"

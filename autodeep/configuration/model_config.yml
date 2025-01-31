@@ -589,10 +589,6 @@ model_configs:
       bin_function:
         - entmoid15
         - sparsemoid
-      max_features:
-        - 10
-        - 50
-        - 100
       input_dropout:
         - 0.0
         - 0.2
@@ -605,18 +601,15 @@ model_configs:
       threshold_init_beta:
         - 0.5
         - 1.0
-        - 2.0
+        - 1.5
       threshold_init_cutoff:
         - 0.5
         - 1.0
-        - 2.0
+        - 1.5
       embedding_dropout:
         - 0.0
         - 0.2
       batch_norm_continuous_input:
-        - True
-        - False
-      embed_categorical:
         - True
         - False
       optimizer_fn:

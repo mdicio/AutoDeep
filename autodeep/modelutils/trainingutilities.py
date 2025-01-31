@@ -364,6 +364,7 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
                                     else hp.uniform(newname, min_value, max_value)
                                 )
                             )
+
         elif (
             isinstance(param_values[0], (str, bool, list))
             or param_name
@@ -377,10 +378,16 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
 
         elif isinstance(param_values[0], int):
             min_value, max_value = ensure_min_max(param_values)
+
+            if param_name in ["batch_size"]:
+                spacing = 32
+            else:
+                spacing = 1
+
             space[param_name] = (
                 min_value
                 if min_value == max_value
-                else scope.int(hp.quniform(param_name, min_value, max_value, 1))
+                else scope.int(hp.quniform(param_name, min_value, max_value, spacing))
             )
         else:
             min_value, max_value = ensure_min_max(param_values)
