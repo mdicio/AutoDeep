@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from typing import Dict
 
 import numpy as np
@@ -7,8 +8,6 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
-
-# pip install pytorch_tabular[extra]
 from pytorch_tabular import TabularModel
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
@@ -75,32 +74,46 @@ class PytorchTabularTrainer:
     """Common base class for trainers."""
 
     def __init__(self, problem_type, num_classes=None):
-        super(PytorchTabularTrainer, self).__init__()
+        super().__init__()
         self.cv_size = None
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(logging.DEBUG)
         self.random_state = 4200
+        # Ensure unique logger name per class
+        self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        self.logger.setLevel(logging.DEBUG)
+
         self.script_filename = os.path.basename(__file__)
         formatter = logging.Formatter(
-            f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
+            f"%(asctime)s - %(levelname)s - {self.script_filename} - {self.__class__.__name__} - %(message)s"
         )
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-        console_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.StreamHandler)
-            for handler in self.logger.handlers
-        ):
-            self.logger.addHandler(console_handler)
 
-        file_handler = logging.FileHandler("logfile.log")
+        # Remove existing handlers to prevent duplication
+        if self.logger.hasHandlers():
+            self.logger.handlers.clear()
+
+        # Console Handler (DEBUG Level)
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(logging.DEBUG)
+        console_handler.setFormatter(formatter)
+
+        # File Handler (DEBUG Level, Append Mode)
+        file_handler = logging.FileHandler("logfile.log", mode="a")
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.FileHandler) for handler in self.logger.handlers
-        ):
-            self.logger.addHandler(file_handler)
 
+        # Add Handlers
+        self.logger.addHandler(console_handler)
+        self.logger.addHandler(file_handler)
+
+        # Prevent other libraries from modifying the logger
+        self.logger.propagate = False
+
+        self.problem_type = problem_type
+        self.num_classes = num_classes
+        self.logger.info(
+            f"Initialized {self.__class__.__name__} with problem type {self.problem_type}"
+        )
+
+        # Set Pytorch Lightning to Silent Mode
         logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
         os.environ["PT_LOGLEVEL"] = "CRITICAL"
 
@@ -113,11 +126,10 @@ class PytorchTabularTrainer:
         self.task = (
             "regression" if self.problem_type == "regression" else "classification"
         )
-        self.prediction_col = (
-            "target_prediction" if self.problem_type == "regression" else "prediction"
-        )
+        self.prediction_col = "target_prediction"
         self.default = False
         self.num_workers = max(1, os.cpu_count() // 2)
+        self.model = None  # Ensure model is initialized as None to track loading status
 
     def _load_best_model(self):
         self.logger.info("Loading model")
@@ -249,7 +261,7 @@ class PytorchTabularTrainer:
         probabilities = None
         predictions = pred_df[self.prediction_col].values
         if predict_proba:
-            probabilities = pred_df["1_probability"].fillna(0).values
+            probabilities = pred_df["target_1_probability"].fillna(0).values
 
         self.logger.debug(f"{predictions[:10]}")
         self.logger.debug("Computed predictions successfully")
@@ -311,9 +323,10 @@ class PytorchTabularTrainer:
             model.fit(train=train_data, validation=test_data, loss=self.loss_fn)
 
             pred_df = model.predict(test_data)
+            print(pred_df)
             predictions = pred_df[self.prediction_col].values
             if self.problem_type == "binary_classification":
-                probabilities = pred_df["1_probability"].fillna(0).values
+                probabilities = pred_df["target_1_probability"].fillna(0).values
                 self.evaluator.y_prob = probabilities
 
             self.evaluator.y_true = test_data["target"].values

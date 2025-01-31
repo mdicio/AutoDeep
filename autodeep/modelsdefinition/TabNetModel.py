@@ -9,6 +9,11 @@ from autodeep.modelutils.trainingutilities import prepare_shared_tabular_configs
 
 
 class TabNetTrainer(PytorchTabularTrainer):
+
+    def __init__(self, problem_type, num_classes=None):
+        super().__init__(problem_type, num_classes)
+        self.logger.info("Trainer initialized")
+
     def prepare_tabular_model(self, params, outer_params, default=False):
         print("tabular model params")
         print(params)

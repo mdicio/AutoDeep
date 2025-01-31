@@ -88,9 +88,7 @@ class AutoRunner:
                 print(f"Running {model_name} on {dataset_name}...")
 
                 run_id = datetime.now().strftime("%Y%m-%d%H-%M%S-") + str(uuid4())
-                print(self.model_config)
                 model_config = self.model_config.get("model_configs").get(model_name)
-                print(model_config)
                 execution_mode = self.execution_mode
 
                 data_loader = self.data_loader(

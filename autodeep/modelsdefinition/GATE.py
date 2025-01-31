@@ -5,10 +5,16 @@ from pytorch_tabular.config import OptimizerConfig
 from pytorch_tabular.models import GatedAdditiveTreeEnsembleConfig
 
 from autodeep.modelsdefinition.CommonStructure import PytorchTabularTrainer
-from autodeep.modelutils.trainingutilities import prepare_shared_tabular_configs
+from autodeep.modelutils.trainingutilities import \
+    prepare_shared_tabular_configs
 
 
 class GateTrainer(PytorchTabularTrainer):
+
+    def __init__(self, problem_type, num_classes=None):
+        super().__init__(problem_type, num_classes)
+        self.logger.info("Trainer initialized")
+
     def prepare_tabular_model(self, params, outer_params, default=False):
         print("tabular model params")
         print(params)

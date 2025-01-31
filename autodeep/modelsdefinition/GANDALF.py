@@ -1,4 +1,5 @@
 import inspect
+import logging
 
 import pandas as pd
 from pytorch_tabular import TabularModel
@@ -11,6 +12,11 @@ from autodeep.modelutils.trainingutilities import prepare_shared_tabular_configs
 
 
 class GandalfTrainer(PytorchTabularTrainer):
+
+    def __init__(self, problem_type, num_classes=None):
+        super().__init__(problem_type, num_classes)
+        self.logger.info("Trainer initialized")
+
     def prepare_tabular_model(self, params, outer_params, default=False):
         print("tabular model params")
         print(params)

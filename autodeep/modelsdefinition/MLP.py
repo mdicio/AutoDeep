@@ -170,7 +170,7 @@ class MLP(BaseModel):
         model_config,
         metric,
         eval_metrics,
-        test_size=0.2,
+        val_size=0.2,
         max_evals=16,
         problem_type="binary_classification",
         extra_info=None,
@@ -190,7 +190,7 @@ class MLP(BaseModel):
             The main metric to optimize.
         eval_metrics : list
             Other evaluation metrics to track.
-        test_size : float, optional
+        val_size : float, optional
             Proportion of data used for testing (default: 0.2).
         max_evals : int, optional
             Maximum number of evaluations for hyperopt (default: 16).
@@ -257,7 +257,7 @@ class MLP(BaseModel):
             X_train, X_test, y_train, y_test = train_test_split(
                 X,
                 y,
-                test_size=test_size,
+                test_size=val_size,
                 random_state=42,
                 stratify=y if self.problem_type != "regression" else None,
             )
