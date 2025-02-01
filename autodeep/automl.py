@@ -90,6 +90,9 @@ class AutoRunner:
                 run_id = datetime.now().strftime("%Y%m-%d%H-%M%S-") + str(uuid4())
                 model_config = self.model_config.get("model_configs").get(model_name)
                 execution_mode = self.execution_mode
+                run_igtd = False
+                if model_name == "resnet":
+                    run_igtd = True
 
                 data_loader = self.data_loader(
                     dataset_path=data_config.get("dataset_path"),
@@ -109,6 +112,11 @@ class AutoRunner:
                         "encode_categorical"
                     ),
                     num_targets=data_config.get("num_targets"),
+                    run_igtd=run_igtd,
+                    igtd_configs=data_config.get("igtd_configs", None),
+                    igtd_result_base_dir=data_config.get(
+                        "igtd_result_base_dir", "igtd"
+                    ),
                 )
                 X_train, X_test, y_train, y_test, extra_info = data_loader.load_data()
 

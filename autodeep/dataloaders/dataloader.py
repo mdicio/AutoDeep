@@ -1,5 +1,6 @@
-from collections import Counter
-from pathlib import Path
+import logging
+import os
+from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
@@ -8,6 +9,144 @@ from sklearn.datasets import load_breast_cancer, load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.utils import shuffle
+
+from autodeep.modelutils.igtdutilities import table_to_image
+
+
+class IGTDPreprocessor:
+    """
+    A class to run the IGTD ordering algorithm on tabular training data.
+
+    The IGTD algorithm transforms a tabular dataset into an image representation using a given
+    ordering of features. This class wraps the call to `table_to_image` from your IGTD library.
+
+    Attributes:
+        num_row (int): Number of pixel rows in the image.
+        num_col (int): Number of pixel columns in the image.
+        save_image_size (int or float): Size (in inches) of saved images.
+        max_step (int): Maximum number of iterations for the IGTD algorithm.
+        val_step (int): Iterations for convergence validation.
+        min_gain (float): Minimum gain threshold for convergence.
+        igtd_configs (dict): Default dictionary of IGTD ordering configurations.
+        exclude_cols (list): List of column names to exclude from the transformation.
+    """
+
+    def __init__(
+        self,
+        save_image_size: int = 3,
+        max_step: int = 1000000,
+        val_step: int = 1000,
+        min_gain: float = 0.01,
+        exclude_cols: Optional[list] = None,
+        igtd_configs: Dict[str, Dict] = {
+            "Euclidean_Euclidean": {
+                "fea_dist_method": "Euclidean",
+                "image_dist_method": "Euclidean",
+                "error": "abs",
+            },
+            "Pearson_Manhattan": {
+                "fea_dist_method": "Pearson",
+                "image_dist_method": "Manhattan",
+                "error": "squared",
+            },
+        },
+        base_result_dir: str = "igtd",
+    ):
+        self.save_image_size = save_image_size
+        self.max_step = max_step
+        self.val_step = val_step
+        self.min_gain = min_gain
+        self.igtd_configs = igtd_configs
+        self.base_result_dir = base_result_dir
+
+        self.exclude_cols = exclude_cols if exclude_cols is not None else []
+        self.logger = logging.getLogger(self.__class__.__name__)
+        if not self.logger.handlers:
+            ch = logging.StreamHandler()
+            ch.setLevel(logging.INFO)
+            formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+            ch.setFormatter(formatter)
+            self.logger.addHandler(ch)
+
+    def _auto_determine_img_size(X):
+        num_features = len(X.columns)
+
+        # Find valid (row, col) pairs where row * col = num_features
+        factors = [
+            (r, num_features // r)
+            for r in range(1, int(np.sqrt(num_features)) + 1)
+            if num_features % r == 0
+        ]
+        print(factors)
+        # Pick the most square-like option (largest row)
+        num_row, num_col = factors[-1]
+
+        # Check if num_features is prime (only divisible by 1 and itself)
+        if len(factors) == 1:  # Only (1, num_features) exists
+            print(
+                f"Warning: The number of features ({num_features}) is prime. "
+                "For better IGTD performance, consider adding or removing columns to allow a more standard grid size."
+            )
+
+        return num_row, num_col
+
+    def run(
+        self,
+        X: pd.DataFrame,
+        num_col: Optional[int] = None,
+        num_row: Optional[int] = None,
+        img_size="custom",  # auto
+    ) -> Dict[str, str]:
+        """
+        Run the IGTD algorithm on the provided DataFrame for each ordering configuration.
+
+        Args:
+            X (pd.DataFrame): The training data (features only) on which to run IGTD.
+            base_result_dir (str): The base directory where IGTD results will be saved.
+            ordering_configs (Dict[str, Dict]): A dictionary mapping configuration names to
+                their parameters. Each configuration dict should contain:
+                  - "fea_dist_method": (str) method for feature distance calculation.
+                  - "image_dist_method": (str) method for pixel distance calculation.
+                  - "error": (str) error function (e.g., "abs", "squared").
+
+        Returns:
+            Dict[str, str]: A mapping from configuration name to the folder where the IGTD
+            result was saved.
+        """
+        result_dirs = {}
+        for config_name, config in self.igtd_configs.items():
+            # Construct a result directory for this configuration
+            result_dir = os.path.join(self.base_result_dir, f"{config_name}")
+            os.makedirs(result_dir, exist_ok=True)
+            self.logger.info(
+                f"Running IGTD ordering for config '{config_name}' in: {result_dir}"
+            )
+
+            if img_size == "auto":
+                self.num_row, self.num_col = self._auto_determine_img_size(X)
+
+            table_to_image(
+                X,
+                [num_row, num_col],
+                config["fea_dist_method"],
+                config["image_dist_method"],
+                self.save_image_size,
+                self.max_step,
+                self.val_step,
+                result_dir,
+                config["error"],
+                min_gain=self.min_gain,
+                save_mode="bulk",
+                exclude_cols=self.exclude_cols,
+            )
+            result_dirs[config_name] = result_dir
+
+        return result_dirs
+
+
+###############################################################################
+# Base DataLoader class with additional utility functions
+###############################################################################
 
 
 class DataLoader:
@@ -20,8 +159,9 @@ class DataLoader:
         return_extra_info=False,
         encode_categorical=False,
         num_targets=None,
+        data_path="data",
+        igtd_path="igtd",
     ):
-
         self.target_column = target_column
         self.test_size = test_size
         self.normalize_features = normalize_features
@@ -29,16 +169,22 @@ class DataLoader:
         self.encode_categorical = encode_categorical
         self.random_state = random_state
         self.num_targets = num_targets
-        # Construct the path to the CSV data file using pathlib]
-        self.script_path = Path(__file__).resolve()
-        self.data_path = f"{self.script_path.parents[1]}/data/"
-        self.igtd_path = f"{self.script_path.parents[1]}/modelsdefinition/IGTD/"
+        self.data_path = data_path
+        self.igtd_path = igtd_path
 
     def load_data(self):
         raise NotImplementedError
 
     def create_extra_info(self, df, igtd_path=None, img_rows=None, img_columns=None):
-        # Get the unique values for each categorical column
+        """
+        Create extra information about the dataset including:
+          - Categorical column names, indices and unique counts.
+          - Numerical column names and indices.
+          - Total number of features.
+          - (Optionally) IGTD ordering information.
+
+        If igtd_path is provided, the method will read the ordering from that file.
+        """
         # Get the categorical and numerical columns
         cat_cols = df.select_dtypes(include=["object", "category"]).columns
         num_cols = df.select_dtypes(exclude=["object", "category"]).columns
@@ -56,11 +202,14 @@ class DataLoader:
         extra_info = column_info
         extra_info["num_features"] = len(df.columns)
 
-        if igtd_path:
+        if igtd_path and os.path.exists(igtd_path):
             with open(igtd_path) as f:
-                extra_info["column_ordering"] = list(
-                    map(int, f.readlines()[-1].strip().split())
-                )
+                # Read the last line from the file and convert it into a list of integers
+                lines = f.readlines()
+                if lines:
+                    extra_info["column_ordering"] = list(
+                        map(int, lines[-1].strip().split())
+                    )
             extra_info["img_rows"] = img_rows
             extra_info["img_columns"] = img_columns
 
@@ -72,7 +221,7 @@ class DataLoader:
         col_to_bin = np.random.choice(
             [col for col in num_cols if col not in exclude_cols]
         )
-        print(f"Binning randomly chosen columns {col_to_bin}")
+        print(f"Binning randomly chosen column {col_to_bin}")
         train_df[col_to_bin] = train_df[col_to_bin].fillna(0)
         test_df[col_to_bin] = train_df[col_to_bin].fillna(0)
         # Bin the column on both the training and test sets
@@ -100,17 +249,6 @@ class DataLoader:
         """
         Perform undersampling on a pandas dataframe with a target column
         with values 0 and 1, based on a user-defined ratio parameter.
-
-        Parameters:
-            df (pandas.DataFrame): The dataframe to perform undersampling on.
-            target_col (str): The name of the target column with values 0 and 1.
-            ratio (int): The degree of undersampling, where if the parameter is 1
-                then there will be as many 0s as 1s. If it is 6, there will be
-                6 times as many 0s as 1s.
-
-        Returns:
-            A pandas dataframe with the same column names as the input dataframe,
-            but undersampled based on the specified ratio.
         """
         counts = df[target_col].value_counts()
         num_0s = counts[0]
@@ -123,48 +261,31 @@ class DataLoader:
     def balance_multiclass_dataset(self, X, y):
         """
         Undersample the majority class to balance the dataset.
-
-        Args:
-            X (DataFrame): Feature matrix.
-            y (Series): Target variable.
-
-        Returns:
-            Balanced feature matrix (DataFrame) and target variable (Series).
         """
         # Count the occurrences of each class
+        from collections import Counter
+
         class_counts = Counter(y)
-
-        # Determine the minimum class count
         min_class_count = min(class_counts.values())
-
-        # Create a DataFrame with the same columns as X
         balanced_X = pd.DataFrame(columns=X.columns)
-
-        # Undersample each class to have the same count as the minimum class count
         for class_label in class_counts.keys():
             class_indices = y[y == class_label].index
             class_indices = shuffle(class_indices, random_state=self.random_state)
             class_indices = class_indices[:min_class_count]
             balanced_X = pd.concat([balanced_X, X.loc[class_indices]])
-
-        # Shuffle the balanced dataset
         balanced_X, balanced_y = shuffle(
             balanced_X, y.loc[balanced_X.index], random_state=self.random_state
         )
-
         return balanced_X, balanced_y
 
     def scale_features(self, X_train, X_test, mode="mean_std"):
-        # Get the categorical and numerical columns
+        # Get the numerical columns
         num_cols = X_train.select_dtypes(exclude=["object", "category"]).columns
-        # Normalize the features if requested
         if mode == "mean_std":
-            # Normalize the features using mean and standard deviation
             scaler = StandardScaler()
             X_train[num_cols] = scaler.fit_transform(X_train[num_cols])
             X_test[num_cols] = scaler.transform(X_test[num_cols])
         elif mode == "min_max":
-            # Normalize the features using min-max scaling
             scaler = MinMaxScaler(feature_range=(0, 1))
             X_train[num_cols] = scaler.fit_transform(X_train[num_cols])
             X_test[num_cols] = scaler.transform(X_test[num_cols])
@@ -175,16 +296,17 @@ class DataLoader:
         return X_train, X_test
 
     def force_encode_categorical(self, df, exclude_cols=["target"]):
-        # Get the categorical and numerical columns
         input_cat_cols = df.select_dtypes(include=["object", "category"]).columns
         if len(input_cat_cols) > 0:
             to_encode = [i for i in input_cat_cols if i not in exclude_cols]
-            # Select a random column and convert it to a categorical column with 10 buckets
-            # Perform one-hot encoding on the object columns
             encoded_cols = pd.get_dummies(df[to_encode], prefix=to_encode)
-            # Concatenate the encoded columns with the non-object columns
             df = pd.concat([df.drop(to_encode, axis=1), encoded_cols], axis=1)
         return df
+
+
+###############################################################################
+# DynamicDataLoader with IGTD integration
+###############################################################################
 
 
 class DynamicDataLoader(DataLoader):
@@ -201,8 +323,10 @@ class DynamicDataLoader(DataLoader):
         return_extra_info=False,
         encode_categorical=False,
         num_targets=1,
+        run_igtd=False,
+        igtd_configs: Optional[Dict[str, Dict]] = None,
+        igtd_result_base_dir: Optional[str] = "igtd",
     ):
-
         self.dataset_path = dataset_path
         self.target_column = target_column
         self.split_col = split_col
@@ -214,12 +338,13 @@ class DynamicDataLoader(DataLoader):
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
         self.num_targets = num_targets
+        self.run_igtd = False
+        self.igtd_configs = igtd_configs  # A dict of ordering configurations
+        self.igtd_result_base_dir = igtd_result_base_dir
 
     def load_data(self):
-
         df = pd.read_csv(self.dataset_path)
 
-        # Automatically determine the target column if not specified
         if self.target_column not in df.columns:
             raise ValueError(
                 f"Target column '{self.target_column}' not found in dataset"
@@ -233,24 +358,24 @@ class DynamicDataLoader(DataLoader):
         if self.encode_categorical:
             X = self.force_encode_categorical(X)
 
+        # Split using split_col if provided; otherwise, use train_test_split
         if self.split_col and self.split_col in df.columns:
             if self.train_value is None or self.test_value is None:
                 raise ValueError(
                     "When using split_col, you must specify train_value and test_value."
                 )
-
             unique_values = df[self.split_col].unique()
             if set(unique_values) != {self.train_value, self.test_value}:
                 raise ValueError(
                     f"split_col must contain exactly two values: {unique_values}, but expected {self.train_value} and {self.test_value}."
                 )
-
             train_mask = df[self.split_col] == self.train_value
             test_mask = df[self.split_col] == self.test_value
-
             X_train, X_test = X[train_mask], X[test_mask]
             y_train, y_test = y[train_mask], y[test_mask]
         else:
+            from sklearn.model_selection import train_test_split
+
             X_train, X_test, y_train, y_test = train_test_split(
                 X,
                 y,
@@ -265,10 +390,33 @@ class DynamicDataLoader(DataLoader):
                 X_train, X_test, mode=self.normalize_features
             )
 
-        # Optionally return extra info
+        # If IGTD is configured, run the IGTD preprocessor on X_train.
+        if self.run_igtd:
+            igtd_preprocessor = IGTDPreprocessor(
+                igtd_configs=self.igtd_configs
+                or None,  # Use provided configs or default
+                base_result_dir=self.igtd_result_base_dir
+                or "igtd",  # Use provided dir or default
+            )
+
+            igtd_results = igtd_preprocessor.run(X_train)
+            # Choose the first configuration and construct the full path to the _index.txt file.
+            first_config = next(iter(igtd_results))
+            igtd_path = os.path.join(igtd_results[first_config], "_index.txt")
+
+        # Optionally return extra info (which includes IGTD ordering info if available)
         extra_info = None
         if self.return_extra_info:
-            extra_info = self.create_extra_info(df)
+            extra_info = self.create_extra_info(
+                df,
+                igtd_path=igtd_path,
+                img_rows=(
+                    self.igtd_preprocessor.num_row if self.igtd_preprocessor else None
+                ),
+                img_columns=(
+                    self.igtd_preprocessor.num_col if self.igtd_preprocessor else None
+                ),
+            )
 
         return X_train, X_test, y_train, y_test, extra_info
 
