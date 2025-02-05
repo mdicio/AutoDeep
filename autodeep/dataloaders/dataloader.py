@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -21,45 +21,49 @@ class IGTDPreprocessor:
     ordering of features. This class wraps the call to `table_to_image` from your IGTD library.
 
     Attributes:
-        num_row (int): Number of pixel rows in the image.
-        num_col (int): Number of pixel columns in the image.
-        save_image_size (int or float): Size (in inches) of saved images.
-        max_step (int): Maximum number of iterations for the IGTD algorithm.
-        val_step (int): Iterations for convergence validation.
-        min_gain (float): Minimum gain threshold for convergence.
-        igtd_configs (dict): Default dictionary of IGTD ordering configurations.
+        igtd_configs (dict): Dictionary containing IGTD-related configurations.
         exclude_cols (list): List of column names to exclude from the transformation.
     """
 
     def __init__(
         self,
-        save_image_size: int = 3,
-        max_step: int = 1000000,
-        val_step: int = 1000,
-        min_gain: float = 0.01,
-        exclude_cols: Optional[list] = None,
-        igtd_configs: Dict[str, Dict] = {
-            "Euclidean_Euclidean": {
-                "fea_dist_method": "Euclidean",
-                "image_dist_method": "Euclidean",
-                "error": "abs",
-            },
-            "Pearson_Manhattan": {
-                "fea_dist_method": "Pearson",
-                "image_dist_method": "Manhattan",
-                "error": "squared",
-            },
-        },
+        dataset_name: str = None,
+        igtd_configs: Dict[str, Dict] = None,
         base_result_dir: str = "igtd",
+        exclude_cols: Optional[List[str]] = None,
     ):
-        self.save_image_size = save_image_size
-        self.max_step = max_step
-        self.val_step = val_step
-        self.min_gain = min_gain
-        self.igtd_configs = igtd_configs
-        self.base_result_dir = base_result_dir
+        """
+        Initializes the IGTDPreprocessor with default configurations.
 
+        Args:
+            exclude_cols (list, optional): Columns to exclude. Defaults to None.
+            igtd_configs (dict, optional): Dictionary of IGTD configurations. Defaults to None.
+            base_result_dir (str, optional): Base directory for IGTD output. Defaults to "igtd".
+        """
+        self.dataset_name = dataset_name
+        self.igtd_configs = igtd_configs or {
+            "img_size": "auto",
+            "save_image_size": 3,
+            "max_step": 1_000_000,
+            "val_step": 1_000,
+            "min_gain": 0.01,
+            "ordering_methods": {
+                "Euclidean_Euclidean": {
+                    "fea_dist_method": "Euclidean",
+                    "image_dist_method": "Euclidean",
+                    "error": "abs",
+                },
+                "Pearson_Manhattan": {
+                    "fea_dist_method": "Pearson",
+                    "image_dist_method": "Manhattan",
+                    "error": "squared",
+                },
+            },
+        }
+        self.base_result_dir = base_result_dir
         self.exclude_cols = exclude_cols if exclude_cols is not None else []
+        self.img_size = self.igtd_configs.get("img_size")
+        # Set up logging
         self.logger = logging.getLogger(self.__class__.__name__)
         if not self.logger.handlers:
             ch = logging.StreamHandler()
@@ -68,7 +72,16 @@ class IGTDPreprocessor:
             ch.setFormatter(formatter)
             self.logger.addHandler(ch)
 
-    def _auto_determine_img_size(X):
+    def _auto_determine_img_size(self, X: pd.DataFrame):
+        """
+        Determines the optimal image size based on the number of features.
+
+        Args:
+            X (pd.DataFrame): DataFrame containing feature columns.
+
+        Returns:
+            tuple: (num_row, num_col) representing the image dimensions.
+        """
         num_features = len(X.columns)
 
         # Find valid (row, col) pairs where row * col = num_features
@@ -77,76 +90,147 @@ class IGTDPreprocessor:
             for r in range(1, int(np.sqrt(num_features)) + 1)
             if num_features % r == 0
         ]
-        print(factors)
+
         # Pick the most square-like option (largest row)
         num_row, num_col = factors[-1]
 
         # Check if num_features is prime (only divisible by 1 and itself)
         if len(factors) == 1:  # Only (1, num_features) exists
-            print(
-                f"Warning: The number of features ({num_features}) is prime. "
+            self.logger.warning(
+                f"The number of features ({num_features}) is prime. "
                 "For better IGTD performance, consider adding or removing columns to allow a more standard grid size."
             )
 
         return num_row, num_col
 
-    def run(
-        self,
-        X: pd.DataFrame,
-        num_col: Optional[int] = None,
-        num_row: Optional[int] = None,
-        img_size="custom",  # auto
-    ) -> Dict[str, str]:
+    def run(self, X: pd.DataFrame) -> Dict[str, str]:
         """
-        Run the IGTD algorithm on the provided DataFrame for each ordering configuration.
+        Runs the IGTD algorithm on the provided DataFrame for each ordering configuration.
 
         Args:
             X (pd.DataFrame): The training data (features only) on which to run IGTD.
-            base_result_dir (str): The base directory where IGTD results will be saved.
-            ordering_configs (Dict[str, Dict]): A dictionary mapping configuration names to
-                their parameters. Each configuration dict should contain:
-                  - "fea_dist_method": (str) method for feature distance calculation.
-                  - "image_dist_method": (str) method for pixel distance calculation.
-                  - "error": (str) error function (e.g., "abs", "squared").
+            img_size (str or list, optional): Image size configuration. Defaults to "auto".
 
         Returns:
-            Dict[str, str]: A mapping from configuration name to the folder where the IGTD
-            result was saved.
+            Dict[str, str]: Mapping from configuration name to the folder where the IGTD result was saved.
         """
         result_dirs = {}
-        for config_name, config in self.igtd_configs.items():
+
+        for config_name, config in self.igtd_configs["ordering_methods"].items():
             # Construct a result directory for this configuration
-            result_dir = os.path.join(self.base_result_dir, f"{config_name}")
-            os.makedirs(result_dir, exist_ok=True)
+            result_dir = os.path.join(
+                self.base_result_dir, self.dataset_name, config_name
+            )
+            if not os.path.exists(result_dir):
+                os.makedirs(result_dir, exist_ok=True)
             self.logger.info(
                 f"Running IGTD ordering for config '{config_name}' in: {result_dir}"
             )
 
-            if img_size == "auto":
-                self.num_row, self.num_col = self._auto_determine_img_size(X)
+            if self.img_size == "auto":
+                num_row, num_col = self._auto_determine_img_size(X)
+            elif isinstance(self.img_size, List):
+                num_row, num_col = self.img_size
+            else:
+                raise ValueError(
+                    "img_size must be either 'auto' or a list [num_row, num_col]"
+                )
 
+            print(type(X))
+            print(X.shape)
+            print(num_row)
+            print(num_col)
             table_to_image(
                 X,
                 [num_row, num_col],
                 config["fea_dist_method"],
                 config["image_dist_method"],
-                self.save_image_size,
-                self.max_step,
-                self.val_step,
+                self.igtd_configs["save_image_size"],
+                self.igtd_configs["max_step"],
+                self.igtd_configs["val_step"],
                 result_dir,
                 config["error"],
-                min_gain=self.min_gain,
+                min_gain=self.igtd_configs["min_gain"],
                 save_mode="bulk",
                 exclude_cols=self.exclude_cols,
             )
-            result_dirs[config_name] = result_dir
-
+            result_file_name = os.path.join(result_dir, config["error"], "_index.txt")
+            result_dirs[config_name] = result_file_name
+            self.result_file_name = result_file_name
+            self.num_row = num_row
+            self.num_col = num_col
+        print("IGTD RESULTS OUTPUT")
+        print(result_dirs)
         return result_dirs
 
 
-###############################################################################
-# Base DataLoader class with additional utility functions
-###############################################################################
+class ExtraInfoCreator:
+    def __init__(
+        self,
+        dataset_name,
+        run_igtd=False,
+        igtd_preprocessor: Optional[IGTDPreprocessor] = None,
+    ):
+        """
+        Initializes the ExtraInfoCreator.
+        Args:
+            run_igtd (bool): Whether to run IGTD.
+            igtd_configs (dict): Dictionary of IGTD ordering configurations.
+            igtd_result_base_dir (str): Base directory for IGTD results.
+        """
+        self.dataset_name = dataset_name
+        self.run_igtd = run_igtd
+        # Create the IGTD preprocessor if configs are provided
+        self.igtd_preprocessor = igtd_preprocessor
+
+    def create_extra_info(self, df: pd.DataFrame, dataset_name: str):
+        """
+        Creates extra info from the dataframe and (optionally) IGTD results.
+        If IGTD is enabled, first check if the IGTD output for the dataset exists.
+        If it does, reuse it; otherwise, run IGTD.
+        """
+        igtd_candidate = None
+        if self.run_igtd:
+            if hasattr(self.igtd_preprocessor, "result_file_name"):
+                igtd_candidate = self.igtd_preprocessor.result_file_name
+                print("PATH EXISTED THIS IS THE IGTD PATH INDEX", igtd_candidate)
+            else:
+                self.igtd_preprocessor.run(df)
+                igtd_candidate = self.igtd_preprocessor.result_file_name
+                print("PATH NOT EXISTED THIS IS THE IGTD PATH INDEX", igtd_candidate)
+
+        # Create extra info about the columns.
+        cat_cols = df.select_dtypes(include=["object", "category"]).columns
+        num_cols = df.select_dtypes(exclude=["object", "category"]).columns
+        cat_unique_vals = [len(df[col].unique()) for col in cat_cols]
+
+        column_info = {
+            "cat_col_names": list(cat_cols),
+            "cat_col_idx": list(df.columns.get_indexer(cat_cols)),
+            "cat_col_unique_vals": cat_unique_vals,
+            "num_col_names": list(num_cols),
+            "num_col_idx": list(df.columns.get_indexer(num_cols)),
+        }
+        extra_info = column_info
+        extra_info["num_features"] = len(df.columns)
+
+        if igtd_candidate and os.path.exists(igtd_candidate):
+            with open(igtd_candidate) as f:
+                lines = f.readlines()
+                if lines:
+                    extra_info["column_ordering"] = list(
+                        map(int, lines[-1].strip().split())
+                    )
+            # Optionally add image dimensions if available from the IGTD preprocessor.
+            if self.igtd_preprocessor:
+                extra_info["img_rows"] = getattr(
+                    self.igtd_preprocessor, "num_row", None
+                )
+                extra_info["img_columns"] = getattr(
+                    self.igtd_preprocessor, "num_col", None
+                )
+
+        return extra_info
 
 
 class DataLoader:
@@ -174,46 +258,6 @@ class DataLoader:
 
     def load_data(self):
         raise NotImplementedError
-
-    def create_extra_info(self, df, igtd_path=None, img_rows=None, img_columns=None):
-        """
-        Create extra information about the dataset including:
-          - Categorical column names, indices and unique counts.
-          - Numerical column names and indices.
-          - Total number of features.
-          - (Optionally) IGTD ordering information.
-
-        If igtd_path is provided, the method will read the ordering from that file.
-        """
-        # Get the categorical and numerical columns
-        cat_cols = df.select_dtypes(include=["object", "category"]).columns
-        num_cols = df.select_dtypes(exclude=["object", "category"]).columns
-
-        cat_unique_vals = [len(df[col].unique()) for col in cat_cols]
-
-        # Create a dictionary to store the column information
-        column_info = {
-            "cat_col_names": list(cat_cols),
-            "cat_col_idx": list(df.columns.get_indexer(cat_cols)),
-            "cat_col_unique_vals": cat_unique_vals,
-            "num_col_names": list(num_cols),
-            "num_col_idx": list(df.columns.get_indexer(num_cols)),
-        }
-        extra_info = column_info
-        extra_info["num_features"] = len(df.columns)
-
-        if igtd_path and os.path.exists(igtd_path):
-            with open(igtd_path) as f:
-                # Read the last line from the file and convert it into a list of integers
-                lines = f.readlines()
-                if lines:
-                    extra_info["column_ordering"] = list(
-                        map(int, lines[-1].strip().split())
-                    )
-            extra_info["img_rows"] = img_rows
-            extra_info["img_columns"] = img_columns
-
-        return extra_info
 
     def bin_random_numerical_column(self, train_df, test_df, exclude_cols, bins=10):
         # Select a random numerical column to bin
@@ -312,6 +356,7 @@ class DataLoader:
 class DynamicDataLoader(DataLoader):
     def __init__(
         self,
+        dataset_name,
         dataset_path,
         target_column="target",
         test_size=0.2,
@@ -325,8 +370,9 @@ class DynamicDataLoader(DataLoader):
         num_targets=1,
         run_igtd=False,
         igtd_configs: Optional[Dict[str, Dict]] = None,
-        igtd_result_base_dir: Optional[str] = "igtd",
+        igtd_result_base_dir: Optional[str] = "IGTD",
     ):
+        self.dataset_name = dataset_name
         self.dataset_path = dataset_path
         self.target_column = target_column
         self.split_col = split_col
@@ -338,9 +384,25 @@ class DynamicDataLoader(DataLoader):
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
         self.num_targets = num_targets
-        self.run_igtd = False
-        self.igtd_configs = igtd_configs  # A dict of ordering configurations
+        self.run_igtd = run_igtd
+        self.igtd_configs = igtd_configs
         self.igtd_result_base_dir = igtd_result_base_dir
+
+        # Instead of creating an IGTDPreprocessor inline,
+        # create an instance of ExtraInfoCreator that will handle IGTD if needed.
+        self.extra_info_creator = ExtraInfoCreator(
+            dataset_name=self.dataset_name,
+            run_igtd=self.run_igtd,
+            igtd_preprocessor=(
+                IGTDPreprocessor(
+                    dataset_name=self.dataset_name,
+                    igtd_configs=self.igtd_configs,
+                    base_result_dir=self.igtd_result_base_dir,
+                )
+                if self.igtd_configs
+                else None
+            ),
+        )
 
     def load_data(self):
         df = pd.read_csv(self.dataset_path)
@@ -354,11 +416,9 @@ class DynamicDataLoader(DataLoader):
         X = df.drop(columns=[self.target_column])
         y = df[self.target_column]
 
-        # Handle categorical encoding if needed
         if self.encode_categorical:
             X = self.force_encode_categorical(X)
 
-        # Split using split_col if provided; otherwise, use train_test_split
         if self.split_col and self.split_col in df.columns:
             if self.train_value is None or self.test_value is None:
                 raise ValueError(
@@ -374,7 +434,6 @@ class DynamicDataLoader(DataLoader):
             X_train, X_test = X[train_mask], X[test_mask]
             y_train, y_test = y[train_mask], y[test_mask]
         else:
-            from sklearn.model_selection import train_test_split
 
             X_train, X_test, y_train, y_test = train_test_split(
                 X,
@@ -384,38 +443,16 @@ class DynamicDataLoader(DataLoader):
                 stratify=y,
             )
 
-        # Normalize features if requested
         if self.normalize_features:
             X_train, X_test = self.scale_features(
                 X_train, X_test, mode=self.normalize_features
             )
 
-        # If IGTD is configured, run the IGTD preprocessor on X_train.
-        if self.run_igtd:
-            igtd_preprocessor = IGTDPreprocessor(
-                igtd_configs=self.igtd_configs
-                or None,  # Use provided configs or default
-                base_result_dir=self.igtd_result_base_dir
-                or "igtd",  # Use provided dir or default
-            )
-
-            igtd_results = igtd_preprocessor.run(X_train)
-            # Choose the first configuration and construct the full path to the _index.txt file.
-            first_config = next(iter(igtd_results))
-            igtd_path = os.path.join(igtd_results[first_config], "_index.txt")
-
-        # Optionally return extra info (which includes IGTD ordering info if available)
+        # Use ExtraInfoCreator to obtain extra info (including IGTD ordering if run)
         extra_info = None
         if self.return_extra_info:
-            extra_info = self.create_extra_info(
-                df,
-                igtd_path=igtd_path,
-                img_rows=(
-                    self.igtd_preprocessor.num_row if self.igtd_preprocessor else None
-                ),
-                img_columns=(
-                    self.igtd_preprocessor.num_col if self.igtd_preprocessor else None
-                ),
+            extra_info = self.extra_info_creator.create_extra_info(
+                X_train, self.dataset_name
             )
 
         return X_train, X_test, y_train, y_test, extra_info

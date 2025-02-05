@@ -905,7 +905,7 @@ model_configs:
       return_extra_info: True  # for dataloader
 
     default_params:
-      early_stopping_rounds: 10
+      early_stopping: True
       verbose: false
       iterations: 20
       retrain: False

@@ -22,10 +22,28 @@ DEFAULT_MODELS = [
     "gandalf",
     "node",
 ]
-
-DEFAULT_DATA_FOLDER = Path("./data")
 DEFAULT_OUTPUT_FOLDER = Path("./output")
 DEFAULT_MODEL_CONFIG_FILE = Path(__file__).parent / "configuration" / "model_config.yml"
+DEFAULT_IGTD_CONFIG = {
+    "img_size": "auto",
+    "save_image_size": 3,
+    "max_step": 1_000_000,
+    "val_step": 1_000,
+    "min_gain": 0.01,
+    "ordering_methods": {
+        "Euclidean_Euclidean": {
+            "fea_dist_method": "Euclidean",
+            "image_dist_method": "Euclidean",
+            "error": "abs",
+        },
+        "Pearson_Manhattan": {
+            "fea_dist_method": "Pearson",
+            "image_dist_method": "Manhattan",
+            "error": "squared",
+        },
+    },
+}
+DEFAULT_IGTD_DIR = Path("./IGTD")
 
 
 class AutoRunner:
@@ -39,84 +57,74 @@ class AutoRunner:
         model_config=DEFAULT_MODEL_CONFIG_FILE,
         data_config=None,
         output_folder=DEFAULT_OUTPUT_FOLDER,
-        output_file_format="{dataset}_{model}_{timestamp}.yml",
+        output_filename="experiments.yml",
+        igtd_path=DEFAULT_IGTD_DIR,
+        igtd_config=DEFAULT_IGTD_CONFIG,
     ):
         self.model_config = self._load_config(model_config)
-        self.data_config = self._process_data_config(data_config)
-        self.data_loader = create_dynamic_data_loader
+        self.data_config = self._validate_data_config(data_config)
         self.output_folder = output_folder
+        self.output_filename = output_filename
         self.default_models = default_models
         self.execution_mode = execution_mode
         self.eval_metrics = eval_metrics
         self.max_evals = max_evals
         self.random_state = random_state
-        self.output_file_format = output_file_format
+        self.igtd_path = igtd_path
+        self.igtd_config = igtd_config
         self.results = []
-        self.random_state = self.model_config.get("random_state", 42)
         self._initialize()
 
     def _initialize(self):
         seed_everything(self.random_state)
-
-        if not os.path.exists(self.output_folder):
-            print(f"Output folder not found, creating one {self.output_folder}")
-            os.makedirs(self.output_folder)
+        os.makedirs(self.output_folder, exist_ok=True)
 
     def _load_config(self, path):
         with open(path, "r") as file:
-            config = yaml.safe_load(file)
-        return config
+            return yaml.safe_load(file)
 
-    def _process_data_config(self, data_config):
-        if isinstance(data_config, dict):
-            return data_config
-        elif data_config is None:
-            raise ValueError("data_config must be provided as a dictionary.")
-        else:
-            raise ValueError("data_config must be either a dictionary or None.")
+    def _validate_data_config(self, data_config):
+        if not isinstance(data_config, dict):
+            raise ValueError("data_config must be a dictionary.")
+        return data_config
 
     def run(self):
-        included_models = [m.lower() for m in self.default_models]
-
-        for dataset_name in self.data_config.keys():
-            data_config = self.data_config[dataset_name]
+        for dataset_name, data_config in self.data_config.items():
             dataset_path = data_config.get("dataset_path")
             if not dataset_path or not os.path.exists(dataset_path):
                 raise FileNotFoundError(f"Dataset path '{dataset_path}' not found.")
 
-            for model_name in included_models:
+            for model_name in map(str.lower, self.default_models):
                 print(f"Running {model_name} on {dataset_name}...")
+                run_id = datetime.now().strftime("%Y%m%d-%H%M%S-") + str(uuid4())
+                igtd_configs = data_config.get("igtd_configs", self.igtd_config)
+                igtd_configs["img_size"] = data_config.get("igtd_configs", {}).get(
+                    "img_size", "auto"
+                )
 
-                run_id = datetime.now().strftime("%Y%m-%d%H-%M%S-") + str(uuid4())
-                model_config = self.model_config.get("model_configs").get(model_name)
-                execution_mode = self.execution_mode
-                run_igtd = False
-                if model_name == "resnet":
-                    run_igtd = True
-
-                data_loader = self.data_loader(
-                    dataset_path=data_config.get("dataset_path"),
+                run_igtd = model_name == "resnet"
+                data_loader = create_dynamic_data_loader(
+                    dataset_name=dataset_name,
+                    dataset_path=dataset_path,
                     target_column=data_config.get("target_col"),
-                    split_col=data_config.get("split_col", None),
-                    test_size=data_config.get("test_size", None),
-                    train_value=data_config.get("train_value", None),
-                    test_value=data_config.get("test_value", None),
+                    split_col=data_config.get("split_col"),
+                    test_size=data_config.get("test_size"),
+                    train_value=data_config.get("train_value"),
+                    test_value=data_config.get("test_value"),
                     random_state=self.random_state,
-                    normalize_features=model_config.get("data_params").get(
-                        "normalize_features"
-                    ),
-                    return_extra_info=model_config.get("data_params").get(
-                        "return_extra_info"
-                    ),
-                    encode_categorical=model_config.get("data_params").get(
-                        "encode_categorical"
-                    ),
-                    num_targets=data_config.get("num_targets"),
+                    normalize_features=self.model_config["model_configs"]
+                    .get(model_name, {})
+                    .get("data_params", {})
+                    .get("normalize_features"),
+                    return_extra_info=True,
+                    encode_categorical=self.model_config["model_configs"]
+                    .get(model_name, {})
+                    .get("data_params", {})
+                    .get("encode_categorical"),
+                    num_targets=data_config.get("num_targets", 1),
                     run_igtd=run_igtd,
-                    igtd_configs=data_config.get("igtd_configs", None),
-                    igtd_result_base_dir=data_config.get(
-                        "igtd_result_base_dir", "igtd"
-                    ),
+                    igtd_configs=igtd_configs,
+                    igtd_result_base_dir=self.igtd_path,
                 )
                 X_train, X_test, y_train, y_test, extra_info = data_loader.load_data()
 
@@ -127,89 +135,99 @@ class AutoRunner:
                     num_classes=data_config.get("num_targets", 1),
                 )
 
-                # Handle new execution modes
-                if execution_mode == "hyperopt_kfold":
-                    (
-                        best_params,
-                        best_score,
-                        score_std,
-                        full_metrics,
-                    ) = model.hyperopt_search_kfold(
-                        X_train,
-                        y_train,
-                        model_config=model_config,
-                        metric=data_config["metric"],
-                        eval_metrics=data_config["eval_metrics"],
-                        k_value=5,
-                        max_evals=self.max_evals,
-                        problem_type=data_config["problem_type"],
-                        extra_info=extra_info,
-                    )
-                # Handle new execution modes
-                elif execution_mode == "hyperopt":
-                    (
-                        best_params,
-                        best_score,
-                        full_metrics,
-                    ) = model.hyperopt_search(
-                        X_train,
-                        y_train,
-                        val_size=model_config["default_params"]["val_size"],
-                        model_config=model_config,
-                        metric=data_config["metric"],
-                        eval_metrics=data_config["eval_metrics"],
-                        max_evals=self.max_evals,
-                        problem_type=data_config["problem_type"],
-                        extra_info=extra_info,
-                    )
-                else:
-                    model.train(X_train, y_train)
-
-                # Handle model prediction
-                if data_config["problem_type"] == "binary_classification":
-                    y_pred, y_prob = model.predict(X_test, predict_proba=True)
-                else:
-                    y_pred = model.predict(X_test)
-                    y_prob = None
-
-                # Evaluate and save results
-                evaluator = Evaluator(
-                    y_true=y_test,
-                    y_pred=y_pred,
-                    y_prob=y_prob,
-                    run_metrics=self.eval_metrics,
-                    metric=data_config["metric"],
-                    problem_type=data_config["problem_type"],
+                best_params, best_score, full_metrics = self._train_model(
+                    model, X_train, y_train, model_name, data_config, extra_info
                 )
-                output_metrics = evaluator.evaluate_model()
+
+                y_pred, y_prob = self._get_predictions(model, X_test, data_config)
+                output_metrics = self._evaluate(y_test, y_pred, y_prob, data_config)
 
                 self._save_results(
-                    run_id, model_name, dataset_name, output_metrics, y_pred, y_test
+                    run_id,
+                    dataset_name,
+                    model_name,
+                    output_metrics,
+                    best_params,
+                    best_score,
+                    full_metrics,
+                    y_pred,
+                    y_test,
                 )
 
-    def _save_results(self, run_id, model_name, dataset_name, metrics, y_pred, y_true):
-        output_filename = self.output_file_format.format(
-            dataset=dataset_name, model=model_name, timestamp=run_id
-        )
-        output_path = os.path.join(self.output_folder, output_filename)
+    def _train_model(
+        self, model, X_train, y_train, model_name, data_config, extra_info
+    ):
+        model_config = self.model_config["model_configs"].get(model_name, {})
+        if self.execution_mode == "hyperopt_kfold":
+            return model.hyperopt_search_kfold(
+                X_train,
+                y_train,
+                model_config,
+                data_config["metric"],
+                data_config["eval_metrics"],
+                k_value=5,
+                max_evals=self.max_evals,
+                problem_type=data_config["problem_type"],
+                extra_info=extra_info,
+            )
+        elif self.execution_mode == "hyperopt":
+            return model.hyperopt_search(
+                X_train,
+                y_train,
+                val_size=model_config["default_params"]["val_size"],
+                model_config=model_config,
+                metric=data_config["metric"],
+                eval_metrics=data_config["eval_metrics"],
+                max_evals=self.max_evals,
+                problem_type=data_config["problem_type"],
+                extra_info=extra_info,
+            )
 
-        output_writer = OutputWriter(
-            output_path,
-            [
-                "run_id",
-                "model",
-                "dataset",
-                "metrics",
-                "predictions",
-                "ground_truth",
-            ],
-        )
+        else:
+            model.train(X_train, y_train)
+            return {}, None, {}
 
-        output_writer.write_row(
-            run_id=run_id,
-            model=model_name,
-            dataset=dataset_name,
-            metrics=metrics,
-            predictions=y_pred[:10].tolist(),
-            ground_truth=y_true[:10].tolist(),
+    def _get_predictions(self, model, X_test, data_config):
+        if data_config["problem_type"] == "binary_classification":
+            return model.predict(X_test, predict_proba=True)
+        return model.predict(X_test), None
+
+    def _evaluate(self, y_test, y_pred, y_prob, data_config):
+        evaluator = Evaluator(
+            y_true=y_test,
+            y_pred=y_pred,
+            y_prob=y_prob,
+            run_metrics=self.eval_metrics,
+            metric=data_config["metric"],
+            problem_type=data_config["problem_type"],
         )
+        return evaluator.evaluate_model()
+
+    def _save_results(
+        self,
+        run_id,
+        dataset_name,
+        model_name,
+        metrics,
+        best_params,
+        best_score,
+        full_metrics,
+        y_pred,
+        y_true,
+    ):
+        output_path = os.path.join(self.output_folder, self.output_filename)
+        output_writer = OutputWriter(output_path, append=True)
+
+        result_data = {
+            "run_id": run_id,
+            "dataset": dataset_name,
+            "model": model_name,
+            "metrics": metrics,
+            "best_params": best_params,
+            "best_score": best_score,
+            "full_metrics": full_metrics,
+            "predictions": y_pred[:10].tolist(),
+            "ground_truth": y_true[:10].tolist(),
+        }
+
+        output_writer.write(result_data)

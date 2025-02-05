@@ -98,6 +98,7 @@ def create_model(model_name, problem_type, num_classes, random_state=42):
 
 
 def create_dynamic_data_loader(
+    dataset_name,
     dataset_path,
     target_column,
     test_size,
@@ -109,10 +110,14 @@ def create_dynamic_data_loader(
     return_extra_info,
     encode_categorical,
     num_targets,
+    run_igtd,
+    igtd_configs,  # A dict of ordering configurations
+    igtd_result_base_dir,
 ):
     print(f"Using dynamic loader for dataset: {dataset_path}")
     # Create a dynamic data loader
     return DynamicDataLoader(
+        dataset_name,
         dataset_path,
         target_column,
         test_size,
@@ -124,6 +129,9 @@ def create_dynamic_data_loader(
         return_extra_info,
         encode_categorical,
         num_targets,
+        run_igtd,
+        igtd_configs,  # A dict of ordering configurations
+        igtd_result_base_dir,
     )
 
 
