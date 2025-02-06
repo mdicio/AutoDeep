@@ -662,8 +662,8 @@ def IGTD(
 def generate_image_data(
     data,
     index,
-    num_row,
-    num_column,
+    img_rows,
+    img_columns,
     coord,
     save_mode="normal",
     save_pngs=False,
@@ -679,8 +679,8 @@ def generate_image_data(
     data: original tabular data, 2D array or data frame, n_samples by n_features
     index: indices of features obtained through optimization, according to which the features can be
         arranged into a num_r by num_c image.
-    num_row: number of rows in image
-    num_column: number of columns in image
+    img_rows: number of rows in image
+    img_columns: number of columns in image
     coord: coordinates of features in the image/matrix
     image_folder: directory to save the image and txt data files. If none, no data file is saved
     file_name: a string as a part of the file names to save data
@@ -692,7 +692,7 @@ def generate_image_data(
         is [0, 255]. Small values actually indicate high values in the original data.
     samples: the names of indices of the samples
     """
-    # print(f"INDEX {index}, NumR {num_row}, NumC {num_column}, coord {coord}")
+    # print(f"INDEX {index}, NumR {img_rows}, NumC {img_columns}, coord {coord}")
     # print(f"INDEX {index}")
     # print(type(data))
     # add excluded cols to index in first positions
@@ -722,11 +722,11 @@ def generate_image_data(
             255 - (data_2 - min_v) / (max_v - min_v) * 255
         )  # So that black means high value
 
-        image_data = np.empty((num_row, num_column, data_2.shape[0]))
+        image_data = np.empty((img_rows, img_columns, data_2.shape[0]))
         image_data.fill(np.nan)
 
         for i in range(data_2.shape[0]):
-            data_i = np.empty((num_row, num_column))
+            data_i = np.empty((img_rows, img_columns))
             data_i.fill(np.nan)
             data_i[coord] = data_2[i, :]
             image_data[:, :, i] = data_i
@@ -898,8 +898,8 @@ def table_to_image(
         data=norm_d,
         index=index[min_id, :],
         exclude_cols=exclude_cols,
-        num_row=scale[0],
-        num_column=scale[1],
+        img_rows=scale[0],
+        img_columns=scale[1],
         coord=coordinate,
         image_folder=normDir + "/data",
         file_name="",

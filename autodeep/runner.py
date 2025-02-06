@@ -4,10 +4,11 @@ from datetime import datetime
 from uuid import uuid4
 
 import yaml
-from autodeep.evaluation.generalevaluator import Evaluator
-from autodeep.factory import create_data_loader, create_model, seed_everything
 from dataloaders.dataloader import *
 from outputhandler.outputwriter import OutputWriter
+
+from autodeep.evaluation.generalevaluator import Evaluator
+from autodeep.factory import create_data_loader, create_model, seed_everything
 
 output_results_filename = "sanity_check"
 DEFAULT = False
@@ -46,7 +47,7 @@ for run in runs:
 
         dataset_configs = config["dataset_configs"][dataset_name]
         dataset_task = dataset_configs["problem_type"]
-        dataset_num_classes = dataset_configs.get("num_targets", 1)
+        dataset_num_targets = dataset_configs.get("num_targets", 1)
 
         dataset_test_size = dataset_configs["test_size"]
         # Create an instance of the specified data loader class
@@ -57,7 +58,7 @@ for run in runs:
             encode_categorical=encode_categorical,
             return_extra_info=return_extra_info,
             random_state=random_state,
-            num_targets=dataset_num_classes,
+            num_targets=dataset_num_targets,
         )
 
         print(
@@ -70,7 +71,7 @@ for run in runs:
             model_name,
             random_state=random_state,
             problem_type=dataset_task,
-            num_classes=dataset_num_classes,
+            num_targets=dataset_num_targets,
         )
         model.save_path = f"./output/modelsaves/{dataset_name}/{model_name}/{run_id}/"
         model.default = DEFAULT

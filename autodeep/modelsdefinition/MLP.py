@@ -24,10 +24,10 @@ from autodeep.modelutils.trainingutilities import (
 class MLP(BaseModel):
     """problem_type in {'binary_classification', 'multiclass_classification', 'regression'}"""
 
-    def __init__(self, problem_type="binary_classification", num_classes=None):
+    def __init__(self, problem_type="binary_classification", num_targets=None):
 
         self.problem_type = problem_type
-        self.num_classes = num_classes
+        self.num_targets = num_targets
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
         self.random_state = 4200
@@ -170,9 +170,7 @@ class MLP(BaseModel):
         model_config,
         metric,
         eval_metrics,
-        val_size=0.2,
         max_evals=16,
-        problem_type="binary_classification",
         extra_info=None,
     ):
         """
@@ -204,6 +202,7 @@ class MLP(BaseModel):
         """
 
         self.default_params = model_config["default_params"]
+        val_size = self.default_params.get("val_size")
         param_grid = model_config["param_grid"]
 
         # Define the hyperparameter search space
@@ -277,27 +276,39 @@ class MLP(BaseModel):
             self.evaluator.y_prob = probabilities
             self.evaluator.run_metrics = eval_metrics
 
-            metric_dict = self.evaluator.evaluate_model()
-
-            # Log metric results
-            self.logger.info(f"Current evaluation metrics: {metric_dict}")
+            metrics_for_split_val = self.evaluator.evaluate_model()
 
             # Extract main metric for optimization
-            score = metric_dict[metric]
+            score = metrics_for_split_val[metric]
             if self.evaluator.maximize[metric][0]:
                 score = -score  # Convert to negative for minimization
+
+            # Predict on the test set
+            y_pred = model.predict(X_train)
+            probabilities = None
+            if self.problem_type == "binary_classification":
+                probabilities = np.array(model.predict_proba(X_train))[:, 1]
+
+            # Evaluate metrics
+            self.evaluator.y_true = y_train
+            self.evaluator.y_pred = y_pred
+            self.evaluator.y_prob = probabilities
+            self.evaluator.run_metrics = eval_metrics
+
+            metrics_for_split_train = self.evaluator.evaluate_model()
 
             return {
                 "loss": score,
                 "params": params,
                 "status": STATUS_OK,
                 "trained_model": model,
-                "full_metrics": metric_dict,
+                "train_metrics": metrics_for_split_train,
+                "validation_metrics": metrics_for_split_val,
             }
 
         # Run hyperopt search
         trials = Trials()
-        self.evaluator = Evaluator(problem_type=problem_type)
+        self.evaluator = Evaluator(problem_type=self.problem_type)
         threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         best = fmin(
@@ -315,12 +326,11 @@ class MLP(BaseModel):
         best_params["default_params"] = self.default_params
 
         best_trial = trials.best_trial
-        best_score = (
-            -best_trial["result"]["loss"]
-            if self.evaluator.maximize[metric][0]
-            else best_trial["result"]["loss"]
-        )
-        full_metrics = best_trial["result"]["full_metrics"]
+        best_score = best_trial["result"]["loss"]
+        if self.evaluator.maximize[metric][0]:
+            best_score = -1 * best_score
+        train_metrics = best_trial["result"]["train_metrics"]
+        validation_metrics = best_trial["result"]["validation_metrics"]
 
         self.logger.info(f"Final best hyperparameters: {best_params}")
         self.logger.info(f"Final best {metric} score: {best_score}")
@@ -328,7 +338,7 @@ class MLP(BaseModel):
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
-        return best_params, best_score, full_metrics
+        return best_params, best_score, train_metrics, validation_metrics
 
     def hyperopt_search_kfold(
         self,
@@ -339,7 +349,6 @@ class MLP(BaseModel):
         eval_metrics,
         k_value=5,
         max_evals=16,
-        problem_type="binary_classification",
         extra_info=None,
     ):
         """
@@ -365,6 +374,7 @@ class MLP(BaseModel):
         """
 
         self.default_params = model_config["default_params"]
+        val_size = self.default_params.get("val_size")
         param_grid = model_config["param_grid"]
         # Set the number of boosting rounds (iterations) to default or use value from config
         verbose = self.default_params.get("verbose", False)
@@ -471,12 +481,12 @@ class MLP(BaseModel):
                 "status": STATUS_OK,
                 "trained_model": model,
                 "score_std": score_std,
-                "full_metrics": metric_dict,
+                "validation_metrics": metric_dict,
             }
 
         # Define the trials object to keep track of the results
         trials = Trials()
-        self.evaluator = Evaluator(problem_type=problem_type)
+        self.evaluator = Evaluator(problem_type=self.problem_type)
         threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         # Run the hyperopt search
@@ -500,9 +510,9 @@ class MLP(BaseModel):
         if self.evaluator.maximize[metric][0]:
             best_score = -1 * best_score
         score_std = best_trial["result"]["score_std"]
-        full_metrics = best_trial["result"]["full_metrics"]
+        validation_metrics = best_trial["result"]["validation_metrics"]
 
-        self.logger.info(f"CRUCIAL INFO FINAL METRICS : {full_metrics}")
+        self.logger.info(f"CRUCIAL INFO FINAL METRICS : {validation_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
@@ -511,7 +521,7 @@ class MLP(BaseModel):
             f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
         )
 
-        return best_params, best_score, score_std, full_metrics
+        return best_params, best_score, score_std, validation_metrics
 
     def cross_validate(
         self,

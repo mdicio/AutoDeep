@@ -14,17 +14,6 @@ from autodeep.modelutils.igtdutilities import table_to_image
 
 
 class IGTDPreprocessor:
-    """
-    A class to run the IGTD ordering algorithm on tabular training data.
-
-    The IGTD algorithm transforms a tabular dataset into an image representation using a given
-    ordering of features. This class wraps the call to `table_to_image` from your IGTD library.
-
-    Attributes:
-        igtd_configs (dict): Dictionary containing IGTD-related configurations.
-        exclude_cols (list): List of column names to exclude from the transformation.
-    """
-
     def __init__(
         self,
         dataset_name: str = None,
@@ -32,14 +21,6 @@ class IGTDPreprocessor:
         base_result_dir: str = "igtd",
         exclude_cols: Optional[List[str]] = None,
     ):
-        """
-        Initializes the IGTDPreprocessor with default configurations.
-
-        Args:
-            exclude_cols (list, optional): Columns to exclude. Defaults to None.
-            igtd_configs (dict, optional): Dictionary of IGTD configurations. Defaults to None.
-            base_result_dir (str, optional): Base directory for IGTD output. Defaults to "igtd".
-        """
         self.dataset_name = dataset_name
         self.igtd_configs = igtd_configs or {
             "img_size": "auto",
@@ -63,7 +44,10 @@ class IGTDPreprocessor:
         self.base_result_dir = base_result_dir
         self.exclude_cols = exclude_cols if exclude_cols is not None else []
         self.img_size = self.igtd_configs.get("img_size")
-        # Set up logging
+        # Initialize img_rows and img_columns to None
+        self.img_rows = None
+        self.img_columns = None
+
         self.logger = logging.getLogger(self.__class__.__name__)
         if not self.logger.handlers:
             ch = logging.StreamHandler()
@@ -72,77 +56,70 @@ class IGTDPreprocessor:
             ch.setFormatter(formatter)
             self.logger.addHandler(ch)
 
+        self._determine_previous_existence()
+
+    def _determine_previous_existence(self):
+        existing_filenames = []
+        for config_name, config in self.igtd_configs["ordering_methods"].items():
+            result_dir = os.path.join(
+                self.base_result_dir, self.dataset_name, config_name
+            )
+            result_file_name = os.path.join(result_dir, config["error"], "_index.txt")
+            if os.path.exists(result_file_name):
+                existing_filenames.append(result_file_name)
+
+        if len(existing_filenames) > 1:
+            self.logger.info(
+                f"Found an already executed IGTD for dataset {self.dataset_name}"
+            )
+            self.already_run = True
+            self.result_file_name = existing_filenames[0]
+        else:
+            self.already_run = False
+
     def _auto_determine_img_size(self, X: pd.DataFrame):
-        """
-        Determines the optimal image size based on the number of features.
-
-        Args:
-            X (pd.DataFrame): DataFrame containing feature columns.
-
-        Returns:
-            tuple: (num_row, num_col) representing the image dimensions.
-        """
         num_features = len(X.columns)
-
-        # Find valid (row, col) pairs where row * col = num_features
         factors = [
             (r, num_features // r)
             for r in range(1, int(np.sqrt(num_features)) + 1)
             if num_features % r == 0
         ]
-
-        # Pick the most square-like option (largest row)
-        num_row, num_col = factors[-1]
-
-        # Check if num_features is prime (only divisible by 1 and itself)
-        if len(factors) == 1:  # Only (1, num_features) exists
+        img_rows, img_columns = factors[-1]
+        if len(factors) == 1:
             self.logger.warning(
                 f"The number of features ({num_features}) is prime. "
                 "For better IGTD performance, consider adding or removing columns to allow a more standard grid size."
             )
+        return img_rows, img_columns
 
-        return num_row, num_col
+    def run(self, X: pd.DataFrame) -> None:
+        # Always compute and set the image dimensions:
+        if self.img_size == "auto":
+            self.img_rows, self.img_columns = self._auto_determine_img_size(X)
+        elif isinstance(self.img_size, list):
+            self.img_rows, self.img_columns = self.img_size
+        else:
+            raise ValueError(
+                "img_size must be either 'auto' or a list [img_rows, img_columns]"
+            )
 
-    def run(self, X: pd.DataFrame) -> Dict[str, str]:
-        """
-        Runs the IGTD algorithm on the provided DataFrame for each ordering configuration.
-
-        Args:
-            X (pd.DataFrame): The training data (features only) on which to run IGTD.
-            img_size (str or list, optional): Image size configuration. Defaults to "auto".
-
-        Returns:
-            Dict[str, str]: Mapping from configuration name to the folder where the IGTD result was saved.
-        """
-        result_dirs = {}
+        # Even if IGTD was run before, we now have the dimensions computed.
+        if self.already_run:
+            return
 
         for config_name, config in self.igtd_configs["ordering_methods"].items():
-            # Construct a result directory for this configuration
             result_dir = os.path.join(
                 self.base_result_dir, self.dataset_name, config_name
             )
-            if not os.path.exists(result_dir):
-                os.makedirs(result_dir, exist_ok=True)
+            os.makedirs(result_dir, exist_ok=True)
             self.logger.info(
                 f"Running IGTD ordering for config '{config_name}' in: {result_dir}"
             )
-
-            if self.img_size == "auto":
-                num_row, num_col = self._auto_determine_img_size(X)
-            elif isinstance(self.img_size, List):
-                num_row, num_col = self.img_size
-            else:
-                raise ValueError(
-                    "img_size must be either 'auto' or a list [num_row, num_col]"
-                )
-
-            print(type(X))
-            print(X.shape)
-            print(num_row)
-            print(num_col)
+            result_file_name = os.path.join(result_dir, config["error"], "_index.txt")
+            self.result_file_name = result_file_name
             table_to_image(
                 X,
-                [num_row, num_col],
+                [self.img_rows, self.img_columns],
                 config["fea_dist_method"],
                 config["image_dist_method"],
                 self.igtd_configs["save_image_size"],
@@ -154,14 +131,6 @@ class IGTDPreprocessor:
                 save_mode="bulk",
                 exclude_cols=self.exclude_cols,
             )
-            result_file_name = os.path.join(result_dir, config["error"], "_index.txt")
-            result_dirs[config_name] = result_file_name
-            self.result_file_name = result_file_name
-            self.num_row = num_row
-            self.num_col = num_col
-        print("IGTD RESULTS OUTPUT")
-        print(result_dirs)
-        return result_dirs
 
 
 class ExtraInfoCreator:
@@ -171,64 +140,51 @@ class ExtraInfoCreator:
         run_igtd=False,
         igtd_preprocessor: Optional[IGTDPreprocessor] = None,
     ):
-        """
-        Initializes the ExtraInfoCreator.
-        Args:
-            run_igtd (bool): Whether to run IGTD.
-            igtd_configs (dict): Dictionary of IGTD ordering configurations.
-            igtd_result_base_dir (str): Base directory for IGTD results.
-        """
         self.dataset_name = dataset_name
         self.run_igtd = run_igtd
-        # Create the IGTD preprocessor if configs are provided
         self.igtd_preprocessor = igtd_preprocessor
 
     def create_extra_info(self, df: pd.DataFrame, dataset_name: str):
-        """
-        Creates extra info from the dataframe and (optionally) IGTD results.
-        If IGTD is enabled, first check if the IGTD output for the dataset exists.
-        If it does, reuse it; otherwise, run IGTD.
-        """
-        igtd_candidate = None
-        if self.run_igtd:
-            if hasattr(self.igtd_preprocessor, "result_file_name"):
-                igtd_candidate = self.igtd_preprocessor.result_file_name
-                print("PATH EXISTED THIS IS THE IGTD PATH INDEX", igtd_candidate)
-            else:
-                self.igtd_preprocessor.run(df)
-                igtd_candidate = self.igtd_preprocessor.result_file_name
-                print("PATH NOT EXISTED THIS IS THE IGTD PATH INDEX", igtd_candidate)
-
-        # Create extra info about the columns.
         cat_cols = df.select_dtypes(include=["object", "category"]).columns
         num_cols = df.select_dtypes(exclude=["object", "category"]).columns
-        cat_unique_vals = [len(df[col].unique()) for col in cat_cols]
-
-        column_info = {
+        extra_info = {
             "cat_col_names": list(cat_cols),
             "cat_col_idx": list(df.columns.get_indexer(cat_cols)),
-            "cat_col_unique_vals": cat_unique_vals,
+            "cat_col_unique_vals": [len(df[col].unique()) for col in cat_cols],
             "num_col_names": list(num_cols),
             "num_col_idx": list(df.columns.get_indexer(num_cols)),
+            "num_features": len(df.columns),
         }
-        extra_info = column_info
-        extra_info["num_features"] = len(df.columns)
+        igtd_candidate = None
+        if self.run_igtd and self.igtd_preprocessor:
+            # Run IGTD if needed, or ensure dimensions are computed
+            if not hasattr(self.igtd_preprocessor, "result_file_name"):
+                self.igtd_preprocessor.run(df)
+            else:
+                # Even if IGTD was already run, ensure the dimensions are set
+                if (
+                    self.igtd_preprocessor.img_rows is None
+                    or self.igtd_preprocessor.img_columns is None
+                ):
+                    (
+                        self.igtd_preprocessor.img_rows,
+                        self.igtd_preprocessor.img_columns,
+                    ) = self.igtd_preprocessor._auto_determine_img_size(df)
 
-        if igtd_candidate and os.path.exists(igtd_candidate):
+            igtd_candidate = self.igtd_preprocessor.result_file_name
+            print("IGTD result file path:", igtd_candidate)
+
             with open(igtd_candidate) as f:
                 lines = f.readlines()
                 if lines:
                     extra_info["column_ordering"] = list(
                         map(int, lines[-1].strip().split())
                     )
-            # Optionally add image dimensions if available from the IGTD preprocessor.
-            if self.igtd_preprocessor:
-                extra_info["img_rows"] = getattr(
-                    self.igtd_preprocessor, "num_row", None
-                )
-                extra_info["img_columns"] = getattr(
-                    self.igtd_preprocessor, "num_col", None
-                )
+
+            extra_info["img_rows"] = self.igtd_preprocessor.img_rows
+            extra_info["img_columns"] = self.igtd_preprocessor.img_columns
+            print("img_rows:", extra_info["img_rows"])
+            print("img_columns:", extra_info["img_columns"])
 
         return extra_info
 
@@ -261,9 +217,9 @@ class DataLoader:
 
     def bin_random_numerical_column(self, train_df, test_df, exclude_cols, bins=10):
         # Select a random numerical column to bin
-        num_cols = train_df.select_dtypes(include=[np.number]).columns
+        img_columns = train_df.select_dtypes(include=[np.number]).columns
         col_to_bin = np.random.choice(
-            [col for col in num_cols if col not in exclude_cols]
+            [col for col in img_columns if col not in exclude_cols]
         )
         print(f"Binning randomly chosen column {col_to_bin}")
         train_df[col_to_bin] = train_df[col_to_bin].fillna(0)
@@ -324,15 +280,15 @@ class DataLoader:
 
     def scale_features(self, X_train, X_test, mode="mean_std"):
         # Get the numerical columns
-        num_cols = X_train.select_dtypes(exclude=["object", "category"]).columns
+        img_columns = X_train.select_dtypes(exclude=["object", "category"]).columns
         if mode == "mean_std":
             scaler = StandardScaler()
-            X_train[num_cols] = scaler.fit_transform(X_train[num_cols])
-            X_test[num_cols] = scaler.transform(X_test[num_cols])
+            X_train[img_columns] = scaler.fit_transform(X_train[img_columns])
+            X_test[img_columns] = scaler.transform(X_test[img_columns])
         elif mode == "min_max":
             scaler = MinMaxScaler(feature_range=(0, 1))
-            X_train[num_cols] = scaler.fit_transform(X_train[num_cols])
-            X_test[num_cols] = scaler.transform(X_test[num_cols])
+            X_train[img_columns] = scaler.fit_transform(X_train[img_columns])
+            X_test[img_columns] = scaler.transform(X_test[img_columns])
         elif mode == "false":
             pass
         else:
@@ -358,6 +314,7 @@ class DynamicDataLoader(DataLoader):
         self,
         dataset_name,
         dataset_path,
+        problem_type,
         target_column="target",
         test_size=0.2,
         split_col=None,
@@ -374,6 +331,7 @@ class DynamicDataLoader(DataLoader):
     ):
         self.dataset_name = dataset_name
         self.dataset_path = dataset_path
+        self.problem_type = problem_type
         self.target_column = target_column
         self.split_col = split_col
         self.train_value = train_value
@@ -412,6 +370,13 @@ class DynamicDataLoader(DataLoader):
                 f"Target column '{self.target_column}' not found in dataset"
             )
 
+        # find columns with NaN values
+        cols_with_nans = df.columns[df.isna().any()].tolist()
+
+        # fill NaN values in those columns with median
+        for col in cols_with_nans:
+            df[col] = df[col].fillna(df[col].median())
+
         # Split into features and target
         X = df.drop(columns=[self.target_column])
         y = df[self.target_column]
@@ -440,7 +405,7 @@ class DynamicDataLoader(DataLoader):
                 y,
                 test_size=self.test_size,
                 random_state=self.random_state,
-                stratify=y,
+                stratify=y if self.problem_type != "regression" else None,
             )
 
         if self.normalize_features:

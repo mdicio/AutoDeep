@@ -4,27 +4,27 @@ from typing import Dict
 
 import numpy as np
 import torch
+from catboost import CatBoostClassifier, CatBoostRegressor
+from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
+from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
+
 from autodeep.evaluation.generalevaluator import Evaluator
 from autodeep.modelsdefinition.CommonStructure import BaseModel
 from autodeep.modelutils.trainingutilities import (
     infer_hyperopt_space,
     stop_on_perfect_lossCondition,
 )
-from catboost import CatBoostClassifier, CatBoostRegressor
-from hyperopt import STATUS_OK, Trials, fmin, hp, space_eval, tpe
-from hyperopt.pyll import scope
-from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
 
 
 class CatBoostTrainer(BaseModel):
-    def __init__(self, problem_type="binary_classification", num_classes=None):
+    def __init__(self, problem_type="binary_classification", num_targets=None):
 
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
         self.random_state = 4200
         self.script_filename = os.path.basename(__file__)
         self.problem_type = problem_type
-        self.num_classes = num_classes
+        self.num_targets = num_targets
 
         formatter = logging.Formatter(
             f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
@@ -71,6 +71,7 @@ class CatBoostTrainer(BaseModel):
 
         # Define the hyperparameter search space
         self.default_params = model_config["default_params"]
+        val_size = self.default_params.get("val_size")
         early_stopping_rounds = self.default_params.get("early_stopping_rounds", 100)
         verbose = self.default_params.get("verbose", False)
         param_grid = model_config["param_grid"]
@@ -80,7 +81,7 @@ class CatBoostTrainer(BaseModel):
         params["cat_features"] = self.cat_features
 
         if self.problem_type == "binary_classification":
-            catboost_model = CatBoostClassifier(
+            model = CatBoostClassifier(
                 od_type="Iter",
                 od_wait=20,
                 task_type=self.device,
@@ -90,10 +91,10 @@ class CatBoostTrainer(BaseModel):
             )
         elif self.problem_type == "multiclass_classification":
             params.pop("scale_pos_weight", None)
-            self.num_classes = len(np.unique(y_train))
-            catboost_model = CatBoostClassifier(
+            self.num_targets = len(np.unique(y_train))
+            model = CatBoostClassifier(
                 loss_function="MultiClass",
-                classes_count=self.num_classes,
+                classes_count=self.num_targets,
                 od_type="Iter",
                 od_wait=20,
                 task_type=self.device,
@@ -103,7 +104,7 @@ class CatBoostTrainer(BaseModel):
 
         elif self.problem_type == "regression":
             params.pop("scale_pos_weight", None)
-            catboost_model = CatBoostRegressor(
+            model = CatBoostRegressor(
                 od_type="Iter",
                 od_wait=20,
                 task_type=self.device,
@@ -118,12 +119,12 @@ class CatBoostTrainer(BaseModel):
         X_train, X_val, y_train, y_val = train_test_split(
             X_train,
             y_train,
-            test_size=self.default_params["validation_fraction"],
+            test_size=self.default_params["val_size"],
             random_state=self.random_state,
         )
         eval_set = [(X_val, y_val)]
 
-        catboost_model.fit(
+        model.fit(
             X_train,
             y_train,
             early_stopping_rounds=early_stopping_rounds,
@@ -131,7 +132,7 @@ class CatBoostTrainer(BaseModel):
             eval_set=eval_set,
         )
 
-        self.model = catboost_model
+        self.model = model
         self.logger.debug("Training completed successfully")
 
     def predict(self, X_test, predict_proba=False):
@@ -157,9 +158,8 @@ class CatBoostTrainer(BaseModel):
         y,
         model_config,
         metric,
-        max_evals=100,
-        random_state=42,
-        problem_type=None,
+        eval_metrics,
+        max_evals=16,
         extra_info=None,
     ):
         """
@@ -184,21 +184,21 @@ class CatBoostTrainer(BaseModel):
             Tuple containing the best hyperparameters and the corresponding best score.
         """
         # Split the data into training and validation sets
-        validation_fraction = param_grid.get("validation_fraction", 0.2)
         self.extra_info = extra_info
         self.cat_features = self.extra_info["cat_col_idx"]
         # Define the hyperparameter search space
         # Define the hyperparameter search space
         self.default_params = model_config["default_params"]
+        val_size = self.default_params.get("val_size")
         early_stopping_rounds = self.default_params.get("early_stopping_rounds", 100)
         verbose = self.default_params.get("verbose", False)
         param_grid = model_config["param_grid"]
         space = infer_hyperopt_space(param_grid)
 
-        self.num_classes = len(np.unique(y))
+        self.num_targets = len(np.unique(y))
 
         X_train, X_val, y_train, y_val = train_test_split(
-            X, y, test_size=validation_fraction, random_state=random_state
+            X, y, test_size=val_size, random_state=self.random_state
         )
         eval_set = [(X_val, y_val)]
 
@@ -209,14 +209,14 @@ class CatBoostTrainer(BaseModel):
             params["cat_features"] = self.cat_features
 
             if self.problem_type == "binary_classification":
-                catboost_model = CatBoostClassifier(
+                model = CatBoostClassifier(
                     od_type="Iter", od_wait=20, task_type=self.device, **params
                 )
             elif self.problem_type == "multiclass_classification":
                 params.pop("scale_pos_weight", None)
-                catboost_model = CatBoostClassifier(
+                model = CatBoostClassifier(
                     loss_function="MultiClass",
-                    classes_count=self.num_classes,
+                    classes_count=self.num_targets,
                     od_type="Iter",
                     od_wait=20,
                     task_type=self.device,
@@ -224,7 +224,7 @@ class CatBoostTrainer(BaseModel):
                 )
             elif self.problem_type == "regression":
                 params.pop("scale_pos_weight", None)
-                catboost_model = CatBoostRegressor(
+                model = CatBoostRegressor(
                     od_type="Iter", od_wait=20, task_type=self.device, **params
                 )
             else:
@@ -232,7 +232,7 @@ class CatBoostTrainer(BaseModel):
                     "Problem type must be binary_classification, multiclass_classification, or regression"
                 )
 
-            catboost_model.fit(
+            model.fit(
                 X_train,
                 y_train,
                 early_stopping_rounds=early_stopping_rounds,
@@ -240,19 +240,33 @@ class CatBoostTrainer(BaseModel):
                 eval_set=eval_set,
             )
 
-            y_pred = catboost_model.predict(X_val).squeeze()
-            self.logger.debug(f"y_pred {type(y_pred)}, {y_pred[:10]}")
+            y_pred = model.predict(X_val).squeeze()
             probabilities = None
 
             if self.problem_type != "regression":
-                probabilities = catboost_model.predict_proba(X_val)[:, 1]
-                self.logger.debug(f"Probabilities {probabilities}")
+                probabilities = model.predict_proba(X_val)[:, 1]
 
             # Calculate the score using the specified metric
             self.evaluator.y_true = y_val
             self.evaluator.y_pred = y_pred
             self.evaluator.y_prob = probabilities
-            score = self.evaluator.evaluate_metric(metric_name=metric)
+            self.evaluator.run_metrics = eval_metrics
+            metrics_for_split_val = self.evaluator.evaluate_model()
+            score = metrics_for_split_val[metric]
+            self.logger.info(f"Validation metrics: {metrics_for_split_val}")
+
+            y_pred = model.predict(X_train).squeeze()
+            probabilities = None
+
+            if self.problem_type != "regression":
+                probabilities = model.predict_proba(X_train)[:, 1]
+
+            # Calculate the score using the specified metric
+            self.evaluator.y_true = y_train
+            self.evaluator.y_pred = y_pred
+            self.evaluator.y_prob = probabilities
+            metrics_for_split_train = self.evaluator.evaluate_model()
+            self.logger.info(f"Train metrics: {metrics_for_split_val}")
 
             if self.evaluator.maximize[metric][0]:
                 score = -1 * score
@@ -261,7 +275,9 @@ class CatBoostTrainer(BaseModel):
                 "loss": score,
                 "params": params,
                 "status": STATUS_OK,
-                "trained_model": catboost_model,
+                "trained_model": model,
+                "train_metrics": metrics_for_split_train,
+                "validation_metrics": metrics_for_split_val,
             }
 
         # Perform the hyperparameter search
@@ -277,7 +293,7 @@ class CatBoostTrainer(BaseModel):
             algo=tpe.suggest,
             max_evals=max_evals,
             trials=trials,
-            rstate=np.random.default_rng(random_state),
+            rstate=np.random.default_rng(self.random_state),
             early_stop_fn=lambda x: stop_on_perfect_lossCondition(x, threshold),
         )
 
@@ -288,12 +304,15 @@ class CatBoostTrainer(BaseModel):
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
+        train_metrics = best_trial["result"]["train_metrics"]
+        validation_metrics = best_trial["result"]["validation_metrics"]
+
         self.logger.info(f"Best hyperparameters: {best_params}")
         self.logger.info(
             f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
         )
 
-        return best_params, best_score
+        return best_params, best_score, train_metrics, validation_metrics
 
     def hyperopt_search_kfold(
         self,
@@ -304,7 +323,6 @@ class CatBoostTrainer(BaseModel):
         eval_metrics,
         k_value=5,
         max_evals=16,
-        problem_type="binary_classification",
         extra_info=None,
     ):
         """
@@ -335,6 +353,7 @@ class CatBoostTrainer(BaseModel):
         # Define the hyperparameter search space
 
         self.default_params = model_config["default_params"]
+        val_size = self.default_params.get("val_size")
         early_stopping_rounds = self.default_params.get("early_stopping_rounds", 100)
         verbose = self.default_params.get("verbose", False)
         param_grid = model_config["param_grid"]
@@ -351,16 +370,16 @@ class CatBoostTrainer(BaseModel):
             params["cat_features"] = self.cat_features
 
             if self.problem_type == "binary_classification":
-                catboost_model = CatBoostClassifier(task_type=self.device, **params)
+                model = CatBoostClassifier(task_type=self.device, **params)
                 # Fit the model on the training data
                 kf = StratifiedKFold(n_splits=k_value, shuffle=True, random_state=42)
 
             elif self.problem_type == "multiclass_classification":
                 params.pop("scale_pos_weight", None)
-                self.num_classes = len(np.unique(y))
-                catboost_model = CatBoostClassifier(
+                self.num_targets = len(np.unique(y))
+                model = CatBoostClassifier(
                     loss_function="MultiClass",
-                    classes_count=self.num_classes,
+                    classes_count=self.num_targets,
                     task_type=self.device,
                     **params,
                 )
@@ -369,7 +388,7 @@ class CatBoostTrainer(BaseModel):
 
             elif self.problem_type == "regression":
                 params.pop("scale_pos_weight", None)
-                catboost_model = CatBoostRegressor(task_type=self.device, **params)
+                model = CatBoostRegressor(task_type=self.device, **params)
                 # Fit the model on the training data
                 kf = KFold(n_splits=k_value, shuffle=True, random_state=42)
             else:
@@ -387,7 +406,7 @@ class CatBoostTrainer(BaseModel):
 
                 eval_set = [(X_val, y_val)]
 
-                catboost_model.fit(
+                model.fit(
                     X_train,
                     y_train,
                     early_stopping_rounds=early_stopping_rounds,
@@ -395,11 +414,11 @@ class CatBoostTrainer(BaseModel):
                     eval_set=eval_set,
                 )
 
-                y_pred = catboost_model.predict(X_val).squeeze()
+                y_pred = model.predict(X_val).squeeze()
                 probabilities = None
 
                 if self.problem_type != "regression":
-                    probabilities = catboost_model.predict_proba(X_val)[:, 1]
+                    probabilities = model.predict_proba(X_val)[:, 1]
                     self.logger.debug(f"Probabilities {probabilities}")
 
                 # Calculate the score using the specified metric
@@ -437,14 +456,14 @@ class CatBoostTrainer(BaseModel):
                 "loss": score_average,
                 "params": params,
                 "status": STATUS_OK,
-                "trained_model": catboost_model,
+                "trained_model": model,
                 "score_std": score_std,
-                "full_metrics": metric_dict,
+                "validation_metrics": metric_dict,
             }
 
         # Define the trials object to keep track of the results
         trials = Trials()
-        self.evaluator = Evaluator(problem_type=problem_type)
+        self.evaluator = Evaluator(problem_type=self.problem_type)
         threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         # Run the hyperopt search
@@ -468,9 +487,9 @@ class CatBoostTrainer(BaseModel):
         if self.evaluator.maximize[metric][0]:
             best_score = -1 * best_score
         score_std = best_trial["result"]["score_std"]
-        full_metrics = best_trial["result"]["full_metrics"]
+        validation_metrics = best_trial["result"]["validation_metrics"]
 
-        self.logger.info(f"CRUCIAL INFO FINAL METRICS : {full_metrics}")
+        self.logger.info(f"CRUCIAL INFO FINAL METRICS : {validation_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
@@ -479,4 +498,4 @@ class CatBoostTrainer(BaseModel):
             f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
         )
 
-        return best_params, best_score, score_std, full_metrics
+        return best_params, best_score, score_std, validation_metrics

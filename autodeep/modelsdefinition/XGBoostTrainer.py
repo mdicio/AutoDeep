@@ -1,4 +1,3 @@
-import inspect
 import logging
 import os
 from typing import Dict
@@ -6,24 +5,19 @@ from typing import Dict
 import numpy as np
 import torch
 import xgboost as xgb
+from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
+from sklearn.model_selection import StratifiedKFold, train_test_split
+
 from autodeep.evaluation.generalevaluator import Evaluator
 from autodeep.modelsdefinition.CommonStructure import BaseModel
 from autodeep.modelutils.trainingutilities import (
     infer_hyperopt_space,
     stop_on_perfect_lossCondition,
 )
-from hyperopt import STATUS_OK, Trials, fmin, hp, space_eval, tpe
-from hyperopt.pyll import scope
-from sklearn.model_selection import (
-    KFold,
-    RandomizedSearchCV,
-    StratifiedKFold,
-    train_test_split,
-)
 
 
-class XGBoostClassifier(BaseModel):
-    def __init__(self, problem_type="binary_classification", num_classes=1):
+class XGBoostTrainer(BaseModel):
+    def __init__(self, problem_type="binary_classification", num_targets=1):
 
         self.cv_size = None
         self.logger = logging.getLogger(__name__)
@@ -32,7 +26,7 @@ class XGBoostClassifier(BaseModel):
         # Get the filename of the current Python script
         self.script_filename = os.path.basename(__file__)
         self.problem_type = problem_type
-        self.num_classes = num_classes
+        self.num_targets = num_targets
         formatter = logging.Formatter(
             f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
         )
@@ -98,7 +92,7 @@ class XGBoostClassifier(BaseModel):
         elif self.problem_type == "multiclass_classification":
             # Create an XGBoost classifier for multiclass classification
             xgb_model = xgb.XGBClassifier(
-                objective="multi:softmax", num_class=self.num_classes, **params
+                objective="multi:softmax", num_class=self.num_targets, **params
             )
         else:
             raise ValueError(
@@ -108,7 +102,7 @@ class XGBoostClassifier(BaseModel):
         X_train, X_val, y_train, y_val = train_test_split(
             X_train,
             y_train,
-            test_size=params["validation_fraction"],
+            test_size=params["val_size"],
             random_state=self.random_state,
         )
         eval_set = [(X_val, y_val)]
@@ -161,9 +155,8 @@ class XGBoostClassifier(BaseModel):
         y,
         model_config,
         metric,
-        max_evals=100,
-        random_state=42,
-        problem_type=None,
+        eval_metrics,
+        max_evals=16,
         extra_info=None,
     ):
         """
@@ -189,17 +182,20 @@ class XGBoostClassifier(BaseModel):
         """
         # Split the data into training and validation sets
         self.default_params = model_config["default_params"]
-        validation_fraction = self.default_params["validation_fraction"]
+        val_size = self.default_params.get("val_size")
         # Set the number of boosting rounds (iterations) to default or use value from config
         early_stopping_rounds = self.default_params.get("early_stopping_rounds", 100)
         verbose = self.default_params.get("verbose", False)
         param_grid = model_config["param_grid"]
-        param_grid.pop("default_params")
         # Define the hyperparameter search space
         space = infer_hyperopt_space(param_grid)
 
         X_train, X_val, y_train, y_val = train_test_split(
-            X, y, test_size=validation_fraction, random_state=random_state
+            X,
+            y,
+            test_size=val_size,
+            random_state=self.random_state,
+            stratify=y if self.problem_type != "regression" else None,
         )
 
         eval_set = [(X_val, y_val)]
@@ -209,29 +205,50 @@ class XGBoostClassifier(BaseModel):
             self.logger.info(f"Hyperopt training with hyperparameters: {params}")
 
             # Create an XGBoost model with the given hyperparameters
-            model = xgb.XGBClassifier(**params)
+            if self.problem_type == "regression":
+                model = xgb.XGBRegressor(
+                    **params, early_stopping_rounds=early_stopping_rounds
+                )
+            else:
+
+                model = xgb.XGBClassifier(
+                    **params, early_stopping_rounds=early_stopping_rounds
+                )
             # Fit the model on the training data
 
             model.fit(
                 X_train,
                 y_train,
-                early_stopping_rounds=early_stopping_rounds,
                 verbose=verbose,
                 eval_set=eval_set,
             )
-            # Predict the labels of the validation data
             y_pred = model.predict(X_val)
-
-            # Generate predictions using the XGBoost model
             probabilities = None
-            if self.problem_type == "binary_classification":
-                probabilities = np.array(model.predict_proba(X_val))[:, 1]
+
+            if self.problem_type != "regression":
+                probabilities = model.predict_proba(X_val)[:, 1]
 
             # Calculate the score using the specified metric
             self.evaluator.y_true = y_val
             self.evaluator.y_pred = y_pred
             self.evaluator.y_prob = probabilities
-            score = self.evaluator.evaluate_metric(metric_name=metric)
+            self.evaluator.run_metrics = eval_metrics
+            metrics_for_split_val = self.evaluator.evaluate_model()
+            score = metrics_for_split_val[metric]
+            self.logger.info(f"Validation metrics: {metrics_for_split_val}")
+
+            y_pred = model.predict(X_train)
+            probabilities = None
+
+            if self.problem_type != "regression":
+                probabilities = model.predict_proba(X_train)[:, 1]
+
+            # Calculate the score using the specified metric
+            self.evaluator.y_true = y_train
+            self.evaluator.y_pred = y_pred
+            self.evaluator.y_prob = probabilities
+            metrics_for_split_train = self.evaluator.evaluate_model()
+            self.logger.info(f"Train metrics: {metrics_for_split_val}")
 
             if self.evaluator.maximize[metric][0]:
                 score = -1 * score
@@ -242,12 +259,14 @@ class XGBoostClassifier(BaseModel):
                 "params": params,
                 "status": STATUS_OK,
                 "trained_model": model,
+                "train_metrics": metrics_for_split_train,
+                "validation_metrics": metrics_for_split_val,
             }
 
         # Perform the hyperparameter search
         trials = Trials()
 
-        self.evaluator = Evaluator(problem_type=problem_type)
+        self.evaluator = Evaluator(problem_type=self.problem_type)
         threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         # Run the hyperopt search
@@ -265,6 +284,12 @@ class XGBoostClassifier(BaseModel):
         best_params["default_params"] = self.default_params
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]
+        if self.evaluator.maximize[metric][0]:
+            best_score = -1 * best_score
+
+        train_metrics = best_trial["result"]["train_metrics"]
+        validation_metrics = best_trial["result"]["validation_metrics"]
+
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
@@ -273,7 +298,7 @@ class XGBoostClassifier(BaseModel):
             f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
         )
 
-        return best_params, best_score
+        return best_params, best_score, train_metrics, validation_metrics
 
     def hyperopt_search_kfold(
         self,
@@ -284,7 +309,6 @@ class XGBoostClassifier(BaseModel):
         eval_metrics,
         k_value=5,
         max_evals=16,
-        problem_type="binary_classification",
         extra_info=None,
     ):
         """
@@ -310,6 +334,7 @@ class XGBoostClassifier(BaseModel):
         """
 
         self.default_params = model_config["default_params"]
+        val_size = self.default_params.get("val_size")
         # Set the number of boosting rounds (iterations) to default or use value from config
         verbose = self.default_params.get("verbose", False)
         param_grid = model_config["param_grid"]
@@ -403,12 +428,12 @@ class XGBoostClassifier(BaseModel):
                 "status": STATUS_OK,
                 "trained_model": model,
                 "score_std": score_std,
-                "full_metrics": metric_dict,
+                "validation_metrics": metric_dict,
             }
 
         # Define the trials object to keep track of the results
         trials = Trials()
-        self.evaluator = Evaluator(problem_type=problem_type)
+        self.evaluator = Evaluator(problem_type=self.problem_type)
         threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         # Run the hyperopt search
@@ -435,9 +460,9 @@ class XGBoostClassifier(BaseModel):
             f"self.evaluator.maximize[metric][1] {self.evaluator.maximize[metric][1]}"
         )
         score_std = best_trial["result"]["score_std"]
-        full_metrics = best_trial["result"]["full_metrics"]
+        validation_metrics = best_trial["result"]["validation_metrics"]
 
-        self.logger.info(f"CRUCIAL INFO FINAL METRICS: {full_metrics}")
+        self.logger.info(f"CRUCIAL INFO FINAL METRICS: {validation_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
@@ -446,4 +471,4 @@ class XGBoostClassifier(BaseModel):
             f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
         )
 
-        return best_params, best_score, score_std, full_metrics
+        return best_params, best_score, score_std, validation_metrics

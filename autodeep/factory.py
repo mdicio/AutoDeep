@@ -30,8 +30,7 @@ from autodeep.modelsdefinition.ResNetModel import ResNetTrainer
 from autodeep.modelsdefinition.SoftOrdering1DCNN import SoftOrdering1DCNN
 from autodeep.modelsdefinition.TabNetModel import TabNetTrainer
 from autodeep.modelsdefinition.TabTransformerModel import TabTransformerTrainer
-from autodeep.modelsdefinition.XGBoostClassifier import XGBoostClassifier
-from autodeep.modelsdefinition.XGBoostRegressor import XGBoostRegressor
+from autodeep.modelsdefinition.XGBoostTrainer import XGBoostTrainer
 
 
 def seed_everything(seed=4200):
@@ -45,17 +44,12 @@ def seed_everything(seed=4200):
         torch.cuda.manual_seed_all(seed)
 
 
-def create_model(model_name, problem_type, num_classes, random_state=42):
+def create_model(model_name, problem_type, num_targets, random_state=42):
     mname = model_name.lower().strip()
     if mname == "xgb":
-        if problem_type == "regression":
-            return XGBoostRegressor()
-        elif problem_type in ["binary_classification", "multiclass_classification"]:
-            return XGBoostClassifier(problem_type)
+        return XGBoostTrainer(problem_type)
     elif mname == "resnet":
-        return ResNetTrainer(
-            problem_type=problem_type, num_targets=num_classes, depth=mname
-        )
+        return ResNetTrainer(problem_type=problem_type, num_targets=num_targets)
     elif mname == "catboost":
         return CatBoostTrainer(problem_type)
 
@@ -84,11 +78,11 @@ def create_model(model_name, problem_type, num_classes, random_state=42):
         return AutoIntTrainer(problem_type=problem_type)
 
     elif mname == "s1dcnn":
-        return SoftOrdering1DCNN(problem_type=problem_type, num_targets=num_classes)
+        return SoftOrdering1DCNN(problem_type=problem_type, num_targets=num_targets)
 
     # elif mname == "squeezenet":
     #    return SqueezeNetTrainer(
-    #        problem_type=problem_type, num_targets=num_classes
+    #        problem_type=problem_type, num_targets=num_targets
     #    )
     # elif mname == "lightgbm":
     #    return LightGBMTrainer(problem_type)
@@ -100,6 +94,7 @@ def create_model(model_name, problem_type, num_classes, random_state=42):
 def create_dynamic_data_loader(
     dataset_name,
     dataset_path,
+    problem_type,
     target_column,
     test_size,
     split_col,
@@ -119,6 +114,7 @@ def create_dynamic_data_loader(
     return DynamicDataLoader(
         dataset_name,
         dataset_path,
+        problem_type,
         target_column,
         test_size,
         split_col,

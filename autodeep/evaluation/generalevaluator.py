@@ -70,7 +70,7 @@ class Evaluator:
         return mean_absolute_error(self.y_true, self.y_pred)
 
     def rmse(self):
-        return mean_squared_error(self.y_true, self.y_pred, squared=False)
+        return np.sqrt(((self.y_true - self.y_pred) ** 2).mean())
 
     def r2_score(self):
         return r2_score(self.y_true, self.y_pred)
@@ -103,11 +103,11 @@ class Evaluator:
         else:
             raise ValueError(f"Invalid problem type: {self.problem_type}")
 
-    def lift(self, percentile=0.1):
+    def lift(self, percentile=10):
         n = len(self.y_true)
         p_true = np.sum(self.y_true) / n
 
-        top_indices = np.argsort(self.y_prob)[::-1][: int(percentile * n)]
+        top_indices = np.argsort(self.y_prob)[::-1][: int(percentile / 100 * n)]
         p_top_true = np.sum(np.take(self.y_true, top_indices, axis=0)) / len(
             top_indices
         )
@@ -166,8 +166,15 @@ class Evaluator:
         if "area_under_pr" in self.run_metrics:
             results["area_under_pr"] = self.area_under_pr()
 
-        if "lift" in self.run_metrics:
-            results["lift"] = self.lift()
+        if "lift1" in self.run_metrics:
+            results["lift1"] = self.lift(percentile=1)
+
+        if "lift5" in self.run_metrics:
+            results["lift5"] = self.lift(percentile=5)
+
+        if "lift10" in self.run_metrics:
+            results["lift10"] = self.lift(percentile=10)
+
         return results
 
     def evaluate_metric(self, metric_name):

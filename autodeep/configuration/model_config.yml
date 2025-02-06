@@ -26,15 +26,12 @@ model_configs:
 
     default_params:
       retrain: False
-      validation_fraction: 0.15
+      val_size: 0.15
       early_stopping_rounds: 100
       verbose: false
       iterations: 500
 
     param_grid:
-      early_stopping_rounds: 
-        - 100
-        - 50
       iterations:
         - 100 
         - 500
@@ -919,8 +916,6 @@ model_configs:
         - resnet18
         - resnet34
         - resnet50
-        - resnet101
-        - resnet152
       batch_size:
         - 1024
         - 512
@@ -973,7 +968,7 @@ model_configs:
   s1dcnn:
     data_params:
       normalize_features: mean_std
-      encode_categorical: False  # for dataloader
+      encode_categorical: True  # for dataloader
       return_extra_info: True  # for dataloader
 
     default_params:
@@ -1049,6 +1044,7 @@ model_configs:
 
     default_params:
       retrain: True
+      val_size: 0.2
       early_stopping_rounds: 30
       verbose: false
       learning_rate: 0.3
@@ -1058,11 +1054,9 @@ model_configs:
       subsample: 0.8
       colsample_bytree: 0.8
       gamma: 0.0
+      early_stopping_rounds: 100
 
     param_grid:
-      early_stopping_rounds:
-        - 30
-        - 50
       learning_rate:
         - 0.3
         - 0.01

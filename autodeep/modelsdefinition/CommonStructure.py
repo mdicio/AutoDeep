@@ -73,7 +73,7 @@ class BaseModel:
 class PytorchTabularTrainer:
     """Common base class for trainers."""
 
-    def __init__(self, problem_type, num_classes=None):
+    def __init__(self, problem_type, num_targets=None):
         super().__init__()
         self.cv_size = None
         self.random_state = 4200
@@ -108,7 +108,7 @@ class PytorchTabularTrainer:
         self.logger.propagate = False
 
         self.problem_type = problem_type
-        self.num_classes = num_classes
+        self.num_targets = num_targets
         self.logger.info(
             f"Initialized {self.__class__.__name__} with problem type {self.problem_type}"
         )
@@ -118,7 +118,7 @@ class PytorchTabularTrainer:
         os.environ["PT_LOGLEVEL"] = "CRITICAL"
 
         self.problem_type = problem_type
-        self.num_classes = num_classes
+        self.num_targets = num_targets
         self.extra_info = None
         self.save_path = "ptabular_checkpoints"
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -278,9 +278,7 @@ class PytorchTabularTrainer:
         model_config,
         metric,
         eval_metrics,
-        val_size=0.2,
         max_evals=16,
-        problem_type="binary_classification",
         extra_info=None,
     ):
         self.logger.info(
@@ -288,6 +286,7 @@ class PytorchTabularTrainer:
         )
         self.extra_info = extra_info
         self.default_params = model_config["default_params"]
+        val_size = self.default_params.get("val_size")
         param_grid = model_config["param_grid"]
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self._set_loss_function(y)
@@ -297,7 +296,10 @@ class PytorchTabularTrainer:
         self.logger.debug(f"Full dataset shape : {data.shape}")
 
         train_data_op, test_data_op = train_test_split(
-            data, test_size=val_size, random_state=42, stratify=y
+            data,
+            test_size=val_size,
+            random_state=42,
+            stratify=y if self.problem_type != "regression" else None,
         )
         self.logger.debug(
             f"Train set shape: {train_data_op.shape}, Test set shape: {test_data_op.shape}"
@@ -323,7 +325,6 @@ class PytorchTabularTrainer:
             model.fit(train=train_data, validation=test_data, loss=self.loss_fn)
 
             pred_df = model.predict(test_data)
-            print(pred_df)
             predictions = pred_df[self.prediction_col].values
             if self.problem_type == "binary_classification":
                 probabilities = pred_df["target_1_probability"].fillna(0).values
@@ -333,23 +334,36 @@ class PytorchTabularTrainer:
             self.evaluator.y_pred = predictions
             self.evaluator.run_metrics = eval_metrics
 
-            metrics = self.evaluator.evaluate_model()
-            score = metrics[metric]
-            self.logger.info(f"Validation metrics: {metrics}")
+            metrics_for_split_val = self.evaluator.evaluate_model()
+            score = metrics_for_split_val[metric]
+            self.logger.info(f"Validation metrics: {metrics_for_split_val}")
 
             if self.evaluator.maximize[metric][0]:
                 score = -1 * score
+
+            pred_df = model.predict(train_data)
+            predictions = pred_df[self.prediction_col].values
+            if self.problem_type == "binary_classification":
+                probabilities = pred_df["target_1_probability"].fillna(0).values
+                self.evaluator.y_prob = probabilities
+
+            self.evaluator.y_true = train_data["target"].values
+            self.evaluator.y_pred = predictions
+            self.evaluator.run_metrics = eval_metrics
+
+            metrics_for_split_train = self.evaluator.evaluate_model()
 
             return {
                 "loss": score,
                 "params": params,
                 "status": STATUS_OK,
                 "trained_model": model,
-                "full_metrics": metrics,
+                "train_metrics": metrics_for_split_train,
+                "validation_metrics": metrics_for_split_val,
             }
 
         trials = Trials()
-        self.evaluator = Evaluator(problem_type=problem_type)
+        self.evaluator = Evaluator(problem_type=self.problem_type)
         threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         best = fmin(
@@ -369,9 +383,10 @@ class PytorchTabularTrainer:
         best_score = best_trial["result"]["loss"]
         if self.evaluator.maximize[metric][0]:
             best_score = -1 * best_score
-        full_metrics = best_trial["result"]["full_metrics"]
+        train_metrics = best_trial["result"]["train_metrics"]
+        validation_metrics = best_trial["result"]["validation_metrics"]
 
-        self.logger.info(f"Final metrics: {full_metrics}")
+        self.logger.info(f"Final validation metrics: {validation_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
@@ -380,4 +395,4 @@ class PytorchTabularTrainer:
             f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
         )
 
-        return best_params, best_score, full_metrics
+        return best_params, best_score, train_metrics, validation_metrics

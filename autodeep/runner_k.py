@@ -4,9 +4,10 @@ from datetime import datetime
 from uuid import uuid4
 
 import yaml
+from outputhandler.outputwriter import OutputWriter
+
 from autodeep.evaluation.generalevaluator import Evaluator
 from autodeep.factory import create_full_data_loader, create_model, seed_everything
-from outputhandler.outputwriter import OutputWriter
 
 full_load_mode = True
 output_results_filename = "REALRUN"
@@ -44,7 +45,7 @@ for run in runs:
 
         dataset_configs = config["dataset_configs"][dataset_name]
         dataset_task = dataset_configs["problem_type"]
-        dataset_num_classes = dataset_configs.get("num_targets", 1)
+        dataset_num_targets = dataset_configs.get("num_targets", 1)
 
         dataset_test_size = dataset_configs["test_size"]
         # Create an instance of the specified data loader class
@@ -55,7 +56,7 @@ for run in runs:
             encode_categorical=encode_categorical,
             return_extra_info=return_extra_info,
             random_state=random_state,
-            num_targets=dataset_num_classes,
+            num_targets=dataset_num_targets,
         )
 
         print(
@@ -68,7 +69,7 @@ for run in runs:
             model_name,
             random_state=random_state,
             problem_type=dataset_task,
-            num_classes=dataset_num_classes,
+            num_targets=dataset_num_targets,
         )
         model.default = DEFAULT
         model.save_path = f"./output/modelsaves/{dataset_name}/{model_name}/{run_id}/"
@@ -100,7 +101,7 @@ for run in runs:
                 best_params,
                 best_score,
                 score_std,
-                full_metrics,
+                validation_metrics,
             ) = model.hyperopt_search_kfold(
                 X_train,
                 y_train,
@@ -150,11 +151,11 @@ for run in runs:
             best_params=best_params,
             best_score=best_score,
             score_std=score_std,
-            output_metrics=full_metrics,
+            output_metrics=validation_metrics,
             saved_model_path=f"{model.save_path}/{run_id}",
             run_time=run_time,
         )
 
-        print(f"### FINAL Metrics {full_metrics} #### ")
+        print(f"### FINAL Metrics {validation_metrics} #### ")
 
         ridx += 1

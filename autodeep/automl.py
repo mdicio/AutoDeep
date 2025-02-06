@@ -50,7 +50,6 @@ class AutoRunner:
     def __init__(
         self,
         execution_mode="hyperopt_kfold",
-        eval_metrics=["accuracy"],
         max_evals=50,
         random_state=42,
         default_models=DEFAULT_MODELS,
@@ -67,7 +66,6 @@ class AutoRunner:
         self.output_filename = output_filename
         self.default_models = default_models
         self.execution_mode = execution_mode
-        self.eval_metrics = eval_metrics
         self.max_evals = max_evals
         self.random_state = random_state
         self.igtd_path = igtd_path
@@ -106,6 +104,7 @@ class AutoRunner:
                 data_loader = create_dynamic_data_loader(
                     dataset_name=dataset_name,
                     dataset_path=dataset_path,
+                    problem_type=data_config.get("problem_type"),
                     target_column=data_config.get("target_col"),
                     split_col=data_config.get("split_col"),
                     test_size=data_config.get("test_size"),
@@ -132,26 +131,28 @@ class AutoRunner:
                     model_name=model_name,
                     random_state=self.random_state,
                     problem_type=data_config["problem_type"],
-                    num_classes=data_config.get("num_targets", 1),
+                    num_targets=data_config.get("num_targets", 1),
                 )
+                model.num_workers = 12
 
-                best_params, best_score, full_metrics = self._train_model(
-                    model, X_train, y_train, model_name, data_config, extra_info
+                best_params, best_score, train_metrics, validation_metrics = (
+                    self._train_model(
+                        model, X_train, y_train, model_name, data_config, extra_info
+                    )
                 )
 
                 y_pred, y_prob = self._get_predictions(model, X_test, data_config)
-                output_metrics = self._evaluate(y_test, y_pred, y_prob, data_config)
+                test_metrics = self._evaluate(y_test, y_pred, y_prob, data_config)
 
                 self._save_results(
                     run_id,
                     dataset_name,
                     model_name,
-                    output_metrics,
+                    train_metrics,
+                    validation_metrics,
+                    test_metrics,
                     best_params,
                     best_score,
-                    full_metrics,
-                    y_pred,
-                    y_test,
                 )
 
     def _train_model(
@@ -159,33 +160,20 @@ class AutoRunner:
     ):
         model_config = self.model_config["model_configs"].get(model_name, {})
         if self.execution_mode == "hyperopt_kfold":
-            return model.hyperopt_search_kfold(
-                X_train,
-                y_train,
-                model_config,
-                data_config["metric"],
-                data_config["eval_metrics"],
-                k_value=5,
-                max_evals=self.max_evals,
-                problem_type=data_config["problem_type"],
-                extra_info=extra_info,
-            )
+            raise ValueError("Not implemented yet, coming soon!")
         elif self.execution_mode == "hyperopt":
             return model.hyperopt_search(
                 X_train,
                 y_train,
-                val_size=model_config["default_params"]["val_size"],
                 model_config=model_config,
                 metric=data_config["metric"],
                 eval_metrics=data_config["eval_metrics"],
                 max_evals=self.max_evals,
-                problem_type=data_config["problem_type"],
                 extra_info=extra_info,
             )
 
         else:
-            model.train(X_train, y_train)
-            return {}, None, {}
+            raise ValueError("Not implemented yet, coming soon!")
 
     def _get_predictions(self, model, X_test, data_config):
         if data_config["problem_type"] == "binary_classification":
@@ -197,7 +185,7 @@ class AutoRunner:
             y_true=y_test,
             y_pred=y_pred,
             y_prob=y_prob,
-            run_metrics=self.eval_metrics,
+            run_metrics=data_config["eval_metrics"],
             metric=data_config["metric"],
             problem_type=data_config["problem_type"],
         )
@@ -208,26 +196,36 @@ class AutoRunner:
         run_id,
         dataset_name,
         model_name,
-        metrics,
+        train_metrics,
+        validation_metrics,
+        test_metrics,
         best_params,
         best_score,
-        full_metrics,
-        y_pred,
-        y_true,
     ):
         output_path = os.path.join(self.output_folder, self.output_filename)
-        output_writer = OutputWriter(output_path, append=True)
+
+        fields = [
+            "run_id",
+            "dataset",
+            "model",
+            "train_metrics",
+            "validation_metrics",
+            "test_metrics",
+            "best_params",
+            "best_score",
+        ]
+
+        output_writer = OutputWriter(output_path, fields)
 
         result_data = {
             "run_id": run_id,
             "dataset": dataset_name,
             "model": model_name,
-            "metrics": metrics,
+            "train_metrics": train_metrics,
+            "validation_metrics": validation_metrics,
+            "test_metrics": test_metrics,
             "best_params": best_params,
             "best_score": best_score,
-            "full_metrics": full_metrics,
-            "predictions": y_pred[:10].tolist(),
-            "ground_truth": y_true[:10].tolist(),
         }
 
-        output_writer.write(result_data)
+        output_writer.write_row(**result_data)

@@ -15,8 +15,8 @@ class IGTDPreprocessor:
     ordering of features. This class wraps the call to `table_to_image` from your IGTD library.
 
     Attributes:
-        num_row (int): Number of pixel rows in the image.
-        num_col (int): Number of pixel columns in the image.
+        img_rows (int): Number of pixel rows in the image.
+        img_columns (int): Number of pixel columns in the image.
         save_image_size (int or float): Size (in inches) of saved images.
         max_step (int): Maximum number of iterations for the IGTD algorithm.
         val_step (int): Iterations for convergence validation.
@@ -26,16 +26,16 @@ class IGTDPreprocessor:
 
     def __init__(
         self,
-        num_row: int,
-        num_col: int,
+        img_rows: int,
+        img_columns: int,
         save_image_size: int,
         max_step: int,
         val_step: int,
         min_gain: float = 0.01,
         exclude_cols: Optional[list] = None,
     ):
-        self.num_row = num_row
-        self.num_col = num_col
+        self.img_rows = img_rows
+        self.img_columns = img_columns
         self.save_image_size = save_image_size
         self.max_step = max_step
         self.val_step = val_step
@@ -81,7 +81,7 @@ class IGTDPreprocessor:
             # Note: The IGTD function is assumed to save output to result_dir.
             table_to_image(
                 X,
-                [self.num_row, self.num_col],
+                [self.img_rows, self.img_columns],
                 config["fea_dist_method"],
                 config["image_dist_method"],
                 self.save_image_size,
@@ -220,11 +220,10 @@ class DynamicDataLoader(DataLoader):
 if __name__ == "__main__":
     # Define IGTD ordering configurations. For example, two different ordering strategies:
 
-
     # Create an instance of the IGTDPreprocessor with desired parameters.
     igtd_preprocessor = IGTDPreprocessor(
-        num_row=8,
-        num_col=7,
+        img_rows=8,
+        img_columns=7,
         save_image_size=3,
         max_step=1000000,
         val_step=1000,
@@ -278,8 +277,8 @@ class IGTDPreprocessor:
     ordering of features. This class wraps the call to `table_to_image` from your IGTD library.
 
     Attributes:
-        num_row (int): Number of pixel rows in the image.
-        num_col (int): Number of pixel columns in the image.
+        img_rows (int): Number of pixel rows in the image.
+        img_columns (int): Number of pixel columns in the image.
         save_image_size (int or float): Size (in inches) of saved images.
         max_step (int): Maximum number of iterations for the IGTD algorithm.
         val_step (int): Iterations for convergence validation.
@@ -290,8 +289,8 @@ class IGTDPreprocessor:
     def __init__(
         self,
         dataset_name: str,
-        num_row: int,
-        num_col: int,
+        img_rows: int,
+        img_columns: int,
         save_image_size: int,
         max_step: int,
         val_step: int,
@@ -299,8 +298,8 @@ class IGTDPreprocessor:
         exclude_cols: Optional[list] = None,
     ):
         self.dataset_name = dataset_name
-        self.num_row = num_row
-        self.num_col = num_col
+        self.img_rows = img_rows
+        self.img_columns = img_columns
         self.save_image_size = save_image_size
         self.max_step = max_step
         self.val_step = val_step
@@ -348,7 +347,7 @@ class IGTDPreprocessor:
             # Note: The IGTD function is assumed to save its output to result_dir.
             table_to_image(
                 X,
-                [self.num_row, self.num_col],
+                [self.img_rows, self.img_columns],
                 config["fea_dist_method"],
                 config["image_dist_method"],
                 self.save_image_size,
@@ -478,8 +477,8 @@ class DynamicDataLoader(DataLoader):
                 first_config = next(iter(igtd_results))
                 # Assume the IGTD algorithm writes an ordering file called "ordering.txt" in the result directory.
                 igtd_path = os.path.join(igtd_results[first_config], "ordering.txt")
-                img_rows = self.igtd_preprocessor.num_row
-                img_columns = self.igtd_preprocessor.num_col
+                img_rows = self.igtd_preprocessor.img_rows
+                img_columns = self.igtd_preprocessor.img_columns
 
             extra_info = self.create_extra_info(
                 df, igtd_path=igtd_path, img_rows=img_rows, img_columns=img_columns
@@ -499,7 +498,7 @@ class DynamicDataLoader(DataLoader):
         """
         # Get the categorical and numerical columns
         cat_cols = df.select_dtypes(include=["object", "category"]).columns
-        num_cols = df.select_dtypes(exclude=["object", "category"]).columns
+        img_columns = df.select_dtypes(exclude=["object", "category"]).columns
 
         cat_unique_vals = [len(df[col].unique()) for col in cat_cols]
 
@@ -508,8 +507,8 @@ class DynamicDataLoader(DataLoader):
             "cat_col_names": list(cat_cols),
             "cat_col_idx": list(df.columns.get_indexer(cat_cols)),
             "cat_col_unique_vals": cat_unique_vals,
-            "num_col_names": list(num_cols),
-            "num_col_idx": list(df.columns.get_indexer(num_cols)),
+            "num_col_names": list(img_columns),
+            "num_col_idx": list(df.columns.get_indexer(img_columns)),
         }
         extra_info = column_info
         extra_info["num_features"] = len(df.columns)
@@ -564,8 +563,8 @@ if __name__ == "__main__":
 
     # Create an instance of the IGTDPreprocessor with desired parameters.
     igtd_preprocessor = IGTDPreprocessor(
-        num_row=8,
-        num_col=7,
+        img_rows=8,
+        img_columns=7,
         save_image_size=3,
         max_step=1000000,
         val_step=1000,

@@ -17,14 +17,16 @@ from tqdm import tqdm
 
 from autodeep.evaluation.generalevaluator import *
 from autodeep.modelutils.trainingutilities import (
-    infer_hyperopt_space_pytorch_custom, stop_on_perfect_lossCondition)
+    infer_hyperopt_space_pytorch_custom,
+    stop_on_perfect_lossCondition,
+)
 
 
 class ResNetModel(nn.Module):
     def __init__(
         self,
         problem_type="binary_classification",
-        num_classes=1,
+        num_targets=1,
         depth="resnet18",
         pretrained=True,
     ):
@@ -32,7 +34,7 @@ class ResNetModel(nn.Module):
 
         self.pretrained = pretrained
         self.problem_type = problem_type
-        self.num_classes = num_classes
+        self.num_targets = num_targets
         self.depth = depth
 
         if depth == "resnet18":
@@ -51,7 +53,7 @@ class ResNetModel(nn.Module):
         if self.problem_type == "binary_classification":
             self.classifier = nn.Linear(self.num_features, 1)
         elif self.problem_type == "multiclass_classification":
-            self.classifier = nn.Linear(self.num_features, self.num_classes)
+            self.classifier = nn.Linear(self.num_features, self.num_targets)
         elif self.problem_type == "regression":
             self.classifier = nn.Linear(self.num_features, 1)
         else:
@@ -70,12 +72,9 @@ class ResNetModel(nn.Module):
 class ResNetTrainer:
     def __init__(
         self,
-        num_targets=1,
-        depth="resnet18",
-        pretrained=True,
-        batch_size=64,
-        learning_rate=0.001,
         problem_type="binary_classification",
+        num_targets=None,
+        pretrained=True,
     ):
         self.problem_type = problem_type
         self.num_targets = num_targets
@@ -84,6 +83,7 @@ class ResNetTrainer:
         self.problem_type = problem_type
         self.depth = None
         self.save_path = None
+        self.num_workers = max(1, os.cpu_count() // 2)
         # Check if self.save_path is not None
         if self.save_path is not None:
             # Specify the directory path you want to create
@@ -123,13 +123,6 @@ class ResNetTrainer:
         self.random_state = 4200
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.logger.info(f"Device {self.device} is available")
-        # Get the number of available CPU cores
-        num_cpu_cores = os.cpu_count()
-        # Calculate the num_workers value as number of cores - 2
-        self.num_workers = max(1, num_cpu_cores)
-        num_cpu_cores = os.cpu_count()
-        # Calculate the num_workers value as number of cores - 2
-        self.num_workers = max(1, num_cpu_cores)
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
@@ -137,8 +130,8 @@ class ResNetTrainer:
         self.model = self.best_model
         self.logger.debug("Model loaded successfully")
 
-    def build_model(self, problem_type, num_classes, depth):
-        model = ResNetModel(problem_type, num_classes, depth)
+    def build_model(self, problem_type, num_targets, depth):
+        model = ResNetModel(problem_type, num_targets, depth)
         return model
 
     def process_inputs_labels_training(self, inputs, labels):
@@ -248,7 +241,7 @@ class ResNetTrainer:
         img_rows,
         img_columns,
         transform,
-        validation_fraction,
+        val_size,
         batch_size,
     ):
         dataset = CustomDataset(
@@ -261,7 +254,7 @@ class ResNetTrainer:
 
         num_samples = len(dataset)
 
-        num_train_samples = int((1 - validation_fraction) * num_samples)
+        num_train_samples = int((1 - val_size) * num_samples)
         if num_train_samples % batch_size == 1:
             num_train_samples += 1
         num_val_samples = num_samples - num_train_samples
@@ -366,7 +359,7 @@ class ResNetTrainer:
 
     def train(self, X_train, y_train, params: Dict, extra_info: Dict):
         outer_params = params["default_params"]
-        validation_fraction = outer_params.get("validation_fraction", 0.2)
+        val_size = outer_params.get("val_size", 0.2)
         max_epochs = outer_params.get("max_epochs", 3)
         batch_size = params.get("batch_size", 32)
         early_stopping = outer_params.get("early_stopping", True)
@@ -402,7 +395,7 @@ class ResNetTrainer:
             self.img_rows,
             self.img_columns,
             self.transformation,
-            validation_fraction,
+            val_size,
             batch_size,
         )
 
@@ -421,7 +414,7 @@ class ResNetTrainer:
             for epoch in range(max_epochs):
                 epoch_loss = self.train_step(train_loader)
 
-                if early_stopping and validation_fraction > 0:
+                if early_stopping and val_size > 0:
                     val_loss = self.validate_step(val_loader)
                     self.scheduler.step(val_loss)
 
@@ -459,10 +452,8 @@ class ResNetTrainer:
         y,
         model_config,
         metric,
-        eval_metrics,
-        val_size=0.2,  # ✅ Instead of k-fold, we use a validation split
+        eval_metrics,  # ✅ Instead of k-fold, we use a validation split
         max_evals=16,
-        problem_type="binary_classification",
         extra_info=None,
     ):
         """
@@ -494,10 +485,11 @@ class ResNetTrainer:
         """
         print(model_config)
         self.default_params = model_config["default_params"]
+        val_size = self.default_params.get("val_size")
         max_epochs = self.default_params.get("max_epochs", 3)
         early_stopping = self.default_params.get("early_stopping", True)
         patience = self.default_params.get("early_stopping_patience", 5)
-        validation_fraction = self.default_params.get("validation_fraction", 0.2)
+        val_size = self.default_params.get("val_size", 0.2)
 
         self.logger.debug(f"Training on {self.device} for dataset")
 
@@ -528,8 +520,13 @@ class ResNetTrainer:
                 y,
                 test_size=val_size,
                 random_state=42,
-                stratify=y if problem_type != "regression" else None,
+                stratify=y if self.problem_type != "regression" else None,
             )
+
+            print(X_train.shape)
+            print(y_train.shape)
+            print(self.img_rows)
+            print(self.img_columns)
 
             train_torch_dataset = self.single_pandas_to_torch_image_dataset(
                 X_train, y_train, self.img_rows, self.img_columns, self.transformation
@@ -537,8 +534,6 @@ class ResNetTrainer:
             val_torch_dataset = self.single_pandas_to_torch_image_dataset(
                 X_val, y_val, self.img_rows, self.img_columns, self.transformation
             )
-
-            metric_dict = {}
 
             if X_train.shape[0] % params["batch_size"] == 1:
                 bs = params["batch_size"] + 1
@@ -581,7 +576,7 @@ class ResNetTrainer:
                 for epoch in range(max_epochs):
                     epoch_loss = self.train_step(train_loader)
 
-                    if early_stopping and validation_fraction > 0:
+                    if early_stopping and val_size > 0:
                         val_loss = self.validate_step(val_loader)
                         self.scheduler.step(val_loss)
 
@@ -629,13 +624,25 @@ class ResNetTrainer:
             self.evaluator.y_prob = y_prob
             self.evaluator.run_metrics = eval_metrics
 
-            metrics_for_split = self.evaluator.evaluate_model()
-            for metric_nm, metric_value in metrics_for_split.items():
-                metric_dict[metric_nm] = [
-                    metric_value
-                ]  # No k-fold, just one value per metric
+            metrics_for_split_val = self.evaluator.evaluate_model()
+            score = metrics_for_split_val[metric]
 
-            score = metrics_for_split[metric]
+            with torch.no_grad():
+                for inputs, labels in train_loader:
+                    predictions, labels, probabilities = (
+                        self.process_inputs_labels_prediction(inputs, labels)
+                    )
+                    y_true = np.append(y_true, labels)
+                    y_pred = np.append(y_pred, predictions)
+                    y_prob = np.append(y_prob, probabilities)
+
+            self.evaluator.y_true = y_true.reshape(-1)
+            self.evaluator.y_pred = y_pred.reshape(-1)
+            self.evaluator.y_prob = y_prob
+            self.evaluator.run_metrics = eval_metrics
+
+            metrics_for_split_train = self.evaluator.evaluate_model()
+
             self.logger.info(f"Validation metrics {metric}: {score}")
 
             if self.evaluator.maximize[metric][0]:
@@ -646,12 +653,12 @@ class ResNetTrainer:
                 "params": params,
                 "status": STATUS_OK,
                 "trained_model": self.model,
-                "score_std": 0,  # No multiple folds, so std = 0
-                "full_metrics": metric_dict,
+                "train_metrics": metrics_for_split_train,
+                "validation_metrics": metrics_for_split_val,
             }
 
         trials = Trials()
-        self.evaluator = Evaluator(problem_type=problem_type)
+        self.evaluator = Evaluator(problem_type=self.problem_type)
         threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         best = fmin(
@@ -671,9 +678,11 @@ class ResNetTrainer:
         best_score = best_trial["result"]["loss"]
         if self.evaluator.maximize[metric][0]:
             best_score = -1 * best_score
-        full_metrics = best_trial["result"]["full_metrics"]
 
-        self.logger.info(f"Final Validation Metrics: {full_metrics}")
+        train_metrics = best_trial["result"]["train_metrics"]
+        validation_metrics = best_trial["result"]["validation_metrics"]
+
+        self.logger.info(f"Final Validation Metrics: {validation_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
@@ -682,7 +691,7 @@ class ResNetTrainer:
             f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
         )
 
-        return best_params, best_score, full_metrics
+        return best_params, best_score, train_metrics, validation_metrics
 
     def hyperopt_search_kfold(
         self,
@@ -693,7 +702,6 @@ class ResNetTrainer:
         eval_metrics,
         k_value=5,
         max_evals=16,
-        problem_type="binary_classification",
         extra_info=None,
     ):
         """
@@ -719,10 +727,11 @@ class ResNetTrainer:
         """
 
         self.default_params = model_config["default_params"]
+        val_size = self.default_params.get("val_size")
         max_epochs = self.default_params.get("max_epochs", 3)
         early_stopping = self.default_params.get("early_stopping", True)
         patience = self.default_params.get("early_stopping_patience", 5)
-        validation_fraction = self.default_params.get("validation_fraction", 0.2)
+        val_size = self.default_params.get("val_size", 0.2)
 
         self.logger.debug(f"Training on {self.device} for dataset")
 
@@ -807,7 +816,7 @@ class ResNetTrainer:
                     for epoch in range(max_epochs):
                         epoch_loss = self.train_step(train_loader)
 
-                        if early_stopping and validation_fraction > 0:
+                        if early_stopping and val_size > 0:
                             val_loss = self.validate_step(val_loader)
                             self.scheduler.step(val_loss)
 
@@ -894,12 +903,12 @@ class ResNetTrainer:
                 "status": STATUS_OK,
                 "trained_model": self.model,
                 "score_std": score_std,
-                "full_metrics": metric_dict,
+                "validation_metrics": metric_dict,
             }
 
         # Define the trials object to keep track of the results
         trials = Trials()
-        self.evaluator = Evaluator(problem_type=problem_type)
+        self.evaluator = Evaluator(problem_type=self.problem_type)
         threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         # Run the hyperopt search
@@ -923,9 +932,9 @@ class ResNetTrainer:
         if self.evaluator.maximize[metric][0]:
             best_score = -1 * best_score
         score_std = best_trial["result"]["score_std"]
-        full_metrics = best_trial["result"]["full_metrics"]
+        validation_metrics = best_trial["result"]["validation_metrics"]
 
-        self.logger.info(f"CRUCIAL INFO FINAL METRICS : {full_metrics}")
+        self.logger.info(f"CRUCIAL INFO FINAL METRICS : {validation_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
@@ -934,7 +943,7 @@ class ResNetTrainer:
             f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
         )
 
-        return best_params, best_score, score_std, full_metrics
+        return best_params, best_score, score_std, validation_metrics
 
     def predict(self, X_test, predict_proba=False, batch_size=4096):
         self.model.to(self.device)

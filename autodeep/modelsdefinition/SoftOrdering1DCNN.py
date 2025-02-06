@@ -1,6 +1,5 @@
 import logging
 import os
-import warnings
 from typing import Dict, Optional
 
 import numpy as np
@@ -9,21 +8,18 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from autodeep.evaluation.generalevaluator import *
-from autodeep.modelutils.trainingutilities import (
-    handle_rogue_batch_size_ptcustom,
-    infer_hyperopt_space_pytorch_custom,
-    stop_on_perfect_lossCondition,
-)
 from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
-from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_class_weight
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from tqdm import tqdm
 
-warnings.filterwarnings("ignore")
+from autodeep.evaluation.generalevaluator import *
+from autodeep.modelutils.trainingutilities import (
+    infer_hyperopt_space_pytorch_custom,
+    stop_on_perfect_lossCondition,
+)
 
 
 class Model(nn.Module):
@@ -263,9 +259,7 @@ class SoftOrdering1DCNN:
                 "Invalid problem_type. Supported values are 'binary', 'multiclass', and 'regression'."
             )
 
-    def _pandas_to_torch_datasets(
-        self, X_train, y_train, validation_fraction, batch_size
-    ):
+    def _pandas_to_torch_datasets(self, X_train, y_train, val_size, batch_size):
         X_train_tensor = torch.tensor(X_train.values, dtype=torch.float)
         y_train_tensor = torch.tensor(
             y_train.values,
@@ -276,7 +270,7 @@ class SoftOrdering1DCNN:
 
         num_samples = len(dataset)
 
-        num_train_samples = int((1 - validation_fraction) * num_samples)
+        num_train_samples = int((1 - val_size) * num_samples)
         if num_train_samples % batch_size == 1:
             num_train_samples += 1
         num_val_samples = num_samples - num_train_samples
@@ -377,7 +371,7 @@ class SoftOrdering1DCNN:
 
     def train(self, X_train, y_train, params: Dict, extra_info: Dict):
         outer_params = params["default_params"]
-        validation_fraction = outer_params.get("validation_fraction", 0.2)
+        val_size = outer_params.get("val_size", 0.2)
         max_epochs = outer_params.get("max_epochs", 3)
         batch_size = params.get("batch_size", 32)
         early_stopping = outer_params.get("early_stopping", True)
@@ -396,7 +390,7 @@ class SoftOrdering1DCNN:
         self._set_loss_function(y_train)
 
         train_dataset, val_dataset = self._pandas_to_torch_datasets(
-            X_train, y_train, validation_fraction, params["batch_size"]
+            X_train, y_train, val_size, params["batch_size"]
         )
 
         train_loader, val_loader = self._torch_datasets_to_dataloaders(
@@ -414,7 +408,7 @@ class SoftOrdering1DCNN:
             for epoch in range(max_epochs):
                 epoch_loss = self.train_step(train_loader)
 
-                if early_stopping and validation_fraction > 0:
+                if early_stopping and val_size > 0:
                     val_loss = self.validate_step(val_loader)
                     self.scheduler.step(val_loss)
 
@@ -452,33 +446,83 @@ class SoftOrdering1DCNN:
         y,
         model_config,
         metric,
-        max_evals=100,
-        problem_type="binary_classification",
+        eval_metrics,
+        max_evals=16,
         extra_info=None,
-        *kwargs,
     ):
+        """
+        Method to perform hyperopt search on the model using input data.
+
+        Parameters
+        ----------
+        X : ndarray
+            Input data for training.
+        y : ndarray
+            Labels for input data.
+        metric : str, optional
+            Scoring metric to use for evaluation. Default is 'accuracy'.
+        max_evals : int, optional
+            Maximum number of evaluations of the objective function. Default is 16.
+
+        Returns
+        -------
+        dict
+            Dictionary containing the best hyperparameters and corresponding score.
+        """
+
         self.default_params = model_config["default_params"]
+        val_size = self.default_params.get("val_size", 0.2)
         max_epochs = self.default_params.get("max_epochs", 3)
         early_stopping = self.default_params.get("early_stopping", True)
         patience = self.default_params.get("early_stopping_patience", 5)
+        param_grid = model_config["param_grid"]
         space = infer_hyperopt_space_pytorch_custom(param_grid)
-        validation_fraction = self.default_params.get("validation_fraction", 0.2)
         self.num_features = extra_info["num_features"]
 
         self._set_loss_function(y)
         self.logger.debug(f"Training on {self.device} for dataset")
 
-        train_dataset, val_dataset = self._pandas_to_torch_datasets(
-            X, y, validation_fraction
+        # Splitting data into training and validation sets
+        X_train, X_val, y_train, y_val = train_test_split(
+            X,
+            y,
+            test_size=val_size,
+            random_state=42,
+            stratify=y if self.problem_type != "regression" else None,
+        )
+
+        # Convert input data into PyTorch dataset
+        self.torch_dataset_train = self._single_pandas_to_torch_image_dataset(
+            X_train, y_train
+        )
+        self.torch_dataset_val = self._single_pandas_to_torch_image_dataset(
+            X_val, y_val
         )
 
         # Define the objective function for hyperopt search
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")
-            # Split the train data into training and validation sets
 
-            train_loader, val_loader = self._torch_datasets_to_dataloaders(
-                train_dataset, val_dataset, params["batch_size"]
+            if X_train.shape[0] % params["batch_size"] == 1:
+                bs = params["batch_size"] + 1
+            else:
+                bs = params["batch_size"]
+
+            train_loader = torch.utils.data.DataLoader(
+                self.torch_dataset_train,
+                batch_size=bs,
+                shuffle=True,
+                drop_last=False,
+                num_workers=self.num_workers,
+                pin_memory=True,
+            )
+            val_loader = torch.utils.data.DataLoader(
+                self.torch_dataset_val,
+                batch_size=bs,
+                shuffle=False,
+                drop_last=False,
+                num_workers=self.num_workers,
+                pin_memory=True,
             )
 
             self.model = self.build_model(
@@ -498,28 +542,25 @@ class SoftOrdering1DCNN:
                 total=max_epochs, desc="Training", unit="epoch", ncols=80
             ) as pbar:
                 for epoch in range(max_epochs):
-                    epoch_loss = self.train_step(train_loader)
+                    train_loss = self.train_step(train_loader)
 
-                    if early_stopping and validation_fraction > 0:
+                    if early_stopping and val_size > 0:
                         val_loss = self.validate_step(val_loader)
                         self.scheduler.step(val_loss)
 
-                        if val_loss < best_val_loss + self.default_params.get(
-                            "tol", 0.0
+                        if (
+                            val_loss + self.default_params.get("tol", 0.0)
+                            < best_val_loss
                         ):
                             best_val_loss = val_loss
                             best_epoch = epoch
                             current_patience = 0
-                            # Save the state dict of the best model
                             best_model_state_dict = self.model.state_dict()
-
                         else:
                             current_patience += 1
 
                         print(
-                            f"Epoch [{epoch+1}/{max_epochs}],"
-                            f"Train Loss: {epoch_loss:.6f},"
-                            f"Val Loss: {val_loss:.6f}"
+                            f"Epoch [{epoch+1}/{max_epochs}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}"
                         )
                         if current_patience >= patience:
                             print(
@@ -527,46 +568,50 @@ class SoftOrdering1DCNN:
                             )
                             break
 
-                pbar.update(1)
+                    pbar.update(1)
 
             # Load the best model state dict
             if best_model_state_dict is not None:
                 self.model.load_state_dict(best_model_state_dict)
                 print(f"Best model loaded from epoch {best_epoch+1}")
 
-            # Assuming you have a PyTorch DataLoader object for the validation set called `val_loader`
-            # Convert dataloader to pandas DataFrames
-            X_val, y_val = pd.DataFrame(), pd.DataFrame()
-            for X_batch, y_batch in val_loader:
-                X_val = pd.concat([X_val, pd.DataFrame(X_batch.numpy())])
-                y_val = pd.concat([y_val, pd.DataFrame(y_batch.numpy())])
-
+            # Evaluate on validation set
             y_pred, y_prob = self.predict(X_val, predict_proba=True)
-            # Calculate the score using the specified metric
-
-            self.evaluator.y_true = y_val
-            self.evaluator.y_pred = y_pred
+            self.evaluator.y_true = y_val.values.squeeze()
+            self.evaluator.y_pred = y_pred.reshape(-1)
             self.evaluator.y_prob = y_prob
-            score = self.evaluator.evaluate_metric(metric_name=metric)
+            self.evaluator.run_metrics = eval_metrics
 
+            validation_metrics = self.evaluator.evaluate_model()
+
+            # Evaluate on training set
+            y_pred_train, y_prob_train = self.predict(X_train, predict_proba=True)
+            self.evaluator.y_true = y_train.values.squeeze()
+            self.evaluator.y_pred = y_pred_train.reshape(-1)
+            self.evaluator.y_prob = y_prob_train
+            train_metrics = self.evaluator.evaluate_model()
+
+            self.logger.info(f"Validation metrics: {validation_metrics}")
+            self.logger.info(f"Training metrics: {train_metrics}")
+
+            # Adjust sign for optimization
+            final_score = validation_metrics[metric]
             if self.evaluator.maximize[metric][0]:
-                score = -1 * score
+                final_score = -1 * final_score
 
-            # Return the negative score (to minimize)
             return {
-                "loss": score,
+                "loss": final_score,
                 "params": params,
                 "status": STATUS_OK,
                 "trained_model": self.model,
+                "validation_metrics": validation_metrics,
+                "train_metrics": train_metrics,
             }
 
-        # Define the trials object to keep track of the results
         trials = Trials()
-
-        self.evaluator = Evaluator(problem_type=problem_type)
+        self.evaluator = Evaluator(problem_type=self.problem_type)
         threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
-        # Run the hyperopt search
         best = fmin(
             objective,
             space=space,
@@ -577,23 +622,25 @@ class SoftOrdering1DCNN:
             early_stop_fn=lambda x: stop_on_perfect_lossCondition(x, threshold),
         )
 
-        # Get the best hyperparameters and corresponding score
         best_params = space_eval(space, best)
         best_params["default_params"] = self.default_params
 
         best_trial = trials.best_trial
         best_score = best_trial["result"]["loss"]
+        if self.evaluator.maximize[metric][0]:
+            best_score = -1 * best_score
+        validation_metrics = best_trial["result"]["validation_metrics"]
+        train_metrics = best_trial["result"]["train_metrics"]
+
+        self.logger.info(f"Final Validation Metrics: {validation_metrics}")
+        self.logger.info(f"Final Training Metrics: {train_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
-        torch.save(self.best_model.state_dict(), f"{self.save_path}_best")
-
         self.logger.info(f"Best hyperparameters: {best_params}")
-        self.logger.info(
-            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
-        )
+        self.logger.info(f"Best metric {metric}: {best_score}")
 
-        return best_params, best_score
+        return best_params, best_score, validation_metrics, train_metrics
 
     def hyperopt_search_kfold(
         self,
@@ -604,7 +651,6 @@ class SoftOrdering1DCNN:
         eval_metrics,
         k_value=5,
         max_evals=16,
-        problem_type="binary_classification",
         extra_info=None,
     ):
         """
@@ -630,11 +676,12 @@ class SoftOrdering1DCNN:
         """
 
         self.default_params = model_config["default_params"]
+        val_size = self.default_params.get("val_size")
         max_epochs = self.default_params.get("max_epochs", 3)
         early_stopping = self.default_params.get("early_stopping", True)
         patience = self.default_params.get("early_stopping_patience", 5)
         space = infer_hyperopt_space_pytorch_custom(param_grid)
-        validation_fraction = self.default_params.get("validation_fraction", 0.2)
+        val_size = self.default_params.get("val_size", 0.2)
         self.num_features = extra_info["num_features"]
 
         self._set_loss_function(y)
@@ -699,7 +746,7 @@ class SoftOrdering1DCNN:
                     for epoch in range(max_epochs):
                         epoch_loss = self.train_step(train_loader)
 
-                        if early_stopping and validation_fraction > 0:
+                        if early_stopping and val_size > 0:
                             val_loss = self.validate_step(val_loader)
                             self.scheduler.step(val_loss)
 
@@ -783,12 +830,12 @@ class SoftOrdering1DCNN:
                 "status": STATUS_OK,
                 "trained_model": self.model,
                 "score_std": score_std,
-                "full_metrics": metric_dict,
+                "validation_metrics": metric_dict,
             }
 
         # Define the trials object to keep track of the results
         trials = Trials()
-        self.evaluator = Evaluator(problem_type=problem_type)
+        self.evaluator = Evaluator(problem_type=self.problem_type)
         threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
         # Run the hyperopt search
@@ -812,9 +859,9 @@ class SoftOrdering1DCNN:
         if self.evaluator.maximize[metric][0]:
             best_score = -1 * best_score
         score_std = best_trial["result"]["score_std"]
-        full_metrics = best_trial["result"]["full_metrics"]
+        validation_metrics = best_trial["result"]["validation_metrics"]
 
-        self.logger.info(f"CRUCIAL INFO FINAL METRICS : {full_metrics}")
+        self.logger.info(f"CRUCIAL INFO FINAL METRICS : {validation_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
 
@@ -823,7 +870,7 @@ class SoftOrdering1DCNN:
             f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
         )
 
-        return best_params, best_score, score_std, full_metrics
+        return best_params, best_score, score_std, validation_metrics
 
     def predict(self, X_test, predict_proba=False, batch_size=4096):
         self.model.to(self.device)
