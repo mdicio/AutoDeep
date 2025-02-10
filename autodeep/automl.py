@@ -56,14 +56,14 @@ class AutoRunner:
         model_config=DEFAULT_MODEL_CONFIG_FILE,
         data_config=None,
         output_folder=DEFAULT_OUTPUT_FOLDER,
-        output_filename="experiments.yml",
+        output_filename="experiments",
         igtd_path=DEFAULT_IGTD_DIR,
         igtd_config=DEFAULT_IGTD_CONFIG,
     ):
         self.model_config = self._load_config(model_config)
         self.data_config = self._validate_data_config(data_config)
         self.output_folder = output_folder
-        self.output_filename = output_filename
+        self.output_filename = output_filename + ".csv"
         self.default_models = default_models
         self.execution_mode = execution_mode
         self.max_evals = max_evals

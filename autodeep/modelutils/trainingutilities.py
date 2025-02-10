@@ -101,6 +101,42 @@ def map_scheduler_str_to_class(scheduler_str):
     return scheduler_mapping[scheduler_str]
 
 
+def prepare_shared_optimizer_configs(params):
+    """
+    Prepare shared configurations for tabular models.
+
+    Parameters
+    ----------
+    params : dict
+        Model-specific parameters.
+    outer_params : dict
+        Outer configuration parameters.
+    extra_info : dict
+        Extra information such as column names.
+    save_path : str
+        Path to save checkpoints.
+    task : str
+        Task type (e.g., "regression", "binary_classification").
+
+    Returns
+    -------
+    tuple
+        A tuple containing data_config, trainer_config, and optimizer_config.
+    """
+
+    # Optimizer and Scheduler setup
+    optimizer_fn_name, optimizer_params, learning_rate = prepare_optimizer(
+        params["optimizer_fn"]
+    )
+    optimizer_params["learning_rate"] = learning_rate
+    (
+        scheduler_fn_name,
+        scheduler_params,
+    ) = prepare_scheduler(params["scheduler_fn"])
+
+    return optimizer_fn_name, optimizer_params, scheduler_fn_name, scheduler_params
+
+
 def prepare_shared_tabular_configs(params, outer_params, extra_info, save_path, task):
     """
     Prepare shared configurations for tabular models.
@@ -182,7 +218,7 @@ def prepare_optimizer(optimizer_fn):
                 {
                     "weight_decay": optimizer_details.get("Adam_weight_decay", 0.0),
                 },
-                optimizer_details.get("Adam_learning_rate", 0.0),
+                optimizer_details.get("Adam_learning_rate", 0.001),
             )
         elif optimizer_fn == SGD:
             return (
@@ -191,7 +227,7 @@ def prepare_optimizer(optimizer_fn):
                     "weight_decay": optimizer_details.get("SGD_weight_decay", 0.0),
                     "momentum": optimizer_details.get("SGD_momentum", 0.0),
                 },
-                optimizer_details.get("SGD_learning_rate", 0.0),
+                optimizer_details.get("SGD_learning_rate", 0.001),
             )
 
         elif optimizer_fn == AdamW:
@@ -200,7 +236,7 @@ def prepare_optimizer(optimizer_fn):
                 {
                     "weight_decay": optimizer_details.get("AdamW_weight_decay", 0.01),
                 },
-                optimizer_details.get("AdamW_learning_rate", 0.0),
+                optimizer_details.get("AdamW_learning_rate", 0.001),
             )
 
     return None, {}
@@ -367,7 +403,7 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
 
         elif (
             isinstance(param_values[0], (str, bool, list))
-            or param_name in ["virtual_batch_size_ratio", "weights"]
+            or param_name in ["virtual_batch_size_ratio", "weights", "hidden_size"]
             or any(value is None for value in param_values)
         ):
             if param_name in ["weights"]:
@@ -461,10 +497,16 @@ def infer_hyperopt_space_pytorch_tabular_old1(param_grid: Dict):
             (isinstance(param_values[0], (str, bool, list)))
             or (
                 param_name
-                in ["virtual_batch_size_ratio", "weights", "input_embed_dim_multiplier"]
+                in [
+                    "virtual_batch_size_ratio",
+                    "weights",
+                    "input_embed_dim_multiplier",
+                    "hidden_size",
+                ]
             )
             or any(value is None for value in param_values)
         ):
+            print("yo", param_name)
             if param_name in ["weights"]:
                 space[param_name] = scope.int(hp.choice(param_name, param_values))
 

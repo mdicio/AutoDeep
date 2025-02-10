@@ -17,6 +17,55 @@ include_models:
   - Node
 
 model_configs:
+  xgb:
+
+    data_params:
+      normalize_features: false
+      encode_categorical: True
+      return_extra_info: False
+
+    default_params:
+      retrain: True
+      val_size: 0.2
+      early_stopping_rounds: 30
+      verbose: false
+      learning_rate: 0.3
+      max_depth: 6
+      n_estimators: 100
+      min_child_weight: 1
+      subsample: 0.8
+      colsample_bytree: 0.8
+      gamma: 0.0
+      early_stopping_rounds: 100
+
+    param_grid:
+      learning_rate:
+        - 0.3
+        - 0.01
+      max_depth:
+        - 4
+        - 6
+        - 8
+      n_estimators:
+        - 50
+        - 100
+        - 200
+      min_child_weight:
+        - 1
+        - 5
+        - 10
+      subsample:
+        - 0.6
+        - 0.8
+        - 1.0
+      colsample_bytree:
+        - 0.6
+        - 0.8
+        - 1.0
+      gamma:
+        - 0.0
+        - 0.1
+        - 0.2
 
   catboost:
     data_params:
@@ -50,14 +99,16 @@ model_configs:
       iterations: 20
       retrain: False
       auto_lr_find: False
-      max_epochs: 3
+      max_epochs: 1000
       val_size: 0.15
-      early_stopping_patience: 20
+      early_stopping_patience: 5
 
     param_grid:
       batch_size:
+        - 1024
+        - 512
+        - 256
         - 128
-        - 2048
       layers:
         - "128-64-32"
         - "256-128"
@@ -88,33 +139,33 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
         SGD:
           weight_decay:
             - 0.0
             - 0.0000001
           momentum:
-            - 0.0
             - 0.9
+            - 0.99
           learning_rate:
-            - 0.001
+            - 0.1
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
             - 0.1
-            - 0.01
+            - 0.5
           patience:
             - 5
-            - 10
+            - 15
         StepLR:
           step_size:
             - 10
@@ -141,14 +192,16 @@ model_configs:
       iterations: 20
       retrain: False
       auto_lr_find: False
-      max_epochs: 3
+      max_epochs: 1000
       val_size: 0.15
-      early_stopping_patience: 20
+      early_stopping_patience: 5
 
     param_grid:
       batch_size:
+        - 1024
+        - 512
+        - 256
         - 128
-        - 2048
       layers:
         - "128-64-32"
         - "256-128"
@@ -174,33 +227,33 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
         SGD:
           weight_decay:
             - 0.0
             - 0.0000001
           momentum:
-            - 0.0
             - 0.9
+            - 0.99
           learning_rate:
-            - 0.001
+            - 0.1
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
             - 0.1
-            - 0.01
+            - 0.5
           patience:
             - 5
-            - 10
+            - 15
         StepLR:
           step_size:
             - 10
@@ -226,14 +279,16 @@ model_configs:
       iterations: 20
       retrain: False
       auto_lr_find: False
-      max_epochs: 3
+      max_epochs: 1000
       val_size: 0.15
-      early_stopping_patience: 20
+      early_stopping_patience: 5
 
     param_grid:
       batch_size:
+        - 1024
+        - 512
+        - 256
         - 128
-        - 2048
       attn_embed_dim_multiplier:
         - 8
         - 32
@@ -289,33 +344,33 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
         SGD:
           weight_decay:
             - 0.0
             - 0.0000001
           momentum:
-            - 0.0
             - 0.9
+            - 0.99
           learning_rate:
-            - 0.001
+            - 0.1
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
             - 0.1
-            - 0.01
+            - 0.5
           patience:
             - 5
-            - 10
+            - 15
         StepLR:
           step_size:
             - 10
@@ -341,14 +396,16 @@ model_configs:
       iterations: 20
       retrain: False
       auto_lr_find: False
-      max_epochs: 3
+      max_epochs: 1000
       val_size: 0.15
-      early_stopping_patience: 20
+      early_stopping_patience: 5
 
     param_grid:
       batch_size:
+        - 1024
+        - 512
+        - 256
         - 128
-        - 2048
       input_embed_dim_multiplier:
         - 1
         - 8
@@ -400,33 +457,33 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
         SGD:
           weight_decay:
             - 0.0
             - 0.0000001
           momentum:
-            - 0.0
             - 0.9
+            - 0.99
           learning_rate:
-            - 0.001
+            - 0.1
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
             - 0.1
-            - 0.01
+            - 0.5
           patience:
             - 5
-            - 10
+            - 15
         StepLR:
           step_size:
             - 10
@@ -452,14 +509,16 @@ model_configs:
       iterations: 20
       retrain: False
       auto_lr_find: False
-      max_epochs: 3
+      max_epochs: 1000
       val_size: 0.15
-      early_stopping_patience: 20
+      early_stopping_patience: 5
 
     param_grid:
       batch_size:
-        - 128
         - 1024
+        - 512
+        - 256
+        - 128
       gflu_stages:
         - 4
         - 7
@@ -502,33 +561,33 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
         SGD:
           weight_decay:
             - 0.0
             - 0.0000001
           momentum:
-            - 0.0
             - 0.9
+            - 0.99
           learning_rate:
-            - 0.001
+            - 0.1
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
             - 0.1
-            - 0.01
+            - 0.5
           patience:
             - 5
-            - 10
+            - 15
         StepLR:
           step_size:
             - 10
@@ -554,14 +613,16 @@ model_configs:
       iterations: 20
       retrain: False
       auto_lr_find: False
-      max_epochs: 3
+      max_epochs: 1000
       val_size: 0.15
-      early_stopping_patience: 20
+      early_stopping_patience: 5
 
     param_grid:
       batch_size:
-        - 64
+        - 1024
         - 512
+        - 256
+        - 128
       num_layers:
         - 1
         - 2
@@ -609,33 +670,33 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
         SGD:
           weight_decay:
             - 0.0
             - 0.0000001
           momentum:
-            - 0.0
             - 0.9
+            - 0.99
           learning_rate:
-            - 0.001
+            - 0.1
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
             - 0.1
-            - 0.01
+            - 0.5
           patience:
             - 5
-            - 10
+            - 15
         StepLR:
           step_size:
             - 10
@@ -663,13 +724,14 @@ model_configs:
       auto_lr_find: False
       max_epochs: 3
       val_size: 0.15
-      early_stopping_patience: 20
+      early_stopping_patience: 5
 
     param_grid:
       batch_size:
-        - 64
-        - 512
         - 1024
+        - 512
+        - 256
+        - 128
       n_d: 
         - 8
         - 16
@@ -719,33 +781,33 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
         SGD:
           weight_decay:
             - 0.0
             - 0.0000001
           momentum:
-            - 0.0
             - 0.9
+            - 0.99
           learning_rate:
-            - 0.001
+            - 0.1
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
             - 0.1
-            - 0.01
+            - 0.5
           patience:
             - 5
-            - 10
+            - 15
         StepLR:
           step_size:
             - 10
@@ -771,15 +833,16 @@ model_configs:
       iterations: 20
       retrain: False
       auto_lr_find: False
-      max_epochs: 3
+      max_epochs: 1000
       val_size: 0.15
-      early_stopping_patience: 20
+      early_stopping_patience: 5
 
     param_grid:
       batch_size:
-        - 64
-        - 512
         - 1024
+        - 512
+        - 256
+        - 128
       input_embed_dim_multiplier:
         - 1
         - 8
@@ -856,33 +919,33 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
         SGD:
           weight_decay:
             - 0.0
             - 0.0000001
           momentum:
-            - 0.0
             - 0.9
+            - 0.99
           learning_rate:
-            - 0.001
+            - 0.1
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
             - 0.1
-            - 0.01
+            - 0.5
           patience:
             - 5
-            - 10
+            - 15
         StepLR:
           step_size:
             - 10
@@ -907,9 +970,9 @@ model_configs:
       iterations: 20
       retrain: False
       auto_lr_find: False
-      max_epochs: 300
+      max_epochs: 1000
       val_size: 0.2
-      early_stopping_patience: 6
+      early_stopping_patience: 5
 
     param_grid:
       resnet_depth:
@@ -920,39 +983,40 @@ model_configs:
         - 1024
         - 512
         - 256
+        - 128
       optimizer_fn:
         Adam:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
         SGD:
           weight_decay:
             - 0.0
             - 0.0000001
           momentum:
-            - 0.0
             - 0.9
+            - 0.99
           learning_rate:
-            - 0.001
+            - 0.1
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
             - 0.1
-            - 0.01
+            - 0.5
           patience:
             - 5
-            - 10
+            - 15
         StepLR:
           step_size:
             - 10
@@ -972,12 +1036,8 @@ model_configs:
       return_extra_info: True  # for dataloader
 
     default_params:
-      early_stopping_rounds: 10
-      verbose: false
-      iterations: 20
       retrain: False
-      auto_lr_find: False
-      max_epochs: 1
+      max_epochs: 1000
       val_size: 0.15
       early_stopping_patience: 5
 
@@ -986,43 +1046,43 @@ model_configs:
         - 1024
         - 512
         - 256
+        - 128
       hidden_size:
         - 4096
         - 2048
-        - 1024
       optimizer_fn:
         Adam:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
         SGD:
           weight_decay:
             - 0.0
             - 0.0000001
           momentum:
-            - 0.0
             - 0.9
+            - 0.99
           learning_rate:
-            - 0.001
+            - 0.1
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.001
-            - 0.0001
+            - 0.1
+            - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
             - 0.1
-            - 0.01
+            - 0.5
           patience:
             - 5
-            - 10
+            - 15
         StepLR:
           step_size:
             - 10
@@ -1034,56 +1094,6 @@ model_configs:
           gamma:
             - 0.9
             - 0.99
-
-  xgb:
-
-    data_params:
-      normalize_features: false
-      encode_categorical: True
-      return_extra_info: False
-
-    default_params:
-      retrain: True
-      val_size: 0.2
-      early_stopping_rounds: 30
-      verbose: false
-      learning_rate: 0.3
-      max_depth: 6
-      n_estimators: 100
-      min_child_weight: 1
-      subsample: 0.8
-      colsample_bytree: 0.8
-      gamma: 0.0
-      early_stopping_rounds: 100
-
-    param_grid:
-      learning_rate:
-        - 0.3
-        - 0.01
-      max_depth:
-        - 4
-        - 6
-        - 8
-      n_estimators:
-        - 50
-        - 100
-        - 200
-      min_child_weight:
-        - 1
-        - 5
-        - 10
-      subsample:
-        - 0.6
-        - 0.8
-        - 1.0
-      colsample_bytree:
-        - 0.6
-        - 0.8
-        - 1.0
-      gamma:
-        - 0.0
-        - 0.1
-        - 0.2
       
   mlp:
     data_params:
@@ -1120,4 +1130,6 @@ model_configs:
         - sgd
       batch_size:
         - 1024
-        - 2048
+        - 512
+        - 256
+        - 128

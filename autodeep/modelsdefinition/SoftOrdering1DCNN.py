@@ -17,9 +17,8 @@ from tqdm import tqdm
 
 from autodeep.evaluation.generalevaluator import *
 from autodeep.modelutils.trainingutilities import (
-    infer_hyperopt_space_pytorch_custom,
-    stop_on_perfect_lossCondition,
-)
+    infer_hyperopt_space_pytorch_tabular, prepare_shared_optimizer_configs,
+    stop_on_perfect_lossCondition)
 
 
 class Model(nn.Module):
@@ -169,11 +168,7 @@ class SoftOrdering1DCNN:
 
         # Get the number of available CPU cores
         num_cpu_cores = os.cpu_count()
-        # Calculate the num_workers value as number of cores - 2
-        self.num_workers = max(1, num_cpu_cores)
-        num_cpu_cores = os.cpu_count()
-        # Calculate the num_workers value as number of cores - 2
-        self.num_workers = max(1, num_cpu_cores)
+        self.num_workers = max(1, num_cpu_cores // 2)
 
         # set  to 0 if not causes error with kfold on macos
 
@@ -327,47 +322,51 @@ class SoftOrdering1DCNN:
         print(f"Model saved successfully at {save_path}")
 
     def _set_optimizer_schedulers(self, params, outer_params: Optional[Dict] = None):
-        if params["optimizer_fn"] == torch.optim.Adam:
+
+        optimizer_fn_name, optimizer_params, scheduler_fn_name, scheduler_params = (
+            prepare_shared_optimizer_configs(params)
+        )
+
+        if optimizer_fn_name == "Adam":
             self.optimizer = optim.Adam(
                 self.model.parameters(),
-                lr=params["Adam_learning_rate"],
-                weight_decay=params["Adam_weight_decay"],
+                lr=optimizer_params["learning_rate"],
+                weight_decay=optimizer_params["weight_decay"],
             )
 
-        elif params["optimizer_fn"] == torch.optim.SGD:
+        elif optimizer_fn_name == "SGD":
             self.optimizer = optim.SGD(
                 self.model.parameters(),
-                lr=params["SGD_learning_rate"],
-                momentum=params["SGD_momentum"],
+                lr=optimizer_params["learning_rate"],
+                momentum=optimizer_params["momentum"],
             )
-        elif params["optimizer_fn"] == torch.optim.AdamW:
-            self.optimizer = torch.optim.AdamW(
+        elif optimizer_fn_name == "AdamW":
+            self.optimizer = optim.AdamW(
                 self.model.parameters(),
-                lr=params["AdamW_learning_rate"],
-                weight_decay=params["AdamW_weight_decay"],
+                lr=optimizer_params["learning_rate"],
+                weight_decay=optimizer_params["weight_decay"],
             )
-        if params["scheduler_fn"] == torch.optim.lr_scheduler.StepLR:
-            self.scheduler = torch.optim.lr_scheduler.StepLR(
+        if scheduler_fn_name == "StepLR":
+            self.scheduler = optim.lr_scheduler.StepLR(
                 self.optimizer,
-                step_size=params["StepLR_step_size"],
-                gamma=params["StepLR_gamma"],
+                step_size=scheduler_params["step_size"],
+                gamma=scheduler_params["gamma"],
             )
 
-        elif params["scheduler_fn"] == torch.optim.lr_scheduler.ExponentialLR:
-            self.scheduler = torch.optim.lr_scheduler.ExponentialLR(
-                self.optimizer, gamma=params["ExponentialLR_gamma"]
+        elif scheduler_fn_name == "ExponentialLR":
+            self.scheduler = optim.lr_scheduler.ExponentialLR(
+                self.optimizer, gamma=scheduler_params["gamma"]
             )
 
-        elif params["scheduler_fn"] == torch.optim.lr_scheduler.ReduceLROnPlateau:
-            self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        elif scheduler_fn_name == "ReduceLROnPlateau":
+            self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
                 self.optimizer,
-                factor=params["ReduceLROnPlateau_factor"],
-                patience=params["ReduceLROnPlateau_patience"],
+                factor=scheduler_params["factor"],
+                patience=scheduler_params["patience"],
                 min_lr=0.0000001,
                 verbose=True,
                 mode="min",
             )
-        return params
 
     def train(self, X_train, y_train, params: Dict, extra_info: Dict):
         outer_params = params["default_params"]
@@ -476,7 +475,7 @@ class SoftOrdering1DCNN:
         early_stopping = self.default_params.get("early_stopping", True)
         patience = self.default_params.get("early_stopping_patience", 5)
         param_grid = model_config["param_grid"]
-        space = infer_hyperopt_space_pytorch_custom(param_grid)
+        space = infer_hyperopt_space_pytorch_tabular(param_grid)
         self.num_features = extra_info["num_features"]
 
         self._set_loss_function(y)
@@ -680,7 +679,7 @@ class SoftOrdering1DCNN:
         max_epochs = self.default_params.get("max_epochs", 3)
         early_stopping = self.default_params.get("early_stopping", True)
         patience = self.default_params.get("early_stopping_patience", 5)
-        space = infer_hyperopt_space_pytorch_custom(param_grid)
+        space = infer_hyperopt_space_pytorch_tabular(param_grid)
         val_size = self.default_params.get("val_size", 0.2)
         self.num_features = extra_info["num_features"]
 
