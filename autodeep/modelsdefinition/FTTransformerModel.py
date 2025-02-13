@@ -1,12 +1,10 @@
 import inspect
-import logging
 
 from pytorch_tabular import TabularModel
 from pytorch_tabular.config import OptimizerConfig
 from pytorch_tabular.models import FTTransformerConfig
 
 from autodeep.modelsdefinition.CommonStructure import PytorchTabularTrainer
-from autodeep.modelutils.trainingutilities import prepare_shared_tabular_configs
 
 
 class FTTransformerTrainer(PytorchTabularTrainer):
@@ -22,12 +20,10 @@ class FTTransformerTrainer(PytorchTabularTrainer):
         print(outer_params)
 
         data_config, trainer_config, optimizer_config, learning_rate = (
-            prepare_shared_tabular_configs(
+            self.prepare_shared_tabular_configs(
                 params=params,
                 outer_params=outer_params,
                 extra_info=self.extra_info,
-                save_path=self.save_path,
-                task=self.task,
             )
         )
         # input_dim' (input_embed_dim) must be multiples of 'num_heads'

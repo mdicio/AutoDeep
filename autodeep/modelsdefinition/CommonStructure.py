@@ -2,7 +2,8 @@ import logging
 import os
 import sys
 from typing import Dict
-
+import sys
+import traceback
 import numpy as np
 import pandas as pd
 import torch
@@ -11,14 +12,18 @@ from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
 from pytorch_tabular import TabularModel
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
-
+from pytorch_tabular.config import OptimizerConfig, TrainerConfig, DataConfig
 from autodeep.evaluation.generalevaluator import Evaluator
 from autodeep.modelutils.trainingutilities import (
     handle_rogue_batch_size,
     infer_hyperopt_space_pytorch_tabular,
     stop_on_perfect_lossCondition,
+    prepare_optimizer, 
+    prepare_scheduler
 )
+from functools import partial
 
+from IPython.display import clear_output
 
 class BaseModel:
     """
@@ -78,6 +83,7 @@ class PytorchTabularTrainer:
         self.cv_size = None
         self.random_state = 4200
         # Ensure unique logger name per class
+        # Ensure a unique logger name per class
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
         self.logger.setLevel(logging.DEBUG)
 
@@ -86,25 +92,21 @@ class PytorchTabularTrainer:
             f"%(asctime)s - %(levelname)s - {self.script_filename} - {self.__class__.__name__} - %(message)s"
         )
 
-        # Remove existing handlers to prevent duplication
-        if self.logger.hasHandlers():
-            self.logger.handlers.clear()
+        # Only add handlers if they are not already present
+        if not self.logger.handlers:
+            # Console Handler (DEBUG Level)
+            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler.setLevel(logging.DEBUG)
+            console_handler.setFormatter(formatter)
+            self.logger.addHandler(console_handler)
 
-        # Console Handler (DEBUG Level)
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.DEBUG)
-        console_handler.setFormatter(formatter)
+            # File Handler (DEBUG Level, Append Mode)
+            file_handler = logging.FileHandler("logfile.log", mode="a")
+            file_handler.setLevel(logging.DEBUG)
+            file_handler.setFormatter(formatter)
+            self.logger.addHandler(file_handler)
 
-        # File Handler (DEBUG Level, Append Mode)
-        file_handler = logging.FileHandler("logfile.log", mode="a")
-        file_handler.setLevel(logging.DEBUG)
-        file_handler.setFormatter(formatter)
-
-        # Add Handlers
-        self.logger.addHandler(console_handler)
-        self.logger.addHandler(file_handler)
-
-        # Prevent other libraries from modifying the logger
+        # Prevent propagation to the root logger
         self.logger.propagate = False
 
         self.problem_type = problem_type
@@ -115,7 +117,7 @@ class PytorchTabularTrainer:
 
         # Set Pytorch Lightning to Silent Mode
         logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
-        os.environ["PT_LOGLEVEL"] = "CRITICAL"
+        os.environ["PT_LOGLEVEL"] = "ERROR"
 
         self.problem_type = problem_type
         self.num_targets = num_targets
@@ -130,6 +132,7 @@ class PytorchTabularTrainer:
         self.default = False
         self.num_workers = max(1, os.cpu_count() // 2)
         self.model = None  # Ensure model is initialized as None to track loading status
+        os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
     def _load_best_model(self):
         self.logger.info("Loading model")
@@ -155,16 +158,13 @@ class PytorchTabularTrainer:
         self.model.save_weights(model_dir + model_name + "_weights")
         self.logger.debug("Model saved successfully")
 
-    def _set_loss_function(self, y_train):
+    def _set_loss_function(self, y):
         if self.problem_type in ["binary_classification", "multiclass_classification"]:
-            y_train_tensor = torch.tensor(y_train.values, dtype=torch.long).flatten()
-            classes = torch.unique(y_train_tensor)
+            classes = np.unique(y)
             class_weights = compute_class_weight(
-                "balanced", classes=np.array(classes), y=y_train.values
+                class_weight="balanced", classes = classes, y=y.values
             )
-            class_weights = torch.tensor(class_weights, dtype=torch.float32).to(
-                self.device
-            )
+            class_weights = torch.tensor(class_weights, dtype=torch.float32)
             self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, reduction="mean")
         elif self.problem_type == "regression":
             self.loss_fn = nn.MSELoss()
@@ -172,6 +172,72 @@ class PytorchTabularTrainer:
             raise ValueError(
                 "Invalid problem_type. Supported values are 'binary_classification', 'multiclass_classification', and 'regression'."
             )
+        self.logger.debug(f"loss is {self.loss_fn}, num_classes = {len(classes)}: {classes}")
+
+    def prepare_shared_tabular_configs(self, params, outer_params, extra_info):
+        """
+        Prepare shared configurations for tabular models.
+
+        Parameters
+        ----------
+        params : dict
+            Model-specific parameters.
+        outer_params : dict
+            Outer configuration parameters.
+        extra_info : dict
+            Extra information such as column names.
+        save_path : str
+            Path to save checkpoints.
+        task : str
+            Task type (e.g., "regression", "binary_classification").
+
+        Returns
+        -------
+        tuple
+            A tuple containing data_config, trainer_config, and optimizer_config.
+        """
+        # DataConfig setup
+        data_config = DataConfig(
+            target=["target"],
+            continuous_cols=[i for i in extra_info["num_col_names"] if i != "target"],
+            categorical_cols=extra_info["cat_col_names"],
+            num_workers=outer_params.get("num_workers", 4),
+        )
+
+        # TrainerConfig setup
+        trainer_config = TrainerConfig(
+            auto_lr_find=outer_params.get("auto_lr_find", False),
+            batch_size=params.get("batch_size", 32),
+            max_epochs=outer_params.get("max_epochs", 100),
+            early_stopping="valid_loss",
+            early_stopping_mode="min",
+            early_stopping_patience=outer_params.get("early_stopping_patience", 10),
+            early_stopping_min_delta=outer_params.get("tol", 0.0),
+            checkpoints=None,
+            load_best=True,
+            progress_bar=outer_params.get("progress_bar", "simple"),
+            precision=outer_params.get("precision", 32),
+        )
+
+        # Optimizer and Scheduler setup
+        optimizer_fn_name, optimizer_params, learning_rate = prepare_optimizer(
+            params["optimizer_fn"]
+        )
+        (
+            scheduler_fn_name,
+            scheduler_params,
+        ) = prepare_scheduler(params["scheduler_fn"])
+
+        optimizer_config = OptimizerConfig(
+            optimizer=optimizer_fn_name,
+            optimizer_params=optimizer_params,
+            lr_scheduler=scheduler_fn_name,
+            lr_scheduler_params=scheduler_params,
+            lr_scheduler_monitor_metric="valid_loss",
+        )
+
+        return data_config, trainer_config, optimizer_config, learning_rate
+
 
     def train(self, X_train, y_train, params: Dict, extra_info: Dict):
         """
@@ -289,48 +355,83 @@ class PytorchTabularTrainer:
         val_size = self.default_params.get("val_size")
         param_grid = model_config["param_grid"]
         space = infer_hyperopt_space_pytorch_tabular(param_grid)
+
+        # Ensure `X` and `y` are pandas DataFrames
+        if not isinstance(X, pd.DataFrame):
+            X = pd.DataFrame(X)
+        if not isinstance(y, pd.Series):
+            print(type(y))
+            y = pd.Series(y)
+        print(type(y))
+
         self._set_loss_function(y)
 
-        data = pd.concat([X, y], axis=1)
-        data.reset_index(drop=True, inplace=True)
-        self.logger.debug(f"Full dataset shape : {data.shape}")
+        if self.problem_type == "regression" and not hasattr(self, "target_range"):
+            self.target_range = [
+                (
+                    float(np.min(X["target"]) * 0.8),
+                    float(np.max(X["target"]) * 1.2),
+                )
+            ]
 
-        train_data_op, test_data_op = train_test_split(
-            data,
-            test_size=val_size,
-            random_state=42,
-            stratify=y if self.problem_type != "regression" else None,
+        stratify = y if self.problem_type != "regression" else None
+        X_train, X_val, y_train, y_val = train_test_split(
+            X, y, test_size=val_size, random_state=42, stratify=stratify
         )
+        
+        self.logger.debug(f"Feature matrix shape: {X.shape}")
+        self.logger.debug(f"Target distribution:\n{y.value_counts(normalize=True)}")
+
         self.logger.debug(
-            f"Train set shape: {train_data_op.shape}, Test set shape: {test_data_op.shape}"
+            f"Problem Type {self.problem_type}"
         )
 
-        def objective(params):
+        def objective(params, X_train, X_val, y_train, y_val):
+
+            clear_output(wait=True)
+
             self.logger.info(f"Training with hyperparameters: {params}")
-            train_data, test_data = handle_rogue_batch_size(
-                train_data_op.copy(), test_data_op.copy(), params["batch_size"]
+            X_train, y_train, X_val, y_val = handle_rogue_batch_size(
+                X_train, y_train, X_val, y_val, params["batch_size"]
             )
 
-            if self.problem_type == "regression" and not hasattr(self, "target_range"):
-                self.target_range = [
-                    (
-                        float(np.min(train_data["target"]) * 0.8),
-                        float(np.max(train_data["target"]) * 1.2),
-                    )
-                ]
+            train_data = pd.concat([X_train, y_train], axis=1)
+            val_data = pd.concat([X_val, y_val], axis=1)
+
+            self.logger.debug(f"Shape of X_train: {X_train.shape}")
+            self.logger.debug(f"Shape of X_val: {X_val.shape}")
+            self.logger.debug(f"Shape of y_train: {y_train.shape}")
+            self.logger.debug(f"Shape of y_val: {y_val.shape}")
+
+            self.logger.debug(f"Batch Size, VBS: {params['batch_size']}, {params['virtual_batch_size']}")
 
             model = self.prepare_tabular_model(
                 params, self.default_params, default=self.default
             )
-            model.fit(train=train_data, validation=test_data, loss=self.loss_fn)
 
-            pred_df = model.predict(test_data)
+            if torch.cuda.is_available():
+                self.logger.debug(f"GPU Memory Allocated: {torch.cuda.memory_allocated() / 1e6} MB")
+                self.logger.debug(f"GPU Memory Reserved: {torch.cuda.memory_reserved() / 1e6} MB")
+
+            try:
+                # Your training loop
+                model.fit(train=train_data, validation=val_data, loss=self.loss_fn)
+                
+
+            except Exception as e:
+                error_message = "".join(traceback.format_exception(*sys.exc_info()))
+                with open("cuda_error_log.txt", "w") as f:
+                    f.write(error_message)
+                print("Error captured in cuda_error_log.txt")
+
+
+            pred_df = model.predict(val_data)
             predictions = pred_df[self.prediction_col].values
             if self.problem_type == "binary_classification":
                 probabilities = pred_df["target_1_probability"].fillna(0).values
                 self.evaluator.y_prob = probabilities
 
-            self.evaluator.y_true = test_data["target"].values
+            self.evaluator.y_true = val_data["target"].values
             self.evaluator.y_pred = predictions
             self.evaluator.run_metrics = eval_metrics
 
@@ -353,6 +454,8 @@ class PytorchTabularTrainer:
 
             metrics_for_split_train = self.evaluator.evaluate_model()
 
+            torch.cuda.empty_cache()
+
             return {
                 "loss": score,
                 "params": params,
@@ -366,8 +469,11 @@ class PytorchTabularTrainer:
         self.evaluator = Evaluator(problem_type=self.problem_type)
         threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
+
+        fmin_objective = partial(objective,  X_train = X_train, X_val = X_val, y_train = y_train, y_val = y_val)
+
         best = fmin(
-            objective,
+            fmin_objective,
             space=space,
             algo=tpe.suggest,
             max_evals=max_evals,

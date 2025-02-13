@@ -5,8 +5,6 @@ import numpy as np
 import pandas as pd
 from hyperopt import hp
 from hyperopt.pyll import scope
-from pytorch_tabular.config import DataConfig  # ExperimentConfig,
-from pytorch_tabular.config import OptimizerConfig, TrainerConfig
 from scipy.stats import randint, uniform
 from torch.optim import SGD, Adam, AdamW
 from torch.optim.lr_scheduler import ExponentialLR, ReduceLROnPlateau, StepLR
@@ -17,36 +15,51 @@ def remainder_equal_one(batch_size, virtual_batch_size_ratio):
     remainder = batch_size % virtual_batch_size
     return remainder == 1
 
+def handle_rogue_batch_size(X_train, y_train, X_val, y_val, batch_size):
+    """
+    Ensures that the dataset sizes do not cause an issue where 
+    len(train) % batch_size == 1 or len(val) % batch_size == 1.
+    
+    Moves rows between train and val to resolve the issue.
+    """
+    if (len(X_train) % batch_size != 1) and (len(X_val) % batch_size != 1):
+        return X_train, y_train, X_val, y_val  # No adjustment needed
 
-def handle_rogue_batch_size(train, val, batch_size):
-    num_rows_to_adjust = 1
-    if len(train) % batch_size != 1 and len(val) % batch_size != 1:
-        return train, val
-    else:
-        num_rows_to_adjust = 0
-        for i in range(100):
-            print(i)
-            if len(train) % batch_size == 1:
-                num_rows_to_adjust += 1
-                removed_rows = train.iloc[
-                    -num_rows_to_adjust:
-                ]  # Select rows as a DataFrame
-                train = train.iloc[:-num_rows_to_adjust]
-                val = pd.concat([val, removed_rows], axis=0)
-                print("train c1", train.shape, val.shape)
+    print("⚠️ ATTEENTIOON WE HANDLING SOME ROGUES ⚠️")
+    
+    num_rows_to_adjust = 0
 
-            if len(val) % batch_size == 1:
-                num_rows_to_adjust += 1
-                removed_rows = val.iloc[
-                    -num_rows_to_adjust:
-                ]  # Select rows as a DataFrame
-                val = val.iloc[:-num_rows_to_adjust]
-                train = pd.concat([train, removed_rows], axis=0)
-                print("val c1", train.shape, val.shape)
+    for _ in range(100):  # Prevent infinite loops
+        if len(X_train) % batch_size == 1:
+            num_rows_to_adjust += 1
 
-            if (len(train) % batch_size != 1) and (len(val) % batch_size != 1):
-                break
-        return train, val
+            # Move the last `num_rows_to_adjust` rows from train to val
+            X_moved, y_moved = X_train.iloc[-num_rows_to_adjust:], y_train.iloc[-num_rows_to_adjust:]
+            X_train, y_train = X_train.iloc[:-num_rows_to_adjust], y_train.iloc[:-num_rows_to_adjust]
+
+            X_val = pd.concat([X_val, X_moved], axis=0)
+            y_val = pd.concat([y_val, y_moved], axis=0)
+
+            print(f"Moved {num_rows_to_adjust} rows from train to val | New shapes: train={X_train.shape}, val={X_val.shape}")
+
+        if len(X_val) % batch_size == 1:
+            num_rows_to_adjust += 1
+
+            # Move the last `num_rows_to_adjust` rows from val to train
+            X_moved, y_moved = X_val.iloc[-num_rows_to_adjust:], y_val.iloc[-num_rows_to_adjust:]
+            X_val, y_val = X_val.iloc[:-num_rows_to_adjust], y_val.iloc[:-num_rows_to_adjust]
+
+            X_train = pd.concat([X_train, X_moved], axis=0)
+            y_train = pd.concat([y_train, y_moved], axis=0)
+
+            print(f"Moved {num_rows_to_adjust} rows from val to train | New shapes: train={X_train.shape}, val={X_val.shape}")
+
+        # Stop if both sizes are valid
+        if (len(X_train) % batch_size != 1) and (len(X_val) % batch_size != 1):
+            break
+
+    return X_train, y_train, X_val, y_val
+
 
 
 def handle_rogue_batch_size_ptcustom(X, y, batch_size):
@@ -135,73 +148,6 @@ def prepare_shared_optimizer_configs(params):
     ) = prepare_scheduler(params["scheduler_fn"])
 
     return optimizer_fn_name, optimizer_params, scheduler_fn_name, scheduler_params
-
-
-def prepare_shared_tabular_configs(params, outer_params, extra_info, save_path, task):
-    """
-    Prepare shared configurations for tabular models.
-
-    Parameters
-    ----------
-    params : dict
-        Model-specific parameters.
-    outer_params : dict
-        Outer configuration parameters.
-    extra_info : dict
-        Extra information such as column names.
-    save_path : str
-        Path to save checkpoints.
-    task : str
-        Task type (e.g., "regression", "binary_classification").
-
-    Returns
-    -------
-    tuple
-        A tuple containing data_config, trainer_config, and optimizer_config.
-    """
-    # DataConfig setup
-    data_config = DataConfig(
-        target=["target"],
-        continuous_cols=[i for i in extra_info["num_col_names"] if i != "target"],
-        categorical_cols=extra_info["cat_col_names"],
-        num_workers=outer_params.get("num_workers", 4),
-    )
-
-    # TrainerConfig setup
-    trainer_config = TrainerConfig(
-        auto_lr_find=outer_params.get("auto_lr_find", False),
-        batch_size=params.get("batch_size", 32),
-        max_epochs=outer_params.get("max_epochs", 100),
-        early_stopping="valid_loss",
-        early_stopping_mode="min",
-        early_stopping_patience=outer_params.get("early_stopping_patience", 10),
-        early_stopping_min_delta=outer_params.get("tol", 0.0),
-        checkpoints="valid_loss",
-        checkpoints_every_n_epochs=10,
-        checkpoints_path=save_path,
-        load_best=True,
-        progress_bar=outer_params.get("progress_bar", "rich"),
-        precision=outer_params.get("precision", 32),
-    )
-
-    # Optimizer and Scheduler setup
-    optimizer_fn_name, optimizer_params, learning_rate = prepare_optimizer(
-        params["optimizer_fn"]
-    )
-    (
-        scheduler_fn_name,
-        scheduler_params,
-    ) = prepare_scheduler(params["scheduler_fn"])
-
-    optimizer_config = OptimizerConfig(
-        optimizer=optimizer_fn_name,
-        optimizer_params=optimizer_params,
-        lr_scheduler=scheduler_fn_name,
-        lr_scheduler_params=scheduler_params,
-        lr_scheduler_monitor_metric="valid_loss",
-    )
-
-    return data_config, trainer_config, optimizer_config, learning_rate
 
 
 def prepare_optimizer(optimizer_fn):

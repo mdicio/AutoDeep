@@ -2,7 +2,6 @@ import os
 import random
 
 import numpy as np
-import torch
 
 # from SCRATCH.SqueezeNet import SqueezeNetTrainer
 from autodeep.dataloaders.dataloader import (
@@ -34,14 +33,14 @@ from autodeep.modelsdefinition.XGBoostTrainer import XGBoostTrainer
 
 
 def seed_everything(seed=4200):
-    torch.manual_seed(seed)
+    # torch.manual_seed(seed)
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)
     # Set the seed for PyTorch
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
+    # torch.manual_seed(seed)
+    # if torch.cuda.is_available():
+    #   torch.cuda.manual_seed_all(seed)
 
 
 def create_model(model_name, problem_type, num_targets, random_state=42):
