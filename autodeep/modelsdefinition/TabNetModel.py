@@ -12,6 +12,8 @@ class TabNetTrainer(PytorchTabularTrainer):
     def __init__(self, problem_type, num_targets=None):
         super().__init__(problem_type, num_targets)
         self.logger.info("Trainer initialized")
+        self.model_name = "tabnet"
+        
 
     def prepare_tabular_model(self, params, outer_params, default=False):
         print("tabular model params")

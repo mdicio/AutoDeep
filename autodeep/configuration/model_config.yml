@@ -722,7 +722,7 @@ model_configs:
       iterations: 20
       retrain: False
       auto_lr_find: False
-      max_epochs: 3
+      max_epochs: 1000
       val_size: 0.15
       early_stopping_patience: 5
 

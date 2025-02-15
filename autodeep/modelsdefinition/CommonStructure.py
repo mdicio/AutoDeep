@@ -160,7 +160,7 @@ class PytorchTabularTrainer:
 
     def _set_loss_function(self, y):
         if self.problem_type in ["binary_classification", "multiclass_classification"]:
-            classes = np.unique(y)
+            classes = np.sort(np.unique(y))
             class_weights = compute_class_weight(
                 class_weight="balanced", classes = classes, y=y.values
             )
@@ -172,8 +172,7 @@ class PytorchTabularTrainer:
             raise ValueError(
                 "Invalid problem_type. Supported values are 'binary_classification', 'multiclass_classification', and 'regression'."
             )
-        self.logger.debug(f"loss is {self.loss_fn}, num_classes = {len(classes)}: {classes}")
-
+        
     def prepare_shared_tabular_configs(self, params, outer_params, extra_info):
         """
         Prepare shared configurations for tabular models.
@@ -369,8 +368,8 @@ class PytorchTabularTrainer:
         if self.problem_type == "regression" and not hasattr(self, "target_range"):
             self.target_range = [
                 (
-                    float(np.min(X["target"]) * 0.8),
-                    float(np.max(X["target"]) * 1.2),
+                    float(np.min(y) * 0.8),
+                    float(np.max(y) * 1.2),
                 )
             ]
 
@@ -403,7 +402,7 @@ class PytorchTabularTrainer:
             self.logger.debug(f"Shape of y_train: {y_train.shape}")
             self.logger.debug(f"Shape of y_val: {y_val.shape}")
 
-            self.logger.debug(f"Batch Size, VBS: {params['batch_size']}, {params['virtual_batch_size']}")
+            self.logger.debug(f"Batch Size, VBS: {params['batch_size']}")
 
             model = self.prepare_tabular_model(
                 params, self.default_params, default=self.default
@@ -420,6 +419,7 @@ class PytorchTabularTrainer:
 
             except Exception as e:
                 error_message = "".join(traceback.format_exception(*sys.exc_info()))
+                #to do add
                 with open("cuda_error_log.txt", "w") as f:
                     f.write(error_message)
                 print("Error captured in cuda_error_log.txt")
@@ -463,6 +463,7 @@ class PytorchTabularTrainer:
                 "trained_model": model,
                 "train_metrics": metrics_for_split_train,
                 "validation_metrics": metrics_for_split_val,
+                "extra_info":self.extra_info
             }
 
         trials = Trials()
@@ -491,6 +492,45 @@ class PytorchTabularTrainer:
             best_score = -1 * best_score
         train_metrics = best_trial["result"]["train_metrics"]
         validation_metrics = best_trial["result"]["validation_metrics"]
+
+        
+        def extract_optimizer_scheduler(params):
+            """
+            Convert optimizer and scheduler class objects to their string names.
+            """
+            if "optimizer_fn" in params and isinstance(params["optimizer_fn"], type):
+                params["optimizer_fn"] = params["optimizer_fn"].__name__
+            
+            if "scheduler_fn" in params and isinstance(params["scheduler_fn"], type):
+                params["scheduler_fn"] = params["scheduler_fn"].__name__
+
+            return params
+
+        # Convert all trial results into a DataFrame
+        results_df = pd.DataFrame(
+            [
+                {
+                    **extract_optimizer_scheduler(t["result"]["params"]),  # Convert optim/sched to string
+                    **{"train_" + k: v for k, v in t["result"]["train_metrics"].items()},  # Train metrics
+                    **{"val_" + k: v for k, v in t["result"]["validation_metrics"].items()},  # Validation metrics
+                    **t["result"]["extra_info"],  # Extra dataset info
+                }
+                for t in trials.trials
+            ]
+        )
+
+        # Define CSV path dynamically based on model name & problem type
+        results_csv_path = f"hyperopt_results_{self.model_name}_{self.problem_type}.csv"
+
+        # Check if file exists, then append or create a new one
+        if os.path.exists(results_csv_path):
+            existing_df = pd.read_csv(results_csv_path)
+            results_df = pd.concat([existing_df, results_df], ignore_index=True)
+
+        # Save results DataFrame to CSV
+        results_df.to_csv(results_csv_path, index=False)
+
+        self.logger.info(f"All trial results saved to {results_csv_path}")
 
         self.logger.info(f"Final validation metrics: {validation_metrics}")
         self.best_model = best_trial["result"]["trained_model"]
