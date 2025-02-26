@@ -10,6 +10,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.utils import shuffle
 
+from scipy.stats import skew, kurtosis
+from typing import Optional
 from autodeep.modelutils.igtdutilities import table_to_image
 
 
@@ -144,10 +146,25 @@ class ExtraInfoCreator:
         self.run_igtd = run_igtd
         self.igtd_preprocessor = igtd_preprocessor
 
+
+class ExtraInfoCreator:
+    def __init__(
+        self,
+        dataset_name,
+        run_igtd=False,
+        igtd_preprocessor: Optional[IGTDPreprocessor] = None,
+    ):
+        self.dataset_name = dataset_name
+        self.run_igtd = run_igtd
+        self.igtd_preprocessor = igtd_preprocessor
+
     def create_extra_info(self, df: pd.DataFrame, dataset_name: str):
         cat_cols = df.select_dtypes(include=["object", "category"]).columns
         num_cols = df.select_dtypes(exclude=["object", "category"]).columns
+        
+        # Base Dataset Characteristics
         extra_info = {
+            "num_samples": len(df),
             "cat_col_names": list(cat_cols),
             "cat_col_idx": list(df.columns.get_indexer(cat_cols)),
             "cat_col_unique_vals": [len(df[col].unique()) for col in cat_cols],
@@ -155,13 +172,32 @@ class ExtraInfoCreator:
             "num_col_idx": list(df.columns.get_indexer(num_cols)),
             "num_features": len(df.columns),
         }
+        
+        # Additional Dataset-Level Statistics (Aggregated)
+        num_features = len(num_cols)
+        cat_features = len(cat_cols)
+
+        extra_info["cat_num_ratio"] = cat_features / (num_features + 1e-6)  # Avoid division by zero
+        extra_info["feature_sparsity"] = df.isnull().mean().mean()  # Percentage of missing values
+
+        # Class Imbalance Calculation (if target column exists)
+        if "target" in df.columns and df["target"].nunique() > 1:
+            class_counts = df["target"].value_counts().values
+            extra_info["class_imbalance_ratio"] = max(class_counts) / sum(class_counts)
+
+        # Aggregate Statistics for Numerical Features (Ensuring Fixed Shape)
+        if num_features > 0:
+            extra_info["num_col_mean"] = df[num_cols].mean().mean()  # Mean of means
+            extra_info["num_col_std"] = df[num_cols].std().mean()  # Mean of stds
+            extra_info["num_col_skew"] = df[num_cols].apply(skew, nan_policy='omit').mean()  # Mean skewness
+            extra_info["num_col_kurtosis"] = df[num_cols].apply(kurtosis, nan_policy='omit').mean()  # Mean kurtosis
+
+        # IGTD Processing (Unchanged from your original code)
         igtd_candidate = None
         if self.run_igtd and self.igtd_preprocessor:
-            # Run IGTD if needed, or ensure dimensions are computed
             if not hasattr(self.igtd_preprocessor, "result_file_name"):
                 self.igtd_preprocessor.run(df)
             else:
-                # Even if IGTD was already run, ensure the dimensions are set
                 if (
                     self.igtd_preprocessor.img_rows is None
                     or self.igtd_preprocessor.img_columns is None
