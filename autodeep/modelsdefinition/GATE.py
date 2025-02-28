@@ -13,6 +13,7 @@ class GateTrainer(PytorchTabularTrainer):
         super().__init__(problem_type, num_targets)
         self.logger.info("Trainer initialized")
         self.model_name = "gate"
+        
     def prepare_tabular_model(self, params, outer_params, default=False):
         print("tabular model params")
         print(params)

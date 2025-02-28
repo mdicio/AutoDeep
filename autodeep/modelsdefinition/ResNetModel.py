@@ -76,6 +76,7 @@ class ResNetTrainer:
         num_targets=None,
         pretrained=True,
     ):
+        self.model_name = "resnet"
         self.problem_type = problem_type
         self.num_targets = num_targets
         self.batch_size = 512

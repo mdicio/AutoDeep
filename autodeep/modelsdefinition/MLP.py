@@ -25,7 +25,7 @@ class MLP(BaseModel):
     """problem_type in {'binary_classification', 'multiclass_classification', 'regression'}"""
 
     def __init__(self, problem_type="binary_classification", num_targets=None):
-
+        self.model_name = "mlp"
         self.problem_type = problem_type
         self.num_targets = num_targets
         self.logger = logging.getLogger(__name__)

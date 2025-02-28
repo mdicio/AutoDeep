@@ -18,7 +18,7 @@ from autodeep.modelutils.trainingutilities import (
 
 class XGBoostTrainer(BaseModel):
     def __init__(self, problem_type="binary_classification", num_targets=1):
-
+        self.model_name = "xgboost"
         self.cv_size = None
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)

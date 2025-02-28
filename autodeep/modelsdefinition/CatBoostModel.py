@@ -25,6 +25,7 @@ class CatBoostTrainer(BaseModel):
         self.script_filename = os.path.basename(__file__)
         self.problem_type = problem_type
         self.num_targets = num_targets
+        self.model_name = "catboost"
 
         formatter = logging.Formatter(
             f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"

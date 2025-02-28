@@ -126,6 +126,7 @@ class SoftOrdering1DCNN:
         num_targets=1,
         **params,
     ):
+        self.model_name = "s1dcnn"
         self.num_features = 42
         self.hidden_size = 4096
         self.problem_type = problem_type
