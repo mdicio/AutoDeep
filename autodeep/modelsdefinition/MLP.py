@@ -4,9 +4,7 @@ import os
 import joblib
 import numpy as np
 from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
-from sklearn.model_selection import (
-    train_test_split,
-)
+from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPClassifier, MLPRegressor
 
 from autodeep.evaluation.generalevaluator import Evaluator
@@ -20,34 +18,30 @@ from autodeep.modelutils.trainingutilities import (
 class MLP(BaseModel):
     """problem_type in {'binary_classification', 'multiclass_classification', 'regression'}"""
 
-    def __init__(self, problem_type="binary_classification", ):
+    def __init__(
+        self,
+        problem_type="binary_classification",
+    ):
         self.model_name = "mlp"
         self.problem_type = problem_type
-        
+
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
         self.random_state = 4200
         # Get the filename of the current Python script
         self.script_filename = os.path.basename(__file__)
-        formatter = logging.Formatter(
-            f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
-        )
+        formatter = logging.Formatter(f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s")
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.StreamHandler)
-            for handler in self.logger.handlers
-        ):
+        if not any(isinstance(handler, logging.StreamHandler) for handler in self.logger.handlers):
             self.logger.addHandler(console_handler)
 
         # Add file handler
         file_handler = logging.FileHandler("logfile.log")
         file_handler.setLevel(logging.DEBUG)  # Set log level to INFO
         file_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.FileHandler) for handler in self.logger.handlers
-        ):
+        if not any(isinstance(handler, logging.FileHandler) for handler in self.logger.handlers):
             self.logger.addHandler(file_handler)
         self.extra_info = None
         self.metric_mapping = {
@@ -66,7 +60,7 @@ class MLP(BaseModel):
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
-        self.logger.info(f"Loading model")
+        self.logger.info("Loading model")
         self.logger.debug("Model loaded successfully")
         self.model = self.best_model
 
@@ -75,7 +69,6 @@ class MLP(BaseModel):
         self.logger.info(f"Saving model to {model_dir+model_name}")
         joblib.dump(self.model, model_dir + model_name)
         self.logger.debug("Model saved successfully")
-
 
     def predict(self, X_test, predict_proba=False):
         """
@@ -152,26 +145,18 @@ class MLP(BaseModel):
         # Define the hyperparameter search space
         space = infer_hyperopt_space(param_grid)
 
-        self.logger.info(
-            f"Starting hyperopt search with {max_evals} evaluations, optimizing {metric} metric"
-        )
+        self.logger.info(f"Starting hyperopt search with {max_evals} evaluations, optimizing {metric} metric")
 
         # Define the objective function for hyperopt search
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")
 
             # Extract common training parameters
-            n_iter_no_change = params.get(
-                "n_iter_no_change", self.default_params.get("n_iter_no_change", 10)
-            )
+            n_iter_no_change = params.get("n_iter_no_change", self.default_params.get("n_iter_no_change", 10))
             max_iter = params.get("max_iter", self.default_params.get("max_iter", 100))
 
             # Filter params to remove training-specific keys
-            filtered_params = {
-                k: v
-                for k, v in params.items()
-                if k not in {"n_iter_no_change", "max_iter"}
-            }
+            filtered_params = {k: v for k, v in params.items() if k not in {"n_iter_no_change", "max_iter"}}
 
             # Select model type based on problem type
             if self.problem_type == "regression":

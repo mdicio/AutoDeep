@@ -14,10 +14,12 @@ from sklearn.utils.class_weight import compute_class_weight
 from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from tqdm import tqdm
 
-from autodeep.evaluation.generalevaluator import *
+from autodeep.evaluation.generalevaluator import Evaluator
 from autodeep.modelutils.trainingutilities import (
-    infer_hyperopt_space_pytorch_tabular, prepare_shared_optimizer_configs,
-    stop_on_perfect_lossCondition)
+    infer_hyperopt_space_pytorch_tabular,
+    prepare_shared_optimizer_configs,
+    stop_on_perfect_lossCondition,
+)
 
 
 class Model(nn.Module):
@@ -26,7 +28,7 @@ class Model(nn.Module):
         cha_1 = 256
         cha_2 = 512
         cha_3 = 512
-        
+
         cha_1_reshape = int(hidden_size / cha_1)
         cha_po_1 = int(hidden_size / cha_1 / 2)
         cha_po_2 = int(hidden_size / cha_1 / 2 / 2) * cha_3
@@ -122,12 +124,11 @@ class SoftOrdering1DCNN:
     def __init__(
         self,
         problem_type="binary_classification",
-            ):
+    ):
         self.model_name = "s1dcnn"
         self.num_features = 42
         self.hidden_size = 4096
         self.problem_type = problem_type
-        
 
         self.scaler = StandardScaler()  # Initialize the scaler for scaling y values
 
@@ -139,25 +140,18 @@ class SoftOrdering1DCNN:
         self.random_state = 4200
         # Get the filename of the current Python script
         self.script_filename = os.path.basename(__file__)
-        formatter = logging.Formatter(
-            f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
-        )
+        formatter = logging.Formatter(f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s")
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.StreamHandler)
-            for handler in self.logger.handlers
-        ):
+        if not any(isinstance(handler, logging.StreamHandler) for handler in self.logger.handlers):
             self.logger.addHandler(console_handler)
 
         # Add file handler
         file_handler = logging.FileHandler("logfile.log")
         file_handler.setLevel(logging.DEBUG)  # Set log level to INFO
         file_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.FileHandler) for handler in self.logger.handlers
-        ):
+        if not any(isinstance(handler, logging.FileHandler) for handler in self.logger.handlers):
             self.logger.addHandler(file_handler)
 
         self.random_state = 4200
@@ -170,7 +164,7 @@ class SoftOrdering1DCNN:
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
-        self.logger.info(f"Loading model")
+        self.logger.info("Loading model")
         self.logger.debug("Model loaded successfully")
         self.model = self.best_model
 
@@ -190,9 +184,7 @@ class SoftOrdering1DCNN:
             labels = labels.long()
             outputs = self.model(inputs)
         else:
-            raise ValueError(
-                "Invalid problem_type. Supported options: binary_classification, multiclass_classification"
-            )
+            raise ValueError("Invalid problem_type. Supported options: binary_classification, multiclass_classification")
 
         return outputs, labels
 
@@ -235,20 +227,14 @@ class SoftOrdering1DCNN:
             y_train_tensor = torch.tensor(y_train.values, dtype=torch.long).flatten()
             classes = torch.unique(y_train_tensor)
             print("CLASSES", classes)
-            class_weights = compute_class_weight(
-                "balanced", classes=np.array(classes), y=y_train.values
-            )
-            class_weights = torch.tensor(class_weights, dtype=torch.float32).to(
-                self.device
-            )
+            class_weights = compute_class_weight("balanced", classes=np.array(classes), y=y_train.values)
+            class_weights = torch.tensor(class_weights, dtype=torch.float32).to(self.device)
             print(class_weights)
             self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, reduction="mean")
         elif self.problem_type == "regression":
             self.loss_fn = nn.MSELoss()
         else:
-            raise ValueError(
-                "Invalid problem_type. Supported values are 'binary', 'multiclass', and 'regression'."
-            )
+            raise ValueError("Invalid problem_type. Supported values are 'binary', 'multiclass', and 'regression'.")
 
     def _pandas_to_torch_datasets(self, X_train, y_train, val_size, batch_size):
         X_train_tensor = torch.tensor(X_train.values, dtype=torch.float)
@@ -266,9 +252,7 @@ class SoftOrdering1DCNN:
             num_train_samples += 1
         num_val_samples = num_samples - num_train_samples
         print("num train samples", num_train_samples)
-        train_dataset, val_dataset = random_split(
-            dataset, [num_train_samples, num_val_samples]
-        )
+        train_dataset, val_dataset = random_split(dataset, [num_train_samples, num_val_samples])
         return train_dataset, val_dataset
 
     def _single_pandas_to_torch_image_dataset(self, X_train, y_train):
@@ -319,9 +303,7 @@ class SoftOrdering1DCNN:
 
     def _set_optimizer_schedulers(self, params, default_params: Optional[Dict] = None):
 
-        optimizer_fn_name, optimizer_params, scheduler_fn_name, scheduler_params = (
-            prepare_shared_optimizer_configs(params)
-        )
+        optimizer_fn_name, optimizer_params, scheduler_fn_name, scheduler_params = prepare_shared_optimizer_configs(params)
 
         if optimizer_fn_name == "Adam":
             self.optimizer = optim.Adam(
@@ -350,9 +332,7 @@ class SoftOrdering1DCNN:
             )
 
         elif scheduler_fn_name == "ExponentialLR":
-            self.scheduler = optim.lr_scheduler.ExponentialLR(
-                self.optimizer, gamma=scheduler_params["gamma"]
-            )
+            self.scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=scheduler_params["gamma"])
 
         elif scheduler_fn_name == "ReduceLROnPlateau":
             self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -363,7 +343,7 @@ class SoftOrdering1DCNN:
                 verbose=True,
                 mode="min",
             )
-            
+
     def hyperopt_search(
         self,
         X,
@@ -418,12 +398,8 @@ class SoftOrdering1DCNN:
         )
 
         # Convert input data into PyTorch dataset
-        self.torch_dataset_train = self._single_pandas_to_torch_image_dataset(
-            X_train, y_train
-        )
-        self.torch_dataset_val = self._single_pandas_to_torch_image_dataset(
-            X_val, y_val
-        )
+        self.torch_dataset_train = self._single_pandas_to_torch_image_dataset(X_train, y_train)
+        self.torch_dataset_val = self._single_pandas_to_torch_image_dataset(X_val, y_val)
 
         # Define the objective function for hyperopt search
         def objective(params):
@@ -451,9 +427,7 @@ class SoftOrdering1DCNN:
                 pin_memory=True,
             )
 
-            self.model = self.build_model(
-                self.num_features, self.num_targets, params["hidden_size"]
-            )
+            self.model = self.build_model(self.num_features, self.num_targets, params["hidden_size"])
 
             self._set_optimizer_schedulers(params)
             self.model.to(self.device)
@@ -464,9 +438,7 @@ class SoftOrdering1DCNN:
             current_patience = 0
             best_model_state_dict = None
 
-            with tqdm(
-                total=max_epochs, desc="Training", unit="epoch", ncols=80
-            ) as pbar:
+            with tqdm(total=max_epochs, desc="Training", unit="epoch", ncols=80) as pbar:
                 for epoch in range(max_epochs):
                     train_loss = self.train_step(train_loader)
 
@@ -474,10 +446,7 @@ class SoftOrdering1DCNN:
                         val_loss = self.validate_step(val_loader)
                         self.scheduler.step(val_loss)
 
-                        if (
-                            val_loss + self.default_params.get("tol", 0.0)
-                            < best_val_loss
-                        ):
+                        if val_loss + self.default_params.get("tol", 0.0) < best_val_loss:
                             best_val_loss = val_loss
                             best_epoch = epoch
                             current_patience = 0
@@ -485,13 +454,9 @@ class SoftOrdering1DCNN:
                         else:
                             current_patience += 1
 
-                        print(
-                            f"Epoch [{epoch+1}/{max_epochs}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}"
-                        )
+                        print(f"Epoch [{epoch+1}/{max_epochs}], Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}")
                         if current_patience >= patience:
-                            print(
-                                f"Early stopping triggered at epoch {epoch+1} with best epoch {best_epoch+1}"
-                            )
+                            print(f"Early stopping triggered at epoch {epoch+1} with best epoch {best_epoch+1}")
                             break
 
                     pbar.update(1)
@@ -603,9 +568,7 @@ class SoftOrdering1DCNN:
                 elif self.problem_type == "regression":
                     preds = outputs.cpu().numpy()
                 else:
-                    raise ValueError(
-                        "Invalid problem_type. Supported options: binary_classification, multiclass_classification, regression."
-                    )
+                    raise ValueError("Invalid problem_type. Supported options: binary_classification, multiclass_classification, regression.")
 
                 predictions.extend(preds)
 

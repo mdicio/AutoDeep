@@ -2,6 +2,7 @@ import os
 import random
 
 import numpy as np
+import torch
 
 # from SCRATCH.SqueezeNet import SqueezeNetTrainer
 from autodeep.dataloaders.dataloader import (
@@ -30,7 +31,7 @@ from autodeep.modelsdefinition.SoftOrdering1DCNN import SoftOrdering1DCNN
 from autodeep.modelsdefinition.TabNetModel import TabNetTrainer
 from autodeep.modelsdefinition.TabTransformerModel import TabTransformerTrainer
 from autodeep.modelsdefinition.XGBoostTrainer import XGBoostTrainer
-import torch
+
 
 def seed_everything(seed=4200):
     random.seed(seed)
@@ -38,10 +39,10 @@ def seed_everything(seed=4200):
     np.random.seed(seed)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
-      torch.cuda.manual_seed_all(seed)
+        torch.cuda.manual_seed_all(seed)
 
 
-def create_model(model_name, problem_type, random_state = 42):
+def create_model(model_name, problem_type, random_state=42):
     seed_everything(random_state)
     mname = model_name.lower().strip()
     if mname == "xgb":
@@ -94,17 +95,17 @@ def create_dynamic_data_loader(
     dataset_path,
     problem_type,
     target_column,
-    test_size = None,
-    split_col = None,
-    train_value = None,
-    test_value = None,
-    random_state = 4200,
-    normalize_features = False,
-    return_extra_info = True,
-    encode_categorical = False,
-    run_igtd = False,
-    igtd_configs = None,
-    igtd_result_base_dir = None,
+    test_size=None,
+    split_col=None,
+    train_value=None,
+    test_value=None,
+    random_state=4200,
+    normalize_features=False,
+    return_extra_info=True,
+    encode_categorical=False,
+    run_igtd=False,
+    igtd_configs=None,
+    igtd_result_base_dir=None,
 ):
     print(f"Using dynamic loader for dataset: {dataset_path}")
     # Create a dynamic data loader

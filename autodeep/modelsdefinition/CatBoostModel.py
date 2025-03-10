@@ -16,35 +16,31 @@ from autodeep.modelutils.trainingutilities import (
 
 
 class CatBoostTrainer(BaseModel):
-    def __init__(self, problem_type="binary_classification", ):
+    def __init__(
+        self,
+        problem_type="binary_classification",
+    ):
 
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
         self.random_state = 4200
         self.script_filename = os.path.basename(__file__)
         self.problem_type = problem_type
-        
+
         self.model_name = "catboost"
 
-        formatter = logging.Formatter(
-            f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
-        )
+        formatter = logging.Formatter(f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s")
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.StreamHandler)
-            for handler in self.logger.handlers
-        ):
+        if not any(isinstance(handler, logging.StreamHandler) for handler in self.logger.handlers):
             self.logger.addHandler(console_handler)
 
         # Add file handler
         file_handler = logging.FileHandler("logfile.log")
         file_handler.setLevel(logging.DEBUG)  # Set log level to INFO
         file_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.FileHandler) for handler in self.logger.handlers
-        ):
+        if not any(isinstance(handler, logging.FileHandler) for handler in self.logger.handlers):
             self.logger.addHandler(file_handler)
 
         self.device = "GPU" if torch.cuda.is_available() else "CPU"
@@ -56,7 +52,7 @@ class CatBoostTrainer(BaseModel):
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
-        self.logger.info(f"Loading model")
+        self.logger.info("Loading model")
         self.logger.debug("Model loaded successfully")
         self.model = self.best_model
 
@@ -128,9 +124,7 @@ class CatBoostTrainer(BaseModel):
 
         self.num_targets = len(np.unique(y))
 
-        X_train, X_val, y_train, y_val = train_test_split(
-            X, y, test_size=val_size, random_state=self.random_state
-        )
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=val_size, random_state=self.random_state)
         eval_set = [(X_val, y_val)]
 
         # Define the objective function to minimize
@@ -140,9 +134,7 @@ class CatBoostTrainer(BaseModel):
             params["cat_features"] = self.cat_features
 
             if self.problem_type == "binary_classification":
-                model = CatBoostClassifier(
-                    od_type="Iter", od_wait=20, task_type=self.device, **params
-                )
+                model = CatBoostClassifier(od_type="Iter", od_wait=20, task_type=self.device, **params)
             elif self.problem_type == "multiclass_classification":
                 params.pop("scale_pos_weight", None)
                 model = CatBoostClassifier(
@@ -155,13 +147,9 @@ class CatBoostTrainer(BaseModel):
                 )
             elif self.problem_type == "regression":
                 params.pop("scale_pos_weight", None)
-                model = CatBoostRegressor(
-                    od_type="Iter", od_wait=20, task_type=self.device, **params
-                )
+                model = CatBoostRegressor(od_type="Iter", od_wait=20, task_type=self.device, **params)
             else:
-                raise ValueError(
-                    "Problem type must be binary_classification, multiclass_classification, or regression"
-                )
+                raise ValueError("Problem type must be binary_classification, multiclass_classification, or regression")
 
             model.fit(
                 X_train,
@@ -239,8 +227,6 @@ class CatBoostTrainer(BaseModel):
         validation_metrics = best_trial["result"]["validation_metrics"]
 
         self.logger.info(f"Best hyperparameters: {best_params}")
-        self.logger.info(
-            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
-        )
+        self.logger.info(f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}")
 
         return best_params, best_score, train_metrics, validation_metrics

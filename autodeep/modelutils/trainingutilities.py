@@ -15,18 +15,19 @@ def remainder_equal_one(batch_size, virtual_batch_size_ratio):
     remainder = batch_size % virtual_batch_size
     return remainder == 1
 
+
 def handle_rogue_batch_size(X_train, y_train, X_val, y_val, batch_size):
     """
-    Ensures that the dataset sizes do not cause an issue where 
+    Ensures that the dataset sizes do not cause an issue where
     len(train) % batch_size == 1 or len(val) % batch_size == 1.
-    
+
     Moves rows between train and val to resolve the issue.
     """
     if (len(X_train) % batch_size != 1) and (len(X_val) % batch_size != 1):
         return X_train, y_train, X_val, y_val  # No adjustment needed
 
     print("⚠️ ATTEENTIOON WE HANDLING SOME ROGUES ⚠️")
-    
+
     num_rows_to_adjust = 0
 
     for _ in range(100):  # Prevent infinite loops
@@ -34,8 +35,14 @@ def handle_rogue_batch_size(X_train, y_train, X_val, y_val, batch_size):
             num_rows_to_adjust += 1
 
             # Move the last `num_rows_to_adjust` rows from train to val
-            X_moved, y_moved = X_train.iloc[-num_rows_to_adjust:], y_train.iloc[-num_rows_to_adjust:]
-            X_train, y_train = X_train.iloc[:-num_rows_to_adjust], y_train.iloc[:-num_rows_to_adjust]
+            X_moved, y_moved = (
+                X_train.iloc[-num_rows_to_adjust:],
+                y_train.iloc[-num_rows_to_adjust:],
+            )
+            X_train, y_train = (
+                X_train.iloc[:-num_rows_to_adjust],
+                y_train.iloc[:-num_rows_to_adjust],
+            )
 
             X_val = pd.concat([X_val, X_moved], axis=0)
             y_val = pd.concat([y_val, y_moved], axis=0)
@@ -46,8 +53,14 @@ def handle_rogue_batch_size(X_train, y_train, X_val, y_val, batch_size):
             num_rows_to_adjust += 1
 
             # Move the last `num_rows_to_adjust` rows from val to train
-            X_moved, y_moved = X_val.iloc[-num_rows_to_adjust:], y_val.iloc[-num_rows_to_adjust:]
-            X_val, y_val = X_val.iloc[:-num_rows_to_adjust], y_val.iloc[:-num_rows_to_adjust]
+            X_moved, y_moved = (
+                X_val.iloc[-num_rows_to_adjust:],
+                y_val.iloc[-num_rows_to_adjust:],
+            )
+            X_val, y_val = (
+                X_val.iloc[:-num_rows_to_adjust],
+                y_val.iloc[:-num_rows_to_adjust],
+            )
 
             X_train = pd.concat([X_train, X_moved], axis=0)
             y_train = pd.concat([y_train, y_moved], axis=0)
@@ -59,29 +72,6 @@ def handle_rogue_batch_size(X_train, y_train, X_val, y_val, batch_size):
             break
 
     return X_train, y_train, X_val, y_val
-
-
-
-def handle_rogue_batch_size_ptcustom(X, y, batch_size):
-    num_rows_to_adjust = 1
-    if len(X) % batch_size != 1:
-        return X, y
-    else:
-        num_rows_to_adjust = 0
-        for i in range(100):
-            print("removing on observation to avoid 1 batch size problem")
-            print(i)
-            if len(X) % batch_size == 1:
-                num_rows_to_adjust += 1
-                removed_rows = X.iloc[
-                    -num_rows_to_adjust:
-                ]  # Select rows as a DataFrame
-                X = X.iloc[:-num_rows_to_adjust]
-                y = y.iloc[:-num_rows_to_adjust]
-
-            if len(X) % batch_size != 1:
-                break
-        return X, y
 
 
 def stop_on_perfect_lossCondition(x, threshold, *kwargs):
@@ -138,9 +128,7 @@ def prepare_shared_optimizer_configs(params):
     """
 
     # Optimizer and Scheduler setup
-    optimizer_fn_name, optimizer_params, learning_rate = prepare_optimizer(
-        params["optimizer_fn"]
-    )
+    optimizer_fn_name, optimizer_params, learning_rate = prepare_optimizer(params["optimizer_fn"])
     optimizer_params["learning_rate"] = learning_rate
     (
         scheduler_fn_name,
@@ -327,21 +315,13 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
                         if isinstance(subvalue[0], (str, bool)):
                             space[newname] = hp.choice(newname, subvalue)
                         elif isinstance(subvalue[0], int):
-                            space[newname] = (
-                                min_value
-                                if min_value == max_value
-                                else scope.int(
-                                    hp.quniform(newname, min_value, max_value, 1)
-                                )
-                            )
+                            space[newname] = min_value if min_value == max_value else scope.int(hp.quniform(newname, min_value, max_value, 1))
                         else:
                             space[newname] = (
                                 min_value
                                 if min_value == max_value
                                 else scope.float(
-                                    hp.loguniform(
-                                        newname, np.log(min_value), np.log(max_value)
-                                    )
+                                    hp.loguniform(newname, np.log(min_value), np.log(max_value))
                                     if min_value > 0.0
                                     else hp.uniform(newname, min_value, max_value)
                                 )
@@ -365,11 +345,7 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
             else:
                 spacing = 1
 
-            space[param_name] = (
-                min_value
-                if min_value == max_value
-                else scope.int(hp.quniform(param_name, min_value, max_value, spacing))
-            )
+            space[param_name] = min_value if min_value == max_value else scope.int(hp.quniform(param_name, min_value, max_value, spacing))
         else:
             min_value, max_value = ensure_min_max(param_values)
             space[param_name] = (
@@ -421,24 +397,16 @@ def infer_hyperopt_space_pytorch_tabular_old1(param_grid: Dict):
                         if min_value == max_value:
                             space[newname] = min_value
                         else:
-                            space[newname] = scope.int(
-                                hp.quniform(newname, min_value, max_value, 1)
-                            )
+                            space[newname] = scope.int(hp.quniform(newname, min_value, max_value, 1))
                     else:
                         # If the parameter values are floats, use hp.loguniform or scope.float
                         if min_value == max_value:
                             space[newname] = min_value
                         else:
                             if min_value == 0.0:
-                                space[newname] = scope.float(
-                                    hp.uniform(newname, min_value, max_value)
-                                )
+                                space[newname] = scope.float(hp.uniform(newname, min_value, max_value))
                             else:
-                                space[newname] = scope.float(
-                                    hp.loguniform(
-                                        newname, np.log(min_value), np.log(max_value)
-                                    )
-                                )
+                                space[newname] = scope.float(hp.loguniform(newname, np.log(min_value), np.log(max_value)))
         elif (
             (isinstance(param_values[0], (str, bool, list)))
             or (
@@ -466,9 +434,7 @@ def infer_hyperopt_space_pytorch_tabular_old1(param_grid: Dict):
             if min_value == max_value:
                 space[param_name] = min_value
             else:
-                space[param_name] = scope.int(
-                    hp.quniform(param_name, min_value, max_value, 1)
-                )
+                space[param_name] = scope.int(hp.quniform(param_name, min_value, max_value, 1))
         else:
             # If the parameter values are floats, use hp.loguniform or scope.float
             min_value = min(param_values)
@@ -477,13 +443,9 @@ def infer_hyperopt_space_pytorch_tabular_old1(param_grid: Dict):
                 space[param_name] = min_value
             else:
                 if min_value == 0.0:
-                    space[param_name] = scope.float(
-                        hp.uniform(param_name, min_value, max_value)
-                    )
+                    space[param_name] = scope.float(hp.uniform(param_name, min_value, max_value))
                 else:
-                    space[param_name] = scope.float(
-                        hp.loguniform(param_name, np.log(min_value), np.log(max_value))
-                    )
+                    space[param_name] = scope.float(hp.loguniform(param_name, np.log(min_value), np.log(max_value)))
     print("SPACE ######################################################")
     print(space)
     return space
@@ -523,29 +485,17 @@ def infer_hyperopt_space_pytorch_custom(param_grid: Dict):
                         if min_value == max_value:
                             space[newname] = min_value
                         else:
-                            space[newname] = scope.int(
-                                hp.quniform(newname, min_value, max_value, 1)
-                            )
+                            space[newname] = scope.int(hp.quniform(newname, min_value, max_value, 1))
                     else:
                         # If the parameter values are floats, use hp.loguniform or scope.float
                         if min_value == max_value:
                             space[newname] = min_value
                         else:
                             if min_value == 0.0:
-                                space[newname] = scope.float(
-                                    hp.uniform(newname, min_value, max_value)
-                                )
+                                space[newname] = scope.float(hp.uniform(newname, min_value, max_value))
                             else:
-                                space[newname] = scope.float(
-                                    hp.loguniform(
-                                        newname, np.log(min_value), np.log(max_value)
-                                    )
-                                )
-        elif (
-            (isinstance(param_values[0], (str, bool, list)))
-            or (param_name in ["hidden_size"])
-            or any(value is None for value in param_values)
-        ):
+                                space[newname] = scope.float(hp.loguniform(newname, np.log(min_value), np.log(max_value)))
+        elif (isinstance(param_values[0], (str, bool, list))) or (param_name in ["hidden_size"]) or any(value is None for value in param_values):
             if param_name in ["weights"]:
                 space[param_name] = scope.int(hp.choice(param_name, param_values))
 
@@ -559,9 +509,7 @@ def infer_hyperopt_space_pytorch_custom(param_grid: Dict):
             if min_value == max_value:
                 space[param_name] = min_value
             else:
-                space[param_name] = scope.int(
-                    hp.quniform(param_name, min_value, max_value, 1)
-                )
+                space[param_name] = scope.int(hp.quniform(param_name, min_value, max_value, 1))
         else:
             # If the parameter values are floats, use hp.loguniform or scope.float
             min_value = min(param_values)
@@ -570,13 +518,9 @@ def infer_hyperopt_space_pytorch_custom(param_grid: Dict):
                 space[param_name] = min_value
             else:
                 if min_value == 0.0:
-                    space[param_name] = scope.float(
-                        hp.uniform(param_name, min_value, max_value)
-                    )
+                    space[param_name] = scope.float(hp.uniform(param_name, min_value, max_value))
                 else:
-                    space[param_name] = scope.float(
-                        hp.loguniform(param_name, np.log(min_value), np.log(max_value))
-                    )
+                    space[param_name] = scope.float(hp.loguniform(param_name, np.log(min_value), np.log(max_value)))
 
     return space
 
@@ -596,22 +540,16 @@ def infer_hyperopt_space_pytorch_custom_old(param_grid: Dict):
             if min_value == max_value:
                 space[param_name] = min_value
             else:
-                space[param_name] = scope.int(
-                    hp.quniform(param_name, min_value, max_value, 1)
-                )
+                space[param_name] = scope.int(hp.quniform(param_name, min_value, max_value, 1))
         else:
             # If the parameter values are floats, use hp.loguniform or scope.float
             if min_value == max_value:
                 space[param_name] = min_value
             else:
                 if min_value == 0.0:
-                    space[param_name] = scope.float(
-                        hp.uniform(param_name, min_value, max_value)
-                    )
+                    space[param_name] = scope.float(hp.uniform(param_name, min_value, max_value))
                 else:
-                    space[param_name] = scope.float(
-                        hp.loguniform(param_name, np.log(min_value), np.log(max_value))
-                    )
+                    space[param_name] = scope.float(hp.loguniform(param_name, np.log(min_value), np.log(max_value)))
     return space
 
 
@@ -631,24 +569,16 @@ def infer_hyperopt_space(param_grid: Dict):
             if min_value == max_value:
                 space[param_name] = min_value
             else:
-                space[param_name] = scope.int(
-                    hp.quniform(param_name, min_value, max_value, 1)
-                )
+                space[param_name] = scope.int(hp.quniform(param_name, min_value, max_value, 1))
         elif isinstance(param_values[0], float):
             # If the parameter values are floats, use hp.loguniform or scope.float
             if min_value == max_value:
                 space[param_name] = min_value
             else:
                 if min_value == 0.0:
-                    space[param_name] = scope.float(
-                        hp.uniform(param_name, min_value, max_value)
-                    )
+                    space[param_name] = scope.float(hp.uniform(param_name, min_value, max_value))
                 else:
-                    space[param_name] = scope.float(
-                        hp.loguniform(param_name, np.log(min_value), np.log(max_value))
-                    )
+                    space[param_name] = scope.float(hp.loguniform(param_name, np.log(min_value), np.log(max_value)))
         else:
-            raise ValueError(
-                f"Param grid uses not supported type, {type(param_values[0])}"
-            )
+            raise ValueError(f"Param grid uses not supported type, {type(param_values[0])}")
     return space

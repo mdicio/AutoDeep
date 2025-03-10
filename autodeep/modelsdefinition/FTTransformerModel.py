@@ -9,7 +9,10 @@ from autodeep.modelsdefinition.CommonStructure import PytorchTabularTrainer
 
 class FTTransformerTrainer(PytorchTabularTrainer):
 
-    def __init__(self, problem_type, ):
+    def __init__(
+        self,
+        problem_type,
+    ):
         super().__init__(problem_type)
         self.logger.info("Trainer initialized")
         self.model_name = "fttransformer"
@@ -20,12 +23,10 @@ class FTTransformerTrainer(PytorchTabularTrainer):
         print("tabular model outer params")
         print(default_params)
 
-        data_config, trainer_config, optimizer_config, learning_rate = (
-            self.prepare_shared_tabular_configs(
-                params=params,
-                default_params=default_params,
-                extra_info=self.extra_info,
-            )
+        data_config, trainer_config, optimizer_config, learning_rate = self.prepare_shared_tabular_configs(
+            params=params,
+            default_params=default_params,
+            extra_info=self.extra_info,
         )
         # input_dim' (input_embed_dim) must be multiples of 'num_heads'
         input_embed_dim_multiplier = params.get("input_embed_dim_multiplier", None)
@@ -35,15 +36,9 @@ class FTTransformerTrainer(PytorchTabularTrainer):
             params["input_embed_dim"] = input_embed_dim_multiplier * num_heads
 
         valid_params = inspect.signature(FTTransformerConfig).parameters
-        compatible_params = {
-            param: value for param, value in params.items() if param in valid_params
-        }
-        invalid_params = {
-            param: value for param, value in params.items() if param not in valid_params
-        }
-        self.logger.warning(
-            f"You are passing some invalid parameters to the model {invalid_params}"
-        )
+        compatible_params = {param: value for param, value in params.items() if param in valid_params}
+        invalid_params = {param: value for param, value in params.items() if param not in valid_params}
+        self.logger.warning(f"You are passing some invalid parameters to the model {invalid_params}")
 
         if self.task == "regression":
             compatible_params["target_range"] = self.target_range

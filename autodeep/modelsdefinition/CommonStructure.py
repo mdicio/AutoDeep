@@ -1,28 +1,29 @@
 import logging
 import os
 import sys
-import sys
 import traceback
+from functools import partial
+
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
 from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
+from IPython.display import clear_output
 from pytorch_tabular import TabularModel
+from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
-from pytorch_tabular.config import OptimizerConfig, TrainerConfig, DataConfig
+
 from autodeep.evaluation.generalevaluator import Evaluator
 from autodeep.modelutils.trainingutilities import (
     handle_rogue_batch_size,
     infer_hyperopt_space_pytorch_tabular,
+    prepare_optimizer,
+    prepare_scheduler,
     stop_on_perfect_lossCondition,
-    prepare_optimizer, 
-    prepare_scheduler
 )
-from functools import partial
 
-from IPython.display import clear_output
 
 class BaseModel:
     """
@@ -33,7 +34,6 @@ class BaseModel:
         super(BaseModel, self).__init__()
         """
         Constructor for the base model class.
-        
         Parameters
         ----------
         model_params : dict
@@ -87,9 +87,7 @@ class PytorchTabularTrainer:
         self.logger.setLevel(logging.DEBUG)
 
         self.script_filename = os.path.basename(__file__)
-        formatter = logging.Formatter(
-            f"%(asctime)s - %(levelname)s - {self.script_filename} - {self.__class__.__name__} - %(message)s"
-        )
+        formatter = logging.Formatter(f"%(asctime)s - %(levelname)s - {self.script_filename} - {self.__class__.__name__} - %(message)s")
 
         # Only add handlers if they are not already present
         if not self.logger.handlers:
@@ -109,24 +107,20 @@ class PytorchTabularTrainer:
         self.logger.propagate = False
 
         self.problem_type = problem_type
-        
-        self.logger.info(
-            f"Initialized {self.__class__.__name__} with problem type {self.problem_type}"
-        )
+
+        self.logger.info(f"Initialized {self.__class__.__name__} with problem type {self.problem_type}")
 
         # Set Pytorch Lightning to Silent Mode
         logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
         os.environ["PT_LOGLEVEL"] = "ERROR"
 
         self.problem_type = problem_type
-        
+
         self.extra_info = None
         self.save_path = "ptabular_checkpoints"
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.logger.info(f"Device {self.device} is available")
-        self.task = (
-            "regression" if self.problem_type == "regression" else "classification"
-        )
+        self.task = "regression" if self.problem_type == "regression" else "classification"
         self.prediction_col = "target_prediction"
         self.default = False
         self.num_workers = max(1, os.cpu_count() // 2)
@@ -155,18 +149,14 @@ class PytorchTabularTrainer:
     def _set_loss_function(self, y):
         if self.problem_type in ["binary_classification", "multiclass_classification"]:
             classes = np.sort(np.unique(y))
-            class_weights = compute_class_weight(
-                class_weight="balanced", classes = classes, y=y.values
-            )
+            class_weights = compute_class_weight(class_weight="balanced", classes=classes, y=y.values)
             class_weights = torch.tensor(class_weights, dtype=torch.float32)
             self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, reduction="mean")
         elif self.problem_type == "regression":
             self.loss_fn = nn.MSELoss()
         else:
-            raise ValueError(
-                "Invalid problem_type. Supported values are 'binary_classification', 'multiclass_classification', and 'regression'."
-            )
-        
+            raise ValueError("Invalid problem_type. Supported values are 'binary_classification', 'multiclass_classification', and 'regression'.")
+
     def prepare_shared_tabular_configs(self, params, default_params, extra_info):
         """
         Prepare shared configurations for tabular models.
@@ -213,9 +203,7 @@ class PytorchTabularTrainer:
         )
 
         # Optimizer and Scheduler setup
-        optimizer_fn_name, optimizer_params, learning_rate = prepare_optimizer(
-            params["optimizer_fn"]
-        )
+        optimizer_fn_name, optimizer_params, learning_rate = prepare_optimizer(params["optimizer_fn"])
         (
             scheduler_fn_name,
             scheduler_params,
@@ -273,9 +261,7 @@ class PytorchTabularTrainer:
         max_evals=16,
         extra_info=None,
     ):
-        self.logger.info(
-            f"Starting hyperopt search {max_evals} evals maximizing {metric} metric on dataset"
-        )
+        self.logger.info(f"Starting hyperopt search {max_evals} evals maximizing {metric} metric on dataset")
         self.extra_info = extra_info
         self.default_params = model_config["default_params"]
         val_size = self.default_params.get("val_size")
@@ -301,25 +287,19 @@ class PytorchTabularTrainer:
             ]
 
         stratify = y if self.problem_type != "regression" else None
-        X_train, X_val, y_train, y_val = train_test_split(
-            X, y, test_size=val_size, random_state=42, stratify=stratify
-        )
-        
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=val_size, random_state=42, stratify=stratify)
+
         self.logger.debug(f"Feature matrix shape: {X.shape}")
         self.logger.debug(f"Target distribution:\n{y.value_counts(normalize=True)}")
 
-        self.logger.debug(
-            f"Problem Type {self.problem_type}"
-        )
+        self.logger.debug(f"Problem Type {self.problem_type}")
 
         def objective(params, X_train, X_val, y_train, y_val):
 
             clear_output(wait=True)
 
             self.logger.info(f"Training with hyperparameters: {params}")
-            X_train, y_train, X_val, y_val = handle_rogue_batch_size(
-                X_train, y_train, X_val, y_val, params["batch_size"]
-            )
+            X_train, y_train, X_val, y_val = handle_rogue_batch_size(X_train, y_train, X_val, y_val, params["batch_size"])
 
             train_data = pd.concat([X_train, y_train], axis=1)
             val_data = pd.concat([X_val, y_val], axis=1)
@@ -331,9 +311,7 @@ class PytorchTabularTrainer:
 
             self.logger.debug(f"Batch Size, VBS: {params['batch_size']}")
 
-            model = self.prepare_tabular_model(
-                params, self.default_params, default=self.default
-            )
+            model = self.prepare_tabular_model(params, self.default_params, default=self.default)
 
             if torch.cuda.is_available():
                 self.logger.debug(f"GPU Memory Allocated: {torch.cuda.memory_allocated() / 1e6} MB")
@@ -342,15 +320,14 @@ class PytorchTabularTrainer:
             try:
                 # Your training loop
                 model.fit(train=train_data, validation=val_data, loss=self.loss_fn)
-                
 
             except Exception as e:
                 error_message = "".join(traceback.format_exception(*sys.exc_info()))
-                #to do add
+                error_message += str(repr(e))
+                # to do add
                 with open("cuda_error_log.txt", "w") as f:
                     f.write(error_message)
                 print("Error captured in cuda_error_log.txt")
-
 
             pred_df = model.predict(val_data)
             predictions = pred_df[self.prediction_col].values
@@ -390,15 +367,14 @@ class PytorchTabularTrainer:
                 "trained_model": model,
                 "train_metrics": metrics_for_split_train,
                 "validation_metrics": metrics_for_split_val,
-                "extra_info":self.extra_info
+                "extra_info": self.extra_info,
             }
 
         trials = Trials()
         self.evaluator = Evaluator(problem_type=self.problem_type)
         threshold = float(-1.0 * self.evaluator.maximize[metric][1])
 
-
-        fmin_objective = partial(objective,  X_train = X_train, X_val = X_val, y_train = y_train, y_val = y_val)
+        fmin_objective = partial(objective, X_train=X_train, X_val=X_val, y_train=y_train, y_val=y_val)
 
         best = fmin(
             fmin_objective,
@@ -420,14 +396,13 @@ class PytorchTabularTrainer:
         train_metrics = best_trial["result"]["train_metrics"]
         validation_metrics = best_trial["result"]["validation_metrics"]
 
-        
         def extract_optimizer_scheduler(params):
             """
             Convert optimizer and scheduler class objects to their string names.
             """
             if "optimizer_fn" in params and isinstance(params["optimizer_fn"], type):
                 params["optimizer_fn"] = params["optimizer_fn"].__name__
-            
+
             if "scheduler_fn" in params and isinstance(params["scheduler_fn"], type):
                 params["scheduler_fn"] = params["scheduler_fn"].__name__
 
@@ -464,8 +439,6 @@ class PytorchTabularTrainer:
         self._load_best_model()
 
         self.logger.info(f"Best hyperparameters: {best_params}")
-        self.logger.info(
-            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
-        )
+        self.logger.info(f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}")
 
         return best_params, best_score, train_metrics, validation_metrics

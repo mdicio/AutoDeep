@@ -25,26 +25,19 @@ class XGBoostTrainer(BaseModel):
         # Get the filename of the current Python script
         self.script_filename = os.path.basename(__file__)
         self.problem_type = problem_type
-        
-        formatter = logging.Formatter(
-            f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
-        )
+
+        formatter = logging.Formatter(f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s")
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.StreamHandler)
-            for handler in self.logger.handlers
-        ):
+        if not any(isinstance(handler, logging.StreamHandler) for handler in self.logger.handlers):
             self.logger.addHandler(console_handler)
 
         # Add file handler
         file_handler = logging.FileHandler("logfile.log")
         file_handler.setLevel(logging.DEBUG)  # Set log level to INFO
         file_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.FileHandler) for handler in self.logger.handlers
-        ):
+        if not any(isinstance(handler, logging.FileHandler) for handler in self.logger.handlers):
             self.logger.addHandler(file_handler)
 
         # extra_info used in case it is needed and specific to the dataset we are training on
@@ -56,7 +49,7 @@ class XGBoostTrainer(BaseModel):
 
     def _load_best_model(self):
         """Load a trained model from a given path"""
-        self.logger.info(f"Loading model")
+        self.logger.info("Loading model")
         self.logger.debug("Model loaded successfully")
         self.model = self.best_model
 
@@ -154,14 +147,10 @@ class XGBoostTrainer(BaseModel):
 
             # Create an XGBoost model with the given hyperparameters
             if self.problem_type == "regression":
-                model = xgb.XGBRegressor(
-                    **params, early_stopping_rounds=early_stopping_rounds
-                )
+                model = xgb.XGBRegressor(**params, early_stopping_rounds=early_stopping_rounds)
             else:
 
-                model = xgb.XGBClassifier(
-                    **params, early_stopping_rounds=early_stopping_rounds
-                )
+                model = xgb.XGBClassifier(**params, early_stopping_rounds=early_stopping_rounds)
             # Fit the model on the training data
 
             model.fit(
@@ -242,8 +231,6 @@ class XGBoostTrainer(BaseModel):
         self._load_best_model()
 
         self.logger.info(f"Best hyperparameters: {best_params}")
-        self.logger.info(
-            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
-        )
+        self.logger.info(f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}")
 
         return best_params, best_score, train_metrics, validation_metrics

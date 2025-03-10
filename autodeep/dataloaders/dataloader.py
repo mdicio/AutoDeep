@@ -5,12 +5,11 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from sklearn.datasets import load_breast_cancer, load_iris
+from sklearn.datasets import fetch_california_housing, load_breast_cancer, load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.utils import shuffle
 
-from typing import Optional
 from autodeep.modelutils.igtdutilities import table_to_image
 
 
@@ -62,17 +61,13 @@ class IGTDPreprocessor:
     def _determine_previous_existence(self):
         existing_filenames = []
         for config_name, config in self.igtd_configs["ordering_methods"].items():
-            result_dir = os.path.join(
-                self.base_result_dir, self.dataset_name, config_name
-            )
+            result_dir = os.path.join(self.base_result_dir, self.dataset_name, config_name)
             result_file_name = os.path.join(result_dir, config["error"], "_index.txt")
             if os.path.exists(result_file_name):
                 existing_filenames.append(result_file_name)
 
         if len(existing_filenames) > 1:
-            self.logger.info(
-                f"Found an already executed IGTD for dataset {self.dataset_name}"
-            )
+            self.logger.info(f"Found an already executed IGTD for dataset {self.dataset_name}")
             self.already_run = True
             self.result_file_name = existing_filenames[0]
         else:
@@ -80,11 +75,7 @@ class IGTDPreprocessor:
 
     def _auto_determine_img_size(self, X: pd.DataFrame):
         num_features = len(X.columns)
-        factors = [
-            (r, num_features // r)
-            for r in range(1, int(np.sqrt(num_features)) + 1)
-            if num_features % r == 0
-        ]
+        factors = [(r, num_features // r) for r in range(1, int(np.sqrt(num_features)) + 1) if num_features % r == 0]
         img_rows, img_columns = factors[-1]
         if len(factors) == 1:
             self.logger.warning(
@@ -100,22 +91,16 @@ class IGTDPreprocessor:
         elif isinstance(self.img_size, list):
             self.img_rows, self.img_columns = self.img_size
         else:
-            raise ValueError(
-                "img_size must be either 'auto' or a list [img_rows, img_columns]"
-            )
+            raise ValueError("img_size must be either 'auto' or a list [img_rows, img_columns]")
 
         # Even if IGTD was run before, we now have the dimensions computed.
         if self.already_run:
             return
 
         for config_name, config in self.igtd_configs["ordering_methods"].items():
-            result_dir = os.path.join(
-                self.base_result_dir, self.dataset_name, config_name
-            )
+            result_dir = os.path.join(self.base_result_dir, self.dataset_name, config_name)
             os.makedirs(result_dir, exist_ok=True)
-            self.logger.info(
-                f"Running IGTD ordering for config '{config_name}' in: {result_dir}"
-            )
+            self.logger.info(f"Running IGTD ordering for config '{config_name}' in: {result_dir}")
             result_file_name = os.path.join(result_dir, config["error"], "_index.txt")
             self.result_file_name = result_file_name
             table_to_image(
@@ -145,22 +130,10 @@ class ExtraInfoCreator:
         self.run_igtd = run_igtd
         self.igtd_preprocessor = igtd_preprocessor
 
-
-class ExtraInfoCreator:
-    def __init__(
-        self,
-        dataset_name,
-        run_igtd=False,
-        igtd_preprocessor: Optional[IGTDPreprocessor] = None,
-    ):
-        self.dataset_name = dataset_name
-        self.run_igtd = run_igtd
-        self.igtd_preprocessor = igtd_preprocessor
-
     def create_extra_info(self, df: pd.DataFrame, dataset_name: str):
         cat_cols = df.select_dtypes(include=["object", "category"]).columns
         num_cols = df.select_dtypes(exclude=["object", "category"]).columns
-        
+
         # Base Dataset Characteristics
         extra_info = {
             "num_samples": len(df),
@@ -171,7 +144,7 @@ class ExtraInfoCreator:
             "num_col_idx": list(df.columns.get_indexer(num_cols)),
             "num_features": len(df.columns),
         }
-        
+
         # Additional Dataset-Level Statistics (Aggregated)
         num_features = len(num_cols)
         cat_features = len(cat_cols)
@@ -197,10 +170,7 @@ class ExtraInfoCreator:
             if not hasattr(self.igtd_preprocessor, "result_file_name"):
                 self.igtd_preprocessor.run(df)
             else:
-                if (
-                    self.igtd_preprocessor.img_rows is None
-                    or self.igtd_preprocessor.img_columns is None
-                ):
+                if self.igtd_preprocessor.img_rows is None or self.igtd_preprocessor.img_columns is None:
                     (
                         self.igtd_preprocessor.img_rows,
                         self.igtd_preprocessor.img_columns,
@@ -212,9 +182,7 @@ class ExtraInfoCreator:
             with open(igtd_candidate) as f:
                 lines = f.readlines()
                 if lines:
-                    extra_info["column_ordering"] = list(
-                        map(int, lines[-1].strip().split())
-                    )
+                    extra_info["column_ordering"] = list(map(int, lines[-1].strip().split()))
 
             extra_info["img_rows"] = self.igtd_preprocessor.img_rows
             extra_info["img_columns"] = self.igtd_preprocessor.img_columns
@@ -233,7 +201,6 @@ class DataLoader:
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        
         data_path="data",
         igtd_path="igtd",
     ):
@@ -243,7 +210,7 @@ class DataLoader:
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
         self.random_state = random_state
-        
+
         self.data_path = data_path
         self.igtd_path = igtd_path
 
@@ -253,9 +220,7 @@ class DataLoader:
     def bin_random_numerical_column(self, train_df, test_df, exclude_cols, bins=10):
         # Select a random numerical column to bin
         img_columns = train_df.select_dtypes(include=[np.number]).columns
-        col_to_bin = np.random.choice(
-            [col for col in img_columns if col not in exclude_cols]
-        )
+        col_to_bin = np.random.choice([col for col in img_columns if col not in exclude_cols])
         print(f"Binning randomly chosen column {col_to_bin}")
         train_df[col_to_bin] = train_df[col_to_bin].fillna(0)
         test_df[col_to_bin] = train_df[col_to_bin].fillna(0)
@@ -308,9 +273,7 @@ class DataLoader:
             class_indices = shuffle(class_indices, random_state=self.random_state)
             class_indices = class_indices[:min_class_count]
             balanced_X = pd.concat([balanced_X, X.loc[class_indices]])
-        balanced_X, balanced_y = shuffle(
-            balanced_X, y.loc[balanced_X.index], random_state=self.random_state
-        )
+        balanced_X, balanced_y = shuffle(balanced_X, y.loc[balanced_X.index], random_state=self.random_state)
         return balanced_X, balanced_y
 
     def scale_features(self, X_train, X_test, mode="mean_std"):
@@ -352,14 +315,13 @@ class DynamicDataLoader(DataLoader):
         problem_type,
         target_column="target",
         test_size=0.2,
-        split_col = None,
+        split_col=None,
         train_value=None,
         test_value=None,
         random_state=42,
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        
         run_igtd=False,
         igtd_configs: Optional[Dict[str, Dict]] = None,
         igtd_result_base_dir: Optional[str] = "IGTD",
@@ -376,7 +338,7 @@ class DynamicDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        
+
         self.run_igtd = run_igtd
         self.igtd_configs = igtd_configs
         self.igtd_result_base_dir = igtd_result_base_dir
@@ -401,21 +363,19 @@ class DynamicDataLoader(DataLoader):
         df = pd.read_csv(self.dataset_path)
 
         if self.target_column not in df.columns:
-            raise ValueError(
-                f"Target column '{self.target_column}' not found in dataset"
-            )
+            raise ValueError(f"Target column '{self.target_column}' not found in dataset")
 
-        df = df.astype({col: 'str' for col in df.select_dtypes('bool').columns})
+        df = df.astype({col: "str" for col in df.select_dtypes("bool").columns})
 
         # Identify numeric and categorical columns
-        numeric_cols = df.select_dtypes(include=['number']).columns
-        categorical_cols = df.select_dtypes(exclude=['number']).columns
+        numeric_cols = df.select_dtypes(include=["number"]).columns
+        categorical_cols = df.select_dtypes(exclude=["number"]).columns
 
-        # Fill missing values: 
+        # Fill missing values:
         # - Numeric columns: fill with median
         # - Categorical columns: fill with mode (most frequent value)
         df[numeric_cols] = df[numeric_cols].apply(lambda col: col.fillna(col.median()))
-        df[categorical_cols] = df[categorical_cols].apply(lambda col: col.fillna(col.mode()[0] if not col.mode().empty else 'Unknown'))
+        df[categorical_cols] = df[categorical_cols].apply(lambda col: col.fillna(col.mode()[0] if not col.mode().empty else "Unknown"))
 
         # Split into features and target
         X = df.drop(columns=[self.target_column])
@@ -426,9 +386,7 @@ class DynamicDataLoader(DataLoader):
 
         if self.split_col and self.split_col in df.columns:
             if self.train_value is None or self.test_value is None:
-                raise ValueError(
-                    "When using split_col, you must specify the train_value and test_value."
-                )
+                raise ValueError("When using split_col, you must specify the train_value and test_value.")
             unique_values = df[self.split_col].unique()
             if set(unique_values) != {self.train_value, self.test_value}:
                 raise ValueError(
@@ -449,16 +407,12 @@ class DynamicDataLoader(DataLoader):
             )
 
         if self.normalize_features:
-            X_train, X_test = self.scale_features(
-                X_train, X_test, mode=self.normalize_features
-            )
+            X_train, X_test = self.scale_features(X_train, X_test, mode=self.normalize_features)
 
         # Use ExtraInfoCreator to obtain extra info (including IGTD ordering if run)
         extra_info = None
         if self.return_extra_info:
-            extra_info = self.extra_info_creator.create_extra_info(
-                X_train, self.dataset_name
-            )
+            extra_info = self.extra_info_creator.create_extra_info(X_train, self.dataset_name)
 
         return X_train, X_test, y_train, y_test, extra_info
 
@@ -472,7 +426,6 @@ class KaggleAgeConditionsLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        
     ):
 
         self.target_column = target_column
@@ -481,10 +434,8 @@ class KaggleAgeConditionsLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        
-        self.filename = (
-            f"{self.data_path}kaggle/icr-identify-age-related-conditions/train.csv"
-        )
+
+        self.filename = f"{self.data_path}kaggle/icr-identify-age-related-conditions/train.csv"
 
     def load_data(self):
         # Load the Iris dataset from scikit-learn
@@ -533,7 +484,6 @@ class KaggleAgeConditionsLoader(DataLoader):
                 img_columns=7,
                 igtd_path=f"{self.igtd_path}results/ageconditions_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
-            
 
         return X_train, X_test, y_train, y_test, extra_info
 
@@ -547,7 +497,6 @@ class BufixDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        
     ):
 
         self.target_column = target_column
@@ -556,7 +505,7 @@ class BufixDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        
+
         self.filename = f"{self.data_path}/buf/sortedbulk_data-1.csv"
 
     def load_data(self):
@@ -564,18 +513,10 @@ class BufixDataLoader(DataLoader):
 
         df = pd.read_csv(self.filename)
         df = df.drop(["num_telefono", "target_event_date", "target_date"], axis=1)
-        df_train = df.loc[df["partition_date"] < "2022-04-30"].drop(
-            "partition_date", axis=1
-        )
-        df_train = self._undersample(df_train, "target", 6).reset_index(
-            drop=True
-        )  # Keep 6 times as many 0s as 1s
+        df_train = df.loc[df["partition_date"] < "2022-04-30"].drop("partition_date", axis=1)
+        df_train = self._undersample(df_train, "target", 6).reset_index(drop=True)  # Keep 6 times as many 0s as 1s
 
-        df_test = (
-            df.loc[df["partition_date"] >= "2022-04-30"]
-            .drop("partition_date", axis=1)
-            .reset_index(drop=True)
-        )
+        df_test = df.loc[df["partition_date"] >= "2022-04-30"].drop("partition_date", axis=1).reset_index(drop=True)
 
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
@@ -584,9 +525,7 @@ class BufixDataLoader(DataLoader):
         y_test = df_test[self.target_column]
 
         # Normalize the features if requested
-        X_train, X_test = self.scale_features(
-            X_train, X_test, mode=self.normalize_features
-        )
+        X_train, X_test = self.scale_features(X_train, X_test, mode=self.normalize_features)
 
         extra_info = None
         if self.return_extra_info:
@@ -609,7 +548,6 @@ class TitanicDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        
     ):
 
         self.target_column = target_column
@@ -618,7 +556,6 @@ class TitanicDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        
 
     def load_data(self):
         # Load the Titanic dataset from seaborn
@@ -662,9 +599,7 @@ class TitanicDataLoader(DataLoader):
         y_test = df_test[self.target_column]
 
         # Normalize the features if requested
-        X_train, X_test = self.scale_features(
-            X_train, X_test, mode=self.normalize_features
-        )
+        X_train, X_test = self.scale_features(X_train, X_test, mode=self.normalize_features)
 
         extra_info = None
         if self.return_extra_info:
@@ -686,7 +621,6 @@ class BreastCancerDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        
     ):
 
         self.target_column = target_column
@@ -695,7 +629,6 @@ class BreastCancerDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        
 
     def load_data(self):
         # Load the Breast Cancer Wisconsin (Diagnostic) dataset from sklearn
@@ -720,9 +653,7 @@ class BreastCancerDataLoader(DataLoader):
         y_test = df_test[self.target_column]
 
         # Normalize the features if requested
-        X_train, X_test = self.scale_features(
-            X_train, X_test, mode=self.normalize_features
-        )
+        X_train, X_test = self.scale_features(X_train, X_test, mode=self.normalize_features)
 
         extra_info = None
         if self.return_extra_info:
@@ -744,7 +675,6 @@ class CreditDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        
     ):
 
         self.target_column = target_column
@@ -753,7 +683,7 @@ class CreditDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        
+
         self.filename = f"{self.data_path}creditcard/creditcard.csv"
 
     def load_data(self):
@@ -768,9 +698,7 @@ class CreditDataLoader(DataLoader):
             random_state=self.random_state,
             stratify=df[self.target_column],
         )
-        df_train = self._undersample(
-            df_train, "target", 6
-        )  # Keep 6 times as many 0s as 1s
+        df_train = self._undersample(df_train, "target", 6)  # Keep 6 times as many 0s as 1s
 
         df_train.reset_index(drop=True, inplace=True)
         df_test.reset_index(drop=True, inplace=True)
@@ -782,9 +710,7 @@ class CreditDataLoader(DataLoader):
         y_test = df_test[self.target_column]
 
         # Normalize the features if requested
-        X_train, X_test = self.scale_features(
-            X_train, X_test, mode=self.normalize_features
-        )
+        X_train, X_test = self.scale_features(X_train, X_test, mode=self.normalize_features)
 
         extra_info = None
         if self.return_extra_info:
@@ -815,7 +741,6 @@ class IrisDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        
 
     def load_data(self):
         # Load the Iris dataset from scikit-learn
@@ -840,9 +765,7 @@ class IrisDataLoader(DataLoader):
         y_test = df_test[self.target_column]
 
         # Normalize the features if requested
-        X_train, X_test = self.scale_features(
-            X_train, X_test, mode=self.normalize_features
-        )
+        X_train, X_test = self.scale_features(X_train, X_test, mode=self.normalize_features)
 
         extra_info = None
         if self.return_extra_info:
@@ -865,7 +788,6 @@ class CaliforniaHousingDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        
     ):
 
         self.target_column = target_column
@@ -874,24 +796,20 @@ class CaliforniaHousingDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        
 
     def load_data(self):
         # Load the California Housing Prices dataset from scikit-learn
-        # data = fetch_california_housing()
+        data = fetch_california_housing()
         # Convert the dataset to a DataFrame
-        # df = pd.DataFrame(data.data, columns=data.feature_names)
-        # df.to_csv(r"/home/boom/sdev/WTabRun/data/housing/cal_housing.csv")
+        df = pd.DataFrame(data.data, columns=data.feature_names)
+        df.to_csv(r"/home/boom/sdev/WTabRun/data/housing/cal_housing.csv")
 
-        df = pd.read_csv(r"/home/boom/sdev/WTabRun/data/housing/cal_housing.csv")
         df[self.target_column] = data.target
 
         df["pop_density"] = df["Population"] / df["AveRooms"]
 
         # Split the data into training and test sets
-        df_train, df_test = train_test_split(
-            df, test_size=self.test_size, random_state=self.random_state
-        )
+        df_train, df_test = train_test_split(df, test_size=self.test_size, random_state=self.random_state)
 
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
@@ -900,9 +818,7 @@ class CaliforniaHousingDataLoader(DataLoader):
         y_test = df_test[self.target_column]
 
         # Normalize the features if requested
-        X_train, X_test = self.scale_features(
-            X_train, X_test, mode=self.normalize_features
-        )
+        X_train, X_test = self.scale_features(X_train, X_test, mode=self.normalize_features)
 
         extra_info = None
         if self.return_extra_info:
@@ -925,7 +841,6 @@ class AdultDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        
     ):
 
         self.target_column = "target"
@@ -934,7 +849,6 @@ class AdultDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        
 
     def load_data(self):
         # Load the Adult dataset from UCI Machine Learning Repository
@@ -955,9 +869,7 @@ class AdultDataLoader(DataLoader):
             "sex",
             "native-country",
         ]
-        df[categorical_cols] = df[categorical_cols].fillna(
-            df[categorical_cols].mode().iloc[0]
-        )
+        df[categorical_cols] = df[categorical_cols].fillna(df[categorical_cols].mode().iloc[0])
 
         # Fill missing numerical values with the mean
         numerical_cols = [
@@ -988,9 +900,7 @@ class AdultDataLoader(DataLoader):
         y_test = df_test[self.target_column]
 
         # Normalize the features if requested
-        X_train, X_test = self.scale_features(
-            X_train, X_test, mode=self.normalize_features
-        )
+        X_train, X_test = self.scale_features(X_train, X_test, mode=self.normalize_features)
 
         extra_info = None
         if self.return_extra_info:
@@ -1013,7 +923,6 @@ class CoverTypeDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        
     ):
 
         self.target_column = "target"
@@ -1022,7 +931,7 @@ class CoverTypeDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        
+
         self.filename = f"{self.data_path}/covertype/covtype.data.gz"
 
     def load_data(self):
@@ -1036,9 +945,7 @@ class CoverTypeDataLoader(DataLoader):
             df = self.force_encode_categorical(df, exclude_cols=[self.target_column])
 
         # Split the data into training and test sets
-        df_train, df_test = train_test_split(
-            df, test_size=self.test_size, random_state=self.random_state
-        )
+        df_train, df_test = train_test_split(df, test_size=self.test_size, random_state=self.random_state)
 
         # Extract the features and target variables from the dataset
         X_train = df_train.drop(columns=[self.target_column])
@@ -1047,9 +954,7 @@ class CoverTypeDataLoader(DataLoader):
         y_test = df_test[self.target_column]
 
         # Normalize the features if requested
-        X_train, X_test = self.scale_features(
-            X_train, X_test, mode=self.normalize_features
-        )
+        X_train, X_test = self.scale_features(X_train, X_test, mode=self.normalize_features)
 
         # Balance the training dataset
         # X_train, y_train = self.balance_multiclass_dataset(X_train, y_train)
@@ -1075,7 +980,6 @@ class HelocDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        
     ):
 
         self.target_column = "target"
@@ -1084,7 +988,7 @@ class HelocDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        
+
         self.filename = f"{self.data_path}heloc/heloc_dataset_v1.csv"
 
     def load_data(self):
@@ -1097,14 +1001,10 @@ class HelocDataLoader(DataLoader):
         if self.encode_categorical and len(cat_cols) > 0:
             df = self.force_encode_categorical(df, exclude_cols=[self.target_column])
 
-        df["CreditUtilizationRatio"] = (
-            df["NetFractionRevolvingBurden"] + df["NetFractionInstallBurden"]
-        )
+        df["CreditUtilizationRatio"] = df["NetFractionRevolvingBurden"] + df["NetFractionInstallBurden"]
 
         # Split the data into training and test sets
-        df_train, df_test = train_test_split(
-            df, test_size=self.test_size, random_state=self.random_state
-        )
+        df_train, df_test = train_test_split(df, test_size=self.test_size, random_state=self.random_state)
 
         # Get the categorical and numerical columns
         input_cat_cols = df_train.select_dtypes(include=["object", "category"]).columns
@@ -1118,9 +1018,7 @@ class HelocDataLoader(DataLoader):
         y_test = df_test[self.target_column]
 
         # Normalize the features if requested
-        X_train, X_test = self.scale_features(
-            X_train, X_test, mode=self.normalize_features
-        )
+        X_train, X_test = self.scale_features(X_train, X_test, mode=self.normalize_features)
 
         extra_info = None
         if self.return_extra_info:
