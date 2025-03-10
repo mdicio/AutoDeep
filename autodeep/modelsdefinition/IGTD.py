@@ -121,7 +121,6 @@ class DynamicDataLoader(DataLoader):
         normalize_features: Optional[str] = "mean_std",
         return_extra_info: bool = False,
         encode_categorical: bool = False,
-        num_targets: int = 1,
         igtd_preprocessor: Optional[IGTDPreprocessor] = None,
         igtd_configs: Optional[Dict[str, Dict]] = None,
         igtd_result_base_dir: Optional[str] = None,
@@ -140,7 +139,6 @@ class DynamicDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        self.num_targets = num_targets
 
         # IGTD related parameters
         self.igtd_preprocessor = igtd_preprocessor
@@ -377,7 +375,6 @@ class DynamicDataLoader(DataLoader):
         normalize_features: Optional[str] = "mean_std",
         return_extra_info: bool = False,
         encode_categorical: bool = False,
-        num_targets: int = 1,
         igtd_preprocessor: Optional[IGTDPreprocessor] = None,
         igtd_configs: Optional[Dict[str, Dict]] = None,
         igtd_result_base_dir: Optional[str] = None,
@@ -396,7 +393,6 @@ class DynamicDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        self.num_targets = num_targets
 
         # IGTD related parameters
         self.igtd_preprocessor = igtd_preprocessor

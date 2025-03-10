@@ -30,25 +30,24 @@ from autodeep.modelsdefinition.SoftOrdering1DCNN import SoftOrdering1DCNN
 from autodeep.modelsdefinition.TabNetModel import TabNetTrainer
 from autodeep.modelsdefinition.TabTransformerModel import TabTransformerTrainer
 from autodeep.modelsdefinition.XGBoostTrainer import XGBoostTrainer
-
+import torch
 
 def seed_everything(seed=4200):
-    # torch.manual_seed(seed)
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)
-    # Set the seed for PyTorch
-    # torch.manual_seed(seed)
-    # if torch.cuda.is_available():
-    #   torch.cuda.manual_seed_all(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+      torch.cuda.manual_seed_all(seed)
 
 
-def create_model(model_name, problem_type, num_targets, random_state=42):
+def create_model(model_name, problem_type, random_state = 42):
+    seed_everything(random_state)
     mname = model_name.lower().strip()
     if mname == "xgb":
         return XGBoostTrainer(problem_type)
     elif mname == "resnet":
-        return ResNetTrainer(problem_type=problem_type, num_targets=num_targets)
+        return ResNetTrainer(problem_type=problem_type)
     elif mname == "catboost":
         return CatBoostTrainer(problem_type)
 
@@ -77,11 +76,11 @@ def create_model(model_name, problem_type, num_targets, random_state=42):
         return AutoIntTrainer(problem_type=problem_type)
 
     elif mname == "s1dcnn":
-        return SoftOrdering1DCNN(problem_type=problem_type, num_targets=num_targets)
+        return SoftOrdering1DCNN(problem_type=problem_type)
 
     # elif mname == "squeezenet":
     #    return SqueezeNetTrainer(
-    #        problem_type=problem_type, num_targets=num_targets
+    #        problem_type=problem_typ
     #    )
     # elif mname == "lightgbm":
     #    return LightGBMTrainer(problem_type)
@@ -95,18 +94,17 @@ def create_dynamic_data_loader(
     dataset_path,
     problem_type,
     target_column,
-    test_size,
-    split_col,
-    train_value,
-    test_value,
-    random_state,
-    normalize_features,
-    return_extra_info,
-    encode_categorical,
-    num_targets,
-    run_igtd,
-    igtd_configs,  # A dict of ordering configurations
-    igtd_result_base_dir,
+    test_size = None,
+    split_col = None,
+    train_value = None,
+    test_value = None,
+    random_state = 4200,
+    normalize_features = False,
+    return_extra_info = True,
+    encode_categorical = False,
+    run_igtd = False,
+    igtd_configs = None,
+    igtd_result_base_dir = None,
 ):
     print(f"Using dynamic loader for dataset: {dataset_path}")
     # Create a dynamic data loader
@@ -123,7 +121,6 @@ def create_dynamic_data_loader(
         normalize_features,
         return_extra_info,
         encode_categorical,
-        num_targets,
         run_igtd,
         igtd_configs,  # A dict of ordering configurations
         igtd_result_base_dir,

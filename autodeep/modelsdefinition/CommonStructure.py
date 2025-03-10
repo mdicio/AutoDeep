@@ -1,7 +1,6 @@
 import logging
 import os
 import sys
-from typing import Dict
 import sys
 import traceback
 import numpy as np
@@ -78,7 +77,7 @@ class BaseModel:
 class PytorchTabularTrainer:
     """Common base class for trainers."""
 
-    def __init__(self, problem_type, num_targets=None):
+    def __init__(self, problem_type):
         super().__init__()
         self.cv_size = None
         self.random_state = 4200
@@ -110,7 +109,7 @@ class PytorchTabularTrainer:
         self.logger.propagate = False
 
         self.problem_type = problem_type
-        self.num_targets = num_targets
+        
         self.logger.info(
             f"Initialized {self.__class__.__name__} with problem type {self.problem_type}"
         )
@@ -120,7 +119,7 @@ class PytorchTabularTrainer:
         os.environ["PT_LOGLEVEL"] = "ERROR"
 
         self.problem_type = problem_type
-        self.num_targets = num_targets
+        
         self.extra_info = None
         self.save_path = "ptabular_checkpoints"
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -141,12 +140,7 @@ class PytorchTabularTrainer:
 
     def _load_model(self, model_path):
         self.logger.info(f"Loading model from {model_path}")
-        self.model = TabularModel(
-            data_config=self.data_config,
-            model_config=self.model_config,
-            optimizer_config=self.optimizer_config,
-            trainer_config=self.trainer_config,
-        ).load_model(model_path)
+        self.model = TabularModel.load_model(model_path)
         self.logger.debug("Model loaded successfully")
 
     def _save_model(self, model_dir, model_name):
@@ -173,7 +167,7 @@ class PytorchTabularTrainer:
                 "Invalid problem_type. Supported values are 'binary_classification', 'multiclass_classification', and 'regression'."
             )
         
-    def prepare_shared_tabular_configs(self, params, outer_params, extra_info):
+    def prepare_shared_tabular_configs(self, params, default_params, extra_info):
         """
         Prepare shared configurations for tabular models.
 
@@ -181,7 +175,7 @@ class PytorchTabularTrainer:
         ----------
         params : dict
             Model-specific parameters.
-        outer_params : dict
+        default_params : dict
             Outer configuration parameters.
         extra_info : dict
             Extra information such as column names.
@@ -200,22 +194,22 @@ class PytorchTabularTrainer:
             target=["target"],
             continuous_cols=[i for i in extra_info["num_col_names"] if i != "target"],
             categorical_cols=extra_info["cat_col_names"],
-            num_workers=outer_params.get("num_workers", 4),
+            num_workers=default_params.get("num_workers", 4),
         )
 
         # TrainerConfig setup
         trainer_config = TrainerConfig(
-            auto_lr_find=outer_params.get("auto_lr_find", False),
+            auto_lr_find=default_params.get("auto_lr_find", False),
             batch_size=params.get("batch_size", 32),
-            max_epochs=outer_params.get("max_epochs", 100),
+            max_epochs=default_params.get("max_epochs", 100),
             early_stopping="valid_loss",
             early_stopping_mode="min",
-            early_stopping_patience=outer_params.get("early_stopping_patience", 10),
-            early_stopping_min_delta=outer_params.get("tol", 0.0),
+            early_stopping_patience=default_params.get("early_stopping_patience", 10),
+            early_stopping_min_delta=default_params.get("tol", 0.0),
             checkpoints=None,
             load_best=True,
-            progress_bar=outer_params.get("progress_bar", "simple"),
-            precision=outer_params.get("precision", 32),
+            progress_bar=default_params.get("progress_bar", "simple"),
+            precision=default_params.get("precision", 32),
         )
 
         # Optimizer and Scheduler setup
@@ -236,73 +230,6 @@ class PytorchTabularTrainer:
         )
 
         return data_config, trainer_config, optimizer_config, learning_rate
-
-
-    def train(self, X_train, y_train, params: Dict, extra_info: Dict):
-        """
-        Method to train the TabNet model on training data.
-
-        Parameters
-        ----------
-        X_train : ndarray
-            Training data input.
-        y_train : ndarray
-            Training data labels.
-        params : dict, optional
-            Dictionary of hyperparameters for the model.
-            Default is {"n_d":8, "n_a":8, "n_steps":3, "gamma":1.3, "n_independent":2, "n_shared":2, "lambda_sparse":0, "optimizer_fn":optim.Adam, "optimizer_params":dict(lr=2e-2), "mask_type":"entmax", "scheduler_params":dict(mode="min", patience=5, min_lr=1e-5, factor=0.9), "scheduler_fn":torch.optim.lr_scheduler.ReduceLROnPlateau, "verbose":1}.
-        random_state : int, optional
-            Seed for reproducibility. Default is 42.
-
-        Returns
-        -------
-        model : GATE
-            Trained TabNet model.
-        """
-        # Set up the parameters for the model
-        self.logger.info("Starting training")
-        self.extra_info = extra_info
-        # Split the train data into training and validation sets
-        if (self.problem_type == "regression") and not hasattr(self, "target_range"):
-            self.target_range = [
-                (float(np.min(y_train) * 0.5), float(np.max(y_train) * 1.5))
-            ]
-
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_train,
-            y_train,
-            test_size=params["default_params"]["val_size"],
-            random_state=self.random_state,
-        )
-
-        self.logger.debug(
-            f"Train and val shapes {X_train.shape}, {X_val.shape}, batch size {params['batch_size']}"
-        )
-        # Merge X_train and y_train
-        self.train_df = pd.concat([X_train, y_train], axis=1)
-
-        # Merge X_val and y_val
-        self.validation_df = pd.concat([X_val, y_val], axis=1)
-
-        self._set_loss_function(y_train)
-        self.model = self.prepare_tabular_model(
-            params, params["default_params"], default=self.default
-        )
-
-        self.train_df, self.validation_df = handle_rogue_batch_size(
-            self.train_df, self.validation_df, params["batch_size"]
-        )
-
-        self.model.fit(
-            train=self.train_df,
-            validation=self.validation_df,
-            loss=self.loss_fn,
-            optimizer=params["optimizer_fn"],
-            optimizer_params=params["optimizer_params"],
-            # lr_scheduler=params["scheduler_fn"],
-            # lr_scheduler_params=params["scheduler_params"],
-        )
-        self.logger.debug("Training completed successfully")
 
     def predict(self, X_test, predict_proba=False):
         """

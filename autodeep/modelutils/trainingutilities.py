@@ -122,7 +122,7 @@ def prepare_shared_optimizer_configs(params):
     ----------
     params : dict
         Model-specific parameters.
-    outer_params : dict
+    default_params : dict
         Outer configuration parameters.
     extra_info : dict
         Extra information such as column names.

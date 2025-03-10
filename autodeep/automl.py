@@ -49,7 +49,7 @@ DEFAULT_IGTD_DIR = Path("./IGTD")
 class AutoRunner:
     def __init__(
         self,
-        execution_mode="hyperopt_kfold",
+        execution_mode="hyperopt",
         max_evals=50,
         random_state=42,
         default_models=DEFAULT_MODELS,
@@ -120,7 +120,6 @@ class AutoRunner:
                     .get(model_name, {})
                     .get("data_params", {})
                     .get("encode_categorical"),
-                    num_targets=data_config.get("num_targets", 1),
                     run_igtd=run_igtd,
                     igtd_configs=igtd_configs,
                     igtd_result_base_dir=self.igtd_path,
@@ -131,7 +130,6 @@ class AutoRunner:
                     model_name=model_name,
                     random_state=self.random_state,
                     problem_type=data_config["problem_type"],
-                    num_targets=data_config.get("num_targets", 1),
                 )
                 model.num_workers = 12
 

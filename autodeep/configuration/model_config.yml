@@ -74,7 +74,7 @@ model_configs:
       return_extra_info: True  # for dataloader
 
     default_params:
-      retrain: False
+      
       val_size: 0.15
       early_stopping_rounds: 100
       verbose: false
@@ -96,12 +96,11 @@ model_configs:
     default_params:
       early_stopping_rounds: 10
       verbose: false
-      iterations: 20
-      retrain: False
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.15
       early_stopping_patience: 5
+      batch_size: 128
 
     param_grid:
       batch_size:
@@ -190,7 +189,7 @@ model_configs:
       early_stopping_rounds: 10
       verbose: false
       iterations: 20
-      retrain: False
+      
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.15
@@ -277,7 +276,7 @@ model_configs:
       early_stopping_rounds: 10
       verbose: false
       iterations: 20
-      retrain: False
+      
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.15
@@ -394,7 +393,7 @@ model_configs:
       early_stopping_rounds: 10
       verbose: false
       iterations: 20
-      retrain: False
+      
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.15
@@ -507,7 +506,7 @@ model_configs:
       early_stopping_rounds: 10
       verbose: false
       iterations: 20
-      retrain: False
+      
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.15
@@ -611,7 +610,7 @@ model_configs:
       early_stopping_rounds: 10
       verbose: false
       iterations: 20
-      retrain: False
+      
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.15
@@ -720,7 +719,7 @@ model_configs:
       early_stopping_rounds: 10
       verbose: false
       iterations: 20
-      retrain: False
+      
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.15
@@ -829,7 +828,7 @@ model_configs:
       early_stopping_rounds: 10
       verbose: false
       iterations: 20
-      retrain: False
+      
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.15
@@ -966,7 +965,7 @@ model_configs:
       early_stopping: True
       verbose: false
       iterations: 20
-      retrain: False
+      
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.2
@@ -1034,7 +1033,7 @@ model_configs:
       return_extra_info: True  # for dataloader
 
     default_params:
-      retrain: False
+      
       max_epochs: 1000
       val_size: 0.15
       early_stopping_patience: 5

@@ -9,21 +9,21 @@ from autodeep.modelsdefinition.CommonStructure import PytorchTabularTrainer
 
 class CategoryEmbeddingTrainer(PytorchTabularTrainer):
 
-    def __init__(self, problem_type, num_targets=None):
-        super().__init__(problem_type, num_targets)
+    def __init__(self, problem_type, ):
+        super().__init__(problem_type)
         self.logger.info("Trainer initialized")
         self.model_name = "categoryembedding"
 
-    def prepare_tabular_model(self, params, outer_params, default=False):
+    def prepare_tabular_model(self, params, default_params, default=False):
         print("tabular model params")
         print(params)
         print("tabular model outer params")
-        print(outer_params)
+        print(default_params)
 
         data_config, trainer_config, optimizer_config, learning_rate = (
             self.prepare_shared_tabular_configs(
                 params=params,
-                outer_params=outer_params,
+                default_params=default_params,
                 extra_info=self.extra_info,
             )
         )

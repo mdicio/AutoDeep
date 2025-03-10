@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
 from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
-from sklearn.model_selection import KFold, StratifiedKFold, train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision.models import resnet18, resnet34, resnet50
@@ -26,7 +26,7 @@ class ResNetModel(nn.Module):
     def __init__(
         self,
         problem_type="binary_classification",
-        num_targets=1,
+        num_targets = None,
         depth="resnet18",
         pretrained=True,
     ):
@@ -73,12 +73,12 @@ class ResNetTrainer:
     def __init__(
         self,
         problem_type="binary_classification",
-        num_targets=None,
+        
         pretrained=True,
     ):
         self.model_name = "resnet"
         self.problem_type = problem_type
-        self.num_targets = num_targets
+        
         self.batch_size = 512
         self.pretrained = pretrained
         self.problem_type = problem_type
@@ -131,8 +131,8 @@ class ResNetTrainer:
         self.model = self.best_model
         self.logger.debug("Model loaded successfully")
 
-    def build_model(self, problem_type, num_targets, depth):
-        model = ResNetModel(problem_type, num_targets, depth)
+    def build_model(self, problem_type, depth):
+        model = ResNetModel(problem_type, depth)
         return model
 
     def process_inputs_labels_training(self, inputs, labels):
@@ -315,7 +315,7 @@ class ResNetTrainer:
         torch.save(self.model.state_dict(), save_path)
         print(f"Model saved successfully at {save_path}")
 
-    def _set_optimizer_schedulers(self, params, outer_params: Optional[Dict] = None):
+    def _set_optimizer_schedulers(self, params, default_params: Optional[Dict] = None):
         if params["optimizer_fn"] == torch.optim.Adam:
             self.optimizer = optim.Adam(
                 self.model.parameters(),
@@ -357,96 +357,7 @@ class ResNetTrainer:
                 mode="min",
             )
         return params
-
-    def train(self, X_train, y_train, params: Dict, extra_info: Dict):
-        outer_params = params["default_params"]
-        val_size = outer_params.get("val_size", 0.2)
-        max_epochs = outer_params.get("max_epochs", 3)
-        batch_size = params.get("batch_size", 32)
-        early_stopping = outer_params.get("early_stopping", True)
-        patience = params.get("early_stopping_patience", 5)
-        self.extra_info = extra_info
-
-        # IGTD_ORDERING
-        index_ordering = extra_info["column_ordering"]
-        self.img_rows = extra_info["img_rows"]
-        self.img_columns = extra_info["img_columns"]
-        # Assuming you have a DataFrame named 'df' with the original column order
-        original_columns = X_train.columns
-        # Reindex the DataFrame with the new column order
-        self.new_column_ordering = [original_columns[i] for i in index_ordering]
-        X_train = X_train.reindex(columns=self.new_column_ordering)
-
-        self.num_features = extra_info["num_features"]
-
-        self.model = self.build_model(
-            self.problem_type, self.num_targets, depth=params["resnet_depth"]
-        )
-        params = self._set_optimizer_schedulers(params)
-        self._set_loss_function(y_train)
-
-        self.transformation = transforms.Compose(
-            [
-                transforms.ToTensor(),
-            ]
-        )
-        train_dataset, val_dataset = self._pandas_to_torch_image_datasets(
-            X_train,
-            y_train,
-            self.img_rows,
-            self.img_columns,
-            self.transformation,
-            val_size,
-            batch_size,
-        )
-
-        train_loader, val_loader = self._torch_image_datasets_to_dataloaders(
-            train_dataset, val_dataset, batch_size
-        )
-
-        self.model.to(self.device)
-        self.model.train()
-
-        best_val_loss = float("inf")
-        best_epoch = 0
-        current_patience = 0
-
-        with tqdm(total=max_epochs, desc="Training", unit="epoch", ncols=80) as pbar:
-            for epoch in range(max_epochs):
-                epoch_loss = self.train_step(train_loader)
-
-                if early_stopping and val_size > 0:
-                    val_loss = self.validate_step(val_loader)
-                    self.scheduler.step(val_loss)
-
-                    if val_loss < best_val_loss + self.default_params.get("tol", 0.0):
-                        best_val_loss = val_loss
-                        best_epoch = epoch
-                        current_patience = 0
-
-                        if self.save_path is not None:
-                            torch.save(
-                                self.model.state_dict(), self.save_path + "_checkpt"
-                            )
-                    else:
-                        current_patience += 1
-
-                    print(
-                        f"Epoch [{epoch+1}/{max_epochs}],"
-                        f"Train Loss: {epoch_loss:.4f},"
-                        f"Val Loss: {val_loss:.4f}"
-                    )
-
-                    if current_patience >= patience:
-                        print(f"Early stopping triggered at epoch {epoch+1}")
-                        break
-
-            if self.save_path is not None:
-                print(f"Best model weights saved at epoch {best_epoch+1}")
-                self.model.load_state_dict(torch.load(self.save_path + "_checkpt"))
-
-            pbar.update(1)
-
+    
     def hyperopt_search(
         self,
         X,
@@ -508,6 +419,8 @@ class ResNetTrainer:
 
         self._set_loss_function(y)
         self.num_features = extra_info["num_features"]
+        self.num_targets = len(np.unique(y))
+
 
         self.transformation = transforms.Compose([transforms.ToTensor()])
 
@@ -515,7 +428,6 @@ class ResNetTrainer:
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")
 
-            # ✅ Instead of KFold, we use train-test split
             X_train, X_val, y_train, y_val = train_test_split(
                 X,
                 y,
@@ -694,257 +606,6 @@ class ResNetTrainer:
 
         return best_params, best_score, train_metrics, validation_metrics
 
-    def hyperopt_search_kfold(
-        self,
-        X,
-        y,
-        model_config,
-        metric,
-        eval_metrics,
-        k_value=5,
-        max_evals=16,
-        extra_info=None,
-    ):
-        """
-        Method to perform hyperopt search cross-validation on the TabNet model using input data.
-
-        Parameters
-        ----------
-        X : ndarray
-            Input data for cross-validation.
-        y : ndarray
-            Labels for input data.
-        metric : str, optional
-            Scoring metric to use for cross-validation. Default is 'accuracy'.
-        n_iter : int, optional
-            Maximum number of evaluations of the objective function. Default is 10.
-        random_state : int, optional
-            Seed for reproducibility. Default is 42.
-
-        Returns
-        -------
-        dict
-            Dictionary containing the best hyperparameters and corresponding score.
-        """
-
-        self.default_params = model_config["default_params"]
-        val_size = self.default_params.get("val_size")
-        max_epochs = self.default_params.get("max_epochs", 3)
-        early_stopping = self.default_params.get("early_stopping", True)
-        patience = self.default_params.get("early_stopping_patience", 5)
-        val_size = self.default_params.get("val_size", 0.2)
-
-        self.logger.debug(f"Training on {self.device} for dataset")
-
-        param_grid = model_config["param_grid"]
-
-        space = infer_hyperopt_space_pytorch_custom(param_grid)
-        # IGTD_ORDERING
-        self.extra_info = extra_info
-        index_ordering = extra_info["column_ordering"]
-        self.img_rows = extra_info["img_rows"]
-        self.img_columns = extra_info["img_columns"]
-        original_columns = X.columns
-        # Reindex the DataFrame with the new column order
-        self.new_column_ordering = [original_columns[i] for i in index_ordering]
-        X = X.reindex(columns=self.new_column_ordering)
-
-        self._set_loss_function(y)
-
-        self.num_features = extra_info["num_features"]
-        self.transformation = transforms.Compose(
-            [
-                transforms.ToTensor(),
-            ]
-        )
-
-        # Define the objective function for hyperopt search
-        def objective(params):
-            self.logger.info(f"Training with hyperparameters: {params}")
-            if self.problem_type == "regression":
-                kf = KFold(n_splits=k_value, shuffle=True, random_state=42)
-
-            else:
-                kf = StratifiedKFold(n_splits=k_value, shuffle=True, random_state=42)
-
-            torch_dataset = self.single_pandas_to_torch_image_dataset(
-                X, y, self.img_rows, self.img_columns, self.transformation
-            )
-
-            metric_dict = {}
-
-            for fold, (train_idx, val_idx) in enumerate(kf.split(X, y)):
-
-                train_subsampler = torch.utils.data.SubsetRandomSampler(train_idx)
-                test_subsampler = torch.utils.data.SubsetRandomSampler(val_idx)
-
-                if train_idx.shape[0] % params["batch_size"] == 1:
-                    bs = params["batch_size"] + 1
-                else:
-                    bs = params["batch_size"]
-                train_loader = torch.utils.data.DataLoader(
-                    torch_dataset,
-                    batch_size=bs,
-                    sampler=train_subsampler,
-                    drop_last=False,
-                    num_workers=self.num_workers,
-                    pin_memory=True,
-                )
-                val_loader = torch.utils.data.DataLoader(
-                    torch_dataset,
-                    batch_size=bs,
-                    sampler=test_subsampler,
-                    drop_last=False,
-                    num_workers=self.num_workers,
-                    pin_memory=True,
-                )
-
-                self.model = self.build_model(
-                    self.problem_type, self.num_targets, depth=params["resnet_depth"]
-                )
-                params = self._set_optimizer_schedulers(params)
-                self.model.to(self.device)
-                self.model.train()
-
-                best_val_loss = float("inf")
-                best_epoch = 0
-                current_patience = 0
-                best_model_state_dict = None
-
-                with tqdm(
-                    total=max_epochs, desc="Training", unit="epoch", ncols=80
-                ) as pbar:
-                    for epoch in range(max_epochs):
-                        epoch_loss = self.train_step(train_loader)
-
-                        if early_stopping and val_size > 0:
-                            val_loss = self.validate_step(val_loader)
-                            self.scheduler.step(val_loss)
-
-                            if (
-                                val_loss + self.default_params.get("tol", 0.0)
-                                < best_val_loss
-                            ):
-                                best_val_loss = val_loss
-                                best_epoch = epoch
-                                current_patience = 0
-                                # Save the state dict of the best model
-                                best_model_state_dict = self.model.state_dict()
-                            else:
-                                current_patience += 1
-
-                            print(
-                                f"Epoch [{epoch+1}/{max_epochs}],"
-                                f"Train Loss: {epoch_loss:.4f},"
-                                f"Val Loss: {val_loss:.4f}"
-                            )
-
-                            if current_patience >= patience:
-                                print(f"Early stopping triggered at epoch {epoch+1}")
-                                break
-
-                    pbar.update(1)
-
-                # Load the best model state dict
-                if best_model_state_dict is not None:
-                    self.model.load_state_dict(best_model_state_dict)
-                    print(f"Best model loaded from epoch {best_epoch+1}")
-
-                self.model.eval()
-                y_pred = np.array([])
-                y_true = np.array([])
-                y_prob = np.array([])
-                with torch.no_grad():
-                    for inputs, labels in val_loader:
-                        (
-                            predictions,
-                            labels,
-                            probabilities,
-                        ) = self.process_inputs_labels_prediction(inputs, labels)
-                        y_true = np.append(y_true, labels)
-                        y_pred = np.append(y_pred, predictions)
-                        y_prob = np.append(y_prob, probabilities)
-
-                # Calculate the score using the specified metric
-                self.evaluator.y_true = np.array(y_true).reshape(-1)
-                self.logger.debug(f"y_true, {y_true[:5]}")
-                self.evaluator.y_pred = np.array(y_pred).reshape(-1)
-                self.logger.debug(f"y_pred, {y_pred[:5]}")
-                self.evaluator.y_prob = y_prob
-                self.logger.debug(f"y_prob, {y_prob[:5]}, {y_prob.shape}")
-                self.evaluator.run_metrics = eval_metrics
-
-                # Iterate over the metric names and append values to the dictionary
-                metrics_for_fold = self.evaluator.evaluate_model()
-                for metric_nm, metric_value in metrics_for_fold.items():
-                    if metric_nm not in metric_dict:
-                        metric_dict[metric_nm] = []  # Initialize a list for this metric
-                    metric_dict[metric_nm].append(metric_value)
-
-                self.logger.info(
-                    f"Fold: {fold +1} metrics {metric}: {metric_dict[metric]}"
-                )
-            # average score over the folds
-            score_average = np.average(metric_dict[metric])
-            score_std = np.std(metric_dict[metric])
-
-            self.logger.info(f"Current hyperopt score {metric} = {score_average}")
-
-            self.logger.info(
-                f"CRUCIAL INFO hyperopt FULL METRICS CURRENT {metric_dict}"
-            )
-
-            if self.evaluator.maximize[metric][0]:
-                score_average = -1 * score_average
-
-            # Return the negative score (to minimize)
-            return {
-                "loss": score_average,
-                "params": params,
-                "status": STATUS_OK,
-                "trained_model": self.model,
-                "score_std": score_std,
-                "validation_metrics": metric_dict,
-            }
-
-        # Define the trials object to keep track of the results
-        trials = Trials()
-        self.evaluator = Evaluator(problem_type=self.problem_type)
-        threshold = float(-1.0 * self.evaluator.maximize[metric][1])
-
-        # Run the hyperopt search
-        best = fmin(
-            objective,
-            space=space,
-            algo=tpe.suggest,
-            max_evals=max_evals,
-            trials=trials,
-            rstate=np.random.default_rng(self.random_state),
-            early_stop_fn=lambda x: stop_on_perfect_lossCondition(x, threshold),
-        )
-
-        # Get the best hyperparameters and corresponding score
-        best_params = space_eval(space, best)
-        best_params["default_params"] = self.default_params
-
-        best_trial = trials.best_trial
-
-        best_score = best_trial["result"]["loss"]
-        if self.evaluator.maximize[metric][0]:
-            best_score = -1 * best_score
-        score_std = best_trial["result"]["score_std"]
-        validation_metrics = best_trial["result"]["validation_metrics"]
-
-        self.logger.info(f"CRUCIAL INFO FINAL METRICS : {validation_metrics}")
-        self.best_model = best_trial["result"]["trained_model"]
-        self._load_best_model()
-
-        self.logger.info(f"Best hyperparameters: {best_params}")
-        self.logger.info(
-            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
-        )
-
-        return best_params, best_score, score_std, validation_metrics
 
     def predict(self, X_test, predict_proba=False, batch_size=4096):
         self.model.to(self.device)

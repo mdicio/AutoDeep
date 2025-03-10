@@ -10,7 +10,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.utils import shuffle
 
-from scipy.stats import skew, kurtosis
 from typing import Optional
 from autodeep.modelutils.igtdutilities import table_to_image
 
@@ -189,8 +188,8 @@ class ExtraInfoCreator:
         if num_features > 0:
             extra_info["num_col_mean"] = df[num_cols].mean().mean()  # Mean of means
             extra_info["num_col_std"] = df[num_cols].std().mean()  # Mean of stds
-            extra_info["num_col_skew"] = df[num_cols].apply(skew, nan_policy='omit').mean()  # Mean skewness
-            extra_info["num_col_kurtosis"] = df[num_cols].apply(kurtosis, nan_policy='omit').mean()  # Mean kurtosis
+            # extra_info["num_col_skew"] = df[num_cols].apply(skew, nan_policy='omit').mean()  # Mean skewness
+            # extra_info["num_col_kurtosis"] = df[num_cols].apply(kurtosis, nan_policy='omit').mean()  # Mean kurtosis
 
         # IGTD Processing (Unchanged from your original code)
         igtd_candidate = None
@@ -234,7 +233,7 @@ class DataLoader:
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        num_targets=None,
+        
         data_path="data",
         igtd_path="igtd",
     ):
@@ -244,7 +243,7 @@ class DataLoader:
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
         self.random_state = random_state
-        self.num_targets = num_targets
+        
         self.data_path = data_path
         self.igtd_path = igtd_path
 
@@ -353,14 +352,14 @@ class DynamicDataLoader(DataLoader):
         problem_type,
         target_column="target",
         test_size=0.2,
-        split_col=None,
+        split_col = None,
         train_value=None,
         test_value=None,
         random_state=42,
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        num_targets=1,
+        
         run_igtd=False,
         igtd_configs: Optional[Dict[str, Dict]] = None,
         igtd_result_base_dir: Optional[str] = "IGTD",
@@ -370,14 +369,14 @@ class DynamicDataLoader(DataLoader):
         self.problem_type = problem_type
         self.target_column = target_column
         self.split_col = split_col
-        self.train_value = train_value
         self.test_value = test_value
+        self.train_value = train_value
         self.test_size = test_size
         self.random_state = random_state
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        self.num_targets = num_targets
+        
         self.run_igtd = run_igtd
         self.igtd_configs = igtd_configs
         self.igtd_result_base_dir = igtd_result_base_dir
@@ -393,7 +392,7 @@ class DynamicDataLoader(DataLoader):
                     igtd_configs=self.igtd_configs,
                     base_result_dir=self.igtd_result_base_dir,
                 )
-                if self.igtd_configs
+                if self.run_igtd
                 else None
             ),
         )
@@ -406,12 +405,17 @@ class DynamicDataLoader(DataLoader):
                 f"Target column '{self.target_column}' not found in dataset"
             )
 
-        # find columns with NaN values
-        cols_with_nans = df.columns[df.isna().any()].tolist()
+        df = df.astype({col: 'str' for col in df.select_dtypes('bool').columns})
 
-        # fill NaN values in those columns with median
-        for col in cols_with_nans:
-            df[col] = df[col].fillna(df[col].median())
+        # Identify numeric and categorical columns
+        numeric_cols = df.select_dtypes(include=['number']).columns
+        categorical_cols = df.select_dtypes(exclude=['number']).columns
+
+        # Fill missing values: 
+        # - Numeric columns: fill with median
+        # - Categorical columns: fill with mode (most frequent value)
+        df[numeric_cols] = df[numeric_cols].apply(lambda col: col.fillna(col.median()))
+        df[categorical_cols] = df[categorical_cols].apply(lambda col: col.fillna(col.mode()[0] if not col.mode().empty else 'Unknown'))
 
         # Split into features and target
         X = df.drop(columns=[self.target_column])
@@ -423,7 +427,7 @@ class DynamicDataLoader(DataLoader):
         if self.split_col and self.split_col in df.columns:
             if self.train_value is None or self.test_value is None:
                 raise ValueError(
-                    "When using split_col, you must specify train_value and test_value."
+                    "When using split_col, you must specify the train_value and test_value."
                 )
             unique_values = df[self.split_col].unique()
             if set(unique_values) != {self.train_value, self.test_value}:
@@ -468,7 +472,7 @@ class KaggleAgeConditionsLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        num_targets=1,
+        
     ):
 
         self.target_column = target_column
@@ -477,7 +481,7 @@ class KaggleAgeConditionsLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        self.num_targets = num_targets
+        
         self.filename = (
             f"{self.data_path}kaggle/icr-identify-age-related-conditions/train.csv"
         )
@@ -529,7 +533,7 @@ class KaggleAgeConditionsLoader(DataLoader):
                 img_columns=7,
                 igtd_path=f"{self.igtd_path}results/ageconditions_igtd_Euclidean_Euclidean/abs/_index.txt",
             )
-            extra_info["num_targets"] = self.num_targets
+            
 
         return X_train, X_test, y_train, y_test, extra_info
 
@@ -543,7 +547,7 @@ class BufixDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        num_targets=1,
+        
     ):
 
         self.target_column = target_column
@@ -552,7 +556,7 @@ class BufixDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        self.num_targets = num_targets
+        
         self.filename = f"{self.data_path}/buf/sortedbulk_data-1.csv"
 
     def load_data(self):
@@ -605,7 +609,7 @@ class TitanicDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        num_targets=1,
+        
     ):
 
         self.target_column = target_column
@@ -614,7 +618,7 @@ class TitanicDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        self.num_targets = num_targets
+        
 
     def load_data(self):
         # Load the Titanic dataset from seaborn
@@ -682,7 +686,7 @@ class BreastCancerDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        num_targets=1,
+        
     ):
 
         self.target_column = target_column
@@ -691,7 +695,7 @@ class BreastCancerDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        self.num_targets = num_targets
+        
 
     def load_data(self):
         # Load the Breast Cancer Wisconsin (Diagnostic) dataset from sklearn
@@ -740,7 +744,7 @@ class CreditDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        num_targets=1,
+        
     ):
 
         self.target_column = target_column
@@ -749,7 +753,7 @@ class CreditDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        self.num_targets = num_targets
+        
         self.filename = f"{self.data_path}creditcard/creditcard.csv"
 
     def load_data(self):
@@ -803,7 +807,6 @@ class IrisDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        num_targets=3,
     ):
 
         self.target_column = target_column
@@ -812,7 +815,7 @@ class IrisDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        self.num_targets = num_targets
+        
 
     def load_data(self):
         # Load the Iris dataset from scikit-learn
@@ -862,7 +865,7 @@ class CaliforniaHousingDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        num_targets=1,
+        
     ):
 
         self.target_column = target_column
@@ -871,7 +874,7 @@ class CaliforniaHousingDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        self.num_targets = num_targets
+        
 
     def load_data(self):
         # Load the California Housing Prices dataset from scikit-learn
@@ -922,7 +925,7 @@ class AdultDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        num_targets=1,
+        
     ):
 
         self.target_column = "target"
@@ -931,7 +934,7 @@ class AdultDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        self.num_targets = num_targets
+        
 
     def load_data(self):
         # Load the Adult dataset from UCI Machine Learning Repository
@@ -1010,7 +1013,7 @@ class CoverTypeDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        num_targets=1,
+        
     ):
 
         self.target_column = "target"
@@ -1019,7 +1022,7 @@ class CoverTypeDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        self.num_targets = num_targets
+        
         self.filename = f"{self.data_path}/covertype/covtype.data.gz"
 
     def load_data(self):
@@ -1072,7 +1075,7 @@ class HelocDataLoader(DataLoader):
         normalize_features="mean_std",
         return_extra_info=False,
         encode_categorical=False,
-        num_targets=1,
+        
     ):
 
         self.target_column = "target"
@@ -1081,7 +1084,7 @@ class HelocDataLoader(DataLoader):
         self.normalize_features = normalize_features
         self.return_extra_info = return_extra_info
         self.encode_categorical = encode_categorical
-        self.num_targets = num_targets
+        
         self.filename = f"{self.data_path}heloc/heloc_dataset_v1.csv"
 
     def load_data(self):
