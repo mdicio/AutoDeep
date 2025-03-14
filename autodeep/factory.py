@@ -43,7 +43,7 @@ def seed_everything(seed=4200):
         type: Description
     """
     random.seed(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
@@ -66,34 +66,34 @@ def create_model(model_name, problem_type, random_state=42):
     """
     seed_everything(random_state)
     mname = model_name.lower().strip()
-    if mname == 'xgb':
+    if mname == "xgb":
         return XGBoostTrainer(problem_type)
-    elif mname == 'resnet':
+    elif mname == "resnet":
         return ResNetTrainer(problem_type=problem_type)
-    elif mname == 'catboost':
+    elif mname == "catboost":
         return CatBoostTrainer(problem_type)
-    elif mname == 'mlp':
+    elif mname == "mlp":
         return MLP(problem_type)
-    elif mname == 'tabnet':
+    elif mname == "tabnet":
         return TabNetTrainer(problem_type)
-    elif mname == 'categoryembedding':
+    elif mname == "categoryembedding":
         return CategoryEmbeddingTrainer(problem_type)
-    elif mname == 'fttransformer':
+    elif mname == "fttransformer":
         return FTTransformerTrainer(problem_type)
-    elif mname == 'gandalf':
+    elif mname == "gandalf":
         return GandalfTrainer(problem_type)
-    elif mname == 'node':
+    elif mname == "node":
         return NodeTrainer(problem_type)
-    elif mname == 'gate':
+    elif mname == "gate":
         return GateTrainer(problem_type=problem_type)
-    elif mname == 'tabtransformer':
+    elif mname == "tabtransformer":
         return TabTransformerTrainer(problem_type=problem_type)
-    elif mname == 'autoint':
+    elif mname == "autoint":
         return AutoIntTrainer(problem_type=problem_type)
-    elif mname == 's1dcnn':
+    elif mname == "s1dcnn":
         return SoftOrdering1DCNN(problem_type=problem_type)
     else:
-        raise ValueError(f'Invalid model: {model_name}')
+        raise ValueError(f"Invalid model: {model_name}")
 
 
 def create_dynamic_data_loader(
@@ -150,7 +150,7 @@ def create_dynamic_data_loader(
     Returns:
         type: Description
     """
-    print(f'Using dynamic loader for dataset: {dataset_path}')
+    print(f"Using dynamic loader for dataset: {dataset_path}")
     return DynamicDataLoader(
         dataset_name,
         dataset_path,
@@ -183,25 +183,25 @@ def create_data_loader(dataset_name, test_size=0.2):
         type: Description
     """
     dname = dataset_name.lower().strip()
-    if dname == 'iris':
+    if dname == "iris":
         return IrisDataLoader(test_size=test_size)
-    elif dname == 'creditcard':
+    elif dname == "creditcard":
         return CreditDataLoader(test_size=test_size)
-    elif dname == 'bufix':
+    elif dname == "bufix":
         return BufixDataLoader(test_size=test_size)
-    elif dname == 'housing':
+    elif dname == "housing":
         return CaliforniaHousingDataLoader(test_size=test_size)
-    elif dname == 'breastcancer':
+    elif dname == "breastcancer":
         return BreastCancerDataLoader(test_size=test_size)
-    elif dname == 'titanic':
+    elif dname == "titanic":
         return TitanicDataLoader(test_size=test_size)
-    elif dname == 'ageconditions':
+    elif dname == "ageconditions":
         return KaggleAgeConditionsLoader(test_size=test_size)
-    elif dname == 'adult':
+    elif dname == "adult":
         return AdultDataLoader(test_size=test_size)
-    elif dname == 'covertype':
+    elif dname == "covertype":
         return CoverTypeDataLoader(test_size=test_size)
-    elif dname == 'heloc':
+    elif dname == "heloc":
         return HelocDataLoader(test_size=test_size)
     else:
-        raise ValueError(f'Invalid dataset: {dataset_name}')
+        raise ValueError(f"Invalid dataset: {dataset_name}")

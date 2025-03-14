@@ -1,4 +1,40 @@
 Skipping .ipynb files as Jupyter dependencies are not installed.
 You can fix this by running ``pip install "black[jupyter]"``
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/CategoryEmbeddingModel.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/AutomaticFeatureInteractionModel.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/FTTransformerModel.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/GANDALF.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/GATE.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/NodeModel.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/TabNetModel.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/factory.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/TabTransformerModel.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/automl.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/CatBoostModel.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/evaluation/generalevaluator.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/automl.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/MLP.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_adult.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_ageconditions.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/XGBoostTrainer.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_covertype.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_breastcancer.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_creditcard.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_heloc.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_housing.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_diabetes.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_iris.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/outputhandler/outputwriter.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_titanic.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/CommonStructure.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/IGTD.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/outputhandler/resultanalyzer.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/SoftOrdering1DCNN.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/ResNetModel.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelutils/trainingutilities.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelutils/igtdutilities.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/dataloaders/dataloader.py
+reformatted /home/boom/Desktop/repos/AutoDeep/autodeep/modelutils/igtd_models.py
+
 All done! ✨ 🍰 ✨
-41 files left unchanged.
+35 files reformatted, 6 files left unchanged.

@@ -45,6 +45,5 @@ repos:
         name: black
         args:
           - "--line-length=150"
-          - "--skip-string-normalization"  # Avoid normalizing string quotes
         exclude: "^(tests|docs)/.*"  # Exclude test and docs directories
         files: ^autodeep/.*\.py$  # Only check Python files

@@ -22,8 +22,8 @@ class AutoIntTrainer(PytorchTabularTrainer):
             type: Description
         """
         super().__init__(problem_type)
-        self.logger.info('Trainer initialized')
-        self.model_name = 'autoint'
+        self.logger.info("Trainer initialized")
+        self.model_name = "autoint"
 
     def prepare_tabular_model(self, params, default_params, default=False):
         """prepare_tabular_model
@@ -41,25 +41,35 @@ class AutoIntTrainer(PytorchTabularTrainer):
         Returns:
             type: Description
         """
-        print('tabular model params')
+        print("tabular model params")
         print(params)
-        print('tabular model outer params')
+        print("tabular model outer params")
         print(default_params)
-        data_config, trainer_config, optimizer_config, learning_rate = self.prepare_shared_tabular_configs(
-            params=params, default_params=default_params, extra_info=self.extra_info
+        data_config, trainer_config, optimizer_config, learning_rate = (
+            self.prepare_shared_tabular_configs(
+                params=params, default_params=default_params, extra_info=self.extra_info
+            )
         )
-        input_embed_dim_multiplier = params.get('attn_embed_dim_multiplier', None)
-        num_heads = params.get('num_heads', None)
+        input_embed_dim_multiplier = params.get("attn_embed_dim_multiplier", None)
+        num_heads = params.get("num_heads", None)
         if num_heads is not None and input_embed_dim_multiplier is not None:
-            params['attn_embed_dim'] = input_embed_dim_multiplier * num_heads
+            params["attn_embed_dim"] = input_embed_dim_multiplier * num_heads
         valid_params = inspect.signature(AutoIntConfig).parameters
-        compatible_params = {param: value for param, value in params.items() if param in valid_params}
-        invalid_params = {param: value for param, value in params.items() if param not in valid_params}
-        self.logger.warning(f'You are passing some invalid parameters to the model {invalid_params}')
-        if self.task == 'regression':
-            compatible_params['target_range'] = self.target_range
-        self.logger.debug(f'compatible parameters: {compatible_params}')
-        model_config = AutoIntConfig(task=self.task, learning_rate=learning_rate, **compatible_params)
+        compatible_params = {
+            param: value for param, value in params.items() if param in valid_params
+        }
+        invalid_params = {
+            param: value for param, value in params.items() if param not in valid_params
+        }
+        self.logger.warning(
+            f"You are passing some invalid parameters to the model {invalid_params}"
+        )
+        if self.task == "regression":
+            compatible_params["target_range"] = self.target_range
+        self.logger.debug(f"compatible parameters: {compatible_params}")
+        model_config = AutoIntConfig(
+            task=self.task, learning_rate=learning_rate, **compatible_params
+        )
         if default:
             model_config = AutoIntConfig(task=self.task)
             optimizer_config = OptimizerConfig()
@@ -68,6 +78,9 @@ class AutoIntTrainer(PytorchTabularTrainer):
         print(optimizer_config)
         print(trainer_config)
         tabular_model = TabularModel(
-            data_config=data_config, model_config=model_config, optimizer_config=optimizer_config, trainer_config=trainer_config
+            data_config=data_config,
+            model_config=model_config,
+            optimizer_config=optimizer_config,
+            trainer_config=trainer_config,
         )
         return tabular_model

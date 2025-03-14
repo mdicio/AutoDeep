@@ -33,7 +33,7 @@ class OutputWriter:
             type: Description
         """
         if not os.path.exists(self.filename) or os.path.getsize(self.filename) == 0:
-            with open(self.filename, 'w', newline='') as f:
+            with open(self.filename, "w", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=self.fields)
                 writer.writeheader()
 
@@ -47,7 +47,7 @@ class OutputWriter:
         Returns:
             type: Description
         """
-        with open(self.filename, 'a', newline='') as f:
+        with open(self.filename, "a", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=self.fields)
             row = {}
             for field in self.fields:
