@@ -49,9 +49,7 @@ class IGTDPreprocessor:
             ch.setFormatter(formatter)
             self.logger.addHandler(ch)
 
-    def run(
-        self, X: pd.DataFrame, base_result_dir: str, ordering_configs: Dict[str, Dict]
-    ) -> Dict[str, str]:
+    def run(self, X: pd.DataFrame, base_result_dir: str, ordering_configs: Dict[str, Dict]) -> Dict[str, str]:
         """
         Run the IGTD algorithm on the provided DataFrame for each ordering configuration.
 
@@ -73,9 +71,7 @@ class IGTDPreprocessor:
             # Construct a result directory for this configuration
             result_dir = os.path.join(base_result_dir, f"{config_name}")
             os.makedirs(result_dir, exist_ok=True)
-            self.logger.info(
-                f"Running IGTD ordering for config '{config_name}' in: {result_dir}"
-            )
+            self.logger.info(f"Running IGTD ordering for config '{config_name}' in: {result_dir}")
 
             # Call the table_to_image function with the given parameters.
             # Note: The IGTD function is assumed to save output to result_dir.
@@ -102,9 +98,9 @@ class IGTDPreprocessor:
 # Example integration within a custom DataLoader
 # =============================================================================
 
-from dataloaders.dataloader import (
+from dataloaders.dataloader import (  # Assume this is your base DataLoader class
     DataLoader,
-)  # Assume this is your base DataLoader class
+)
 from sklearn.model_selection import train_test_split
 
 
@@ -150,9 +146,7 @@ class DynamicDataLoader(DataLoader):
         df = pd.read_csv(self.dataset_path)
 
         if self.target_column not in df.columns:
-            raise ValueError(
-                f"Target column '{self.target_column}' not found in dataset"
-            )
+            raise ValueError(f"Target column '{self.target_column}' not found in dataset")
 
         # Split into features and target
         X = df.drop(columns=[self.target_column])
@@ -165,9 +159,7 @@ class DynamicDataLoader(DataLoader):
         # Splitting strategy
         if self.split_col and self.split_col in df.columns:
             if self.train_value is None or self.test_value is None:
-                raise ValueError(
-                    "When using split_col, you must specify train_value and test_value."
-                )
+                raise ValueError("When using split_col, you must specify train_value and test_value.")
             train_mask = df[self.split_col] == self.train_value
             test_mask = df[self.split_col] == self.test_value
             X_train, X_test = X[train_mask], X[test_mask]
@@ -183,20 +175,14 @@ class DynamicDataLoader(DataLoader):
 
         # Normalize features if requested
         if self.normalize_features:
-            X_train, X_test = self.scale_features(
-                X_train, X_test, mode=self.normalize_features
-            )
+            X_train, X_test = self.scale_features(X_train, X_test, mode=self.normalize_features)
 
         # If an IGTD preprocessor is provided, run the transformation on X_train
         igtd_results = None
         if self.igtd_preprocessor is not None and self.igtd_configs is not None:
             if not self.igtd_result_base_dir:
-                raise ValueError(
-                    "igtd_result_base_dir must be provided if using the IGTD preprocessor."
-                )
-            igtd_results = self.igtd_preprocessor.run(
-                X_train, self.igtd_result_base_dir, self.igtd_configs
-            )
+                raise ValueError("igtd_result_base_dir must be provided if using the IGTD preprocessor.")
+            igtd_results = self.igtd_preprocessor.run(X_train, self.igtd_result_base_dir, self.igtd_configs)
 
         # Optionally return extra info (could include IGTD result locations)
         extra_info = None
@@ -260,9 +246,9 @@ from typing import Dict, Optional
 
 import numpy as np
 import pandas as pd
-from dataloaders.dataloader import (
+from dataloaders.dataloader import (  # Assume this is your base DataLoader class
     DataLoader,
-)  # Assume this is your base DataLoader class
+)
 from Scripts.IGTD_Functions import table_to_image
 from sklearn.model_selection import train_test_split
 
@@ -311,9 +297,7 @@ class IGTDPreprocessor:
             ch.setFormatter(formatter)
             self.logger.addHandler(ch)
 
-    def run(
-        self, X: pd.DataFrame, base_result_dir: str, ordering_configs: Dict[str, Dict]
-    ) -> Dict[str, str]:
+    def run(self, X: pd.DataFrame, base_result_dir: str, ordering_configs: Dict[str, Dict]) -> Dict[str, str]:
         """
         Run the IGTD algorithm on the provided DataFrame for each ordering configuration.
 
@@ -333,13 +317,9 @@ class IGTDPreprocessor:
         result_dirs = {}
         for config_name, config in ordering_configs.items():
             # Construct a result directory for this configuration
-            result_dir = os.path.join(
-                base_result_dir, self.dataset_name, f"{config_name}"
-            )
+            result_dir = os.path.join(base_result_dir, self.dataset_name, f"{config_name}")
             os.makedirs(result_dir, exist_ok=True)
-            self.logger.info(
-                f"Running IGTD ordering for config '{config_name}' in: {result_dir}"
-            )
+            self.logger.info(f"Running IGTD ordering for config '{config_name}' in: {result_dir}")
 
             # Call the table_to_image function with the given parameters.
             # Note: The IGTD function is assumed to save its output to result_dir.
@@ -413,9 +393,7 @@ class DynamicDataLoader(DataLoader):
         df = pd.read_csv(self.dataset_path)
 
         if self.target_column not in df.columns:
-            raise ValueError(
-                f"Target column '{self.target_column}' not found in dataset"
-            )
+            raise ValueError(f"Target column '{self.target_column}' not found in dataset")
 
         # Split into features and target
         X = df.drop(columns=[self.target_column])
@@ -428,9 +406,7 @@ class DynamicDataLoader(DataLoader):
         # Splitting strategy
         if self.split_col and self.split_col in df.columns:
             if self.train_value is None or self.test_value is None:
-                raise ValueError(
-                    "When using split_col, you must specify train_value and test_value."
-                )
+                raise ValueError("When using split_col, you must specify train_value and test_value.")
             train_mask = df[self.split_col] == self.train_value
             test_mask = df[self.split_col] == self.test_value
             X_train, X_test = X[train_mask], X[test_mask]
@@ -446,20 +422,14 @@ class DynamicDataLoader(DataLoader):
 
         # Normalize features if requested
         if self.normalize_features:
-            X_train, X_test = self.scale_features(
-                X_train, X_test, mode=self.normalize_features
-            )
+            X_train, X_test = self.scale_features(X_train, X_test, mode=self.normalize_features)
 
         # Run the IGTD transformation on the training data if a preprocessor is provided.
         igtd_results = None
         if self.igtd_preprocessor is not None and self.igtd_configs is not None:
             if not self.igtd_result_base_dir:
-                raise ValueError(
-                    "igtd_result_base_dir must be provided if using the IGTD preprocessor."
-                )
-            igtd_results = self.igtd_preprocessor.run(
-                X_train, self.igtd_result_base_dir, self.igtd_configs
-            )
+                raise ValueError("igtd_result_base_dir must be provided if using the IGTD preprocessor.")
+            igtd_results = self.igtd_preprocessor.run(X_train, self.igtd_result_base_dir, self.igtd_configs)
             self.logger.info(f"IGTD results: {igtd_results}")
 
         # Optionally return extra info
@@ -476,9 +446,7 @@ class DynamicDataLoader(DataLoader):
                 img_rows = self.igtd_preprocessor.img_rows
                 img_columns = self.igtd_preprocessor.img_columns
 
-            extra_info = self.create_extra_info(
-                df, igtd_path=igtd_path, img_rows=img_rows, img_columns=img_columns
-            )
+            extra_info = self.create_extra_info(df, igtd_path=igtd_path, img_rows=img_rows, img_columns=img_columns)
 
         return X_train, X_test, y_train, y_test, extra_info
 
@@ -514,9 +482,7 @@ class DynamicDataLoader(DataLoader):
                 # Read the last line from the file and convert it into a list of integers
                 lines = f.readlines()
                 if lines:
-                    extra_info["column_ordering"] = list(
-                        map(int, lines[-1].strip().split())
-                    )
+                    extra_info["column_ordering"] = list(map(int, lines[-1].strip().split()))
             extra_info["img_rows"] = img_rows
             extra_info["img_columns"] = img_columns
 

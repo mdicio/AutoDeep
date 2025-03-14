@@ -1,76 +1,173 @@
-# WTabRun
+# AutoDeep
 
 ## Description
 
-This is a personal project which aims to expand the current literature of benchmarking algorithm's performance on tabular datasets. The project is in an Alpha development state.
-The goal here is for a user to be able to easily test multiple tabular data architectures on a variety of datasets with an easy to use api for training with hyperparameter optimization and evaluation.
-If you do find this interesting or useful please star this repo and give me any tips on how to make it better, collaboration is highly appreciated and I think this repo could reach its full potential and who knows, maybe even help dethrone XGB or CatBoost from their long lasting reigns in the tabular data domain (or maybe not).
+AutoDeep is a flexible and easy-to-use API for automating machine learning experiments (AutoML) on tabular datasets. It facilitates testing various deep learning models as well as tree based models to compare their performance on multiple datasets with hyperparameter optimization and evaluation. By using the AutoRunner class, you can quickly train and evaluate models like XGBoost, CatBoost, MLP, ResNet, and more on tabular data.
 
-## Current State and Future Developments
+The goal of this project is to provide an easy interface for training, hyperparameter tuning, and evaluating models, so researchers and developers can quickly benchmark different models on their datasets.
 
-The state of the repository is in its development phase and right now it is surely not optimally built to easily accomodate everyone's needs. Admittedly in this initial state the repository is still usable but needs to be tweaked for a user to be able to run any tests. In Future developments the functionalities will be heavily expanded and made more accessible.
+## Features
 
+- **Supports multiple machine learning models**: Includes models like XGBoost, CatBoost, MLP, ResNet, and more.
+- **Hyperparameter optimization**: Automatically tunes hyperparameters using Bayesian Optimizatoin.
+- **Data configuration**: Allows custom dataset configurations for easy experimentation.
+- **Output handling**: Saves the results of experiments, including evaluation metrics, in CSV format.
+- **Easy integration**: Simple to configure and extend with additional models or datasets.
+
+## Installation
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/yourusername/AutoRunner.git
+cd AutoRunner
+```
+
+Install the dependencies:
+
+pip install -r requirements.txt
+
+Configure your experiment by editing the data_config dictionary in the code or create your own configuration.
 
 ## How to Use
+To run an experiment, follow these steps:
 
-To use this repository for your own experiments, follow these steps:
+### 1. Prepare Data Configuration
+Define the datasets you want to run experiments on in the data_config dictionary. Each dataset should include:
 
-Clone the repository to your local machine.
+dataset_path: Path to the dataset file (CSV).
+target_col: Column name of the target variable.
+problem_type: Type of machine learning problem (e.g., binary_classification, multiclass_classification, regression).
+test_size: Proportion of data to use for testing.
+split_col: Alternatively, provide a column where you have already split the data.
+metric: Metric to evaluate the model's performance for optimization(e.g., accuracy, rmse, roc_auc).
+eval_metrics: List of evaluation metrics to keep track of(e.g., accuracy, f1_score).
 
-run pip install -r requirements.txt 
+#### Example configuration:
 
-Configure your experiment by editing the experiment_config.yml file in the configuration directory. You can specify which models and datasets to include, as well as various hyperparameters and execution modes. In this Beta version of the project, only 'iris', 'breastcancer', and 'titanic' are available options. Adding your own dataset is possible and relatively easy to do, you will need to create a dataloader class in dataloaders/dataloader.py if you wish to use the train_test split as a training method or dataloaders/fulldataloader.py if you wish to use the k-fold method
+```python
+DATA_CONFIG = {
+"regression_3": {
+    "dataset_path": "/path/to/dataset.csv",
+    "target_col": "target",
+    "problem_type": "regression",
+    "test_size": 0.2,
+    "metric": "rmse",
+    "eval_metrics": ["mse", "rmse"],
+},
+}
+```
+### 2. Define Models to Use
 
-Open the notebooks/Add_run_elements.ipynb file and create templates with the given functions or otherwise to create an experiment_runs.yml file. This file will dictate the whole set of model and dataset executions you want to run. Here you can effectively see the search spaces used for each model and eventually modify them. All elements in the parameter grid should be lists containing a minimum and maximum value for the hyperparameter you want to search on. These values will then be internally used and fed to hyperopt to create the search space.
+You can specify which models to include in your experiments by setting default_models. Supported models are:
 
-Run the runner.py script or runner_k.py, It will loop over the specified experiments, load data, train models, and record evaluation results.
+"xgb"
+"catboost"
+"mlp"
+"resnet"
+"s1dcnn"
+"tabnet"
+"autoint"
+"categoryembedding"
+"fttransformer"
+"tabtransformer"
+"gandalf"
+"node"
+"gate"
 
-The evaluation results will be saved in CSV files in the output directory.
+Example:
 
-You can also find the trained models in the output/modelsaves directory.
+```python
+DEFAULT_MODELS = ["xgb", "catboost", "mlp"]
+```
 
+### 3. Initialize AutoRunner
+
+Create an instance of AutoRunner with the necessary configurations. You can set the execution_mode (e.g., "hyperopt") for hyperparameter optimization and specify the number of evaluations for tuning.
+
+Example initialization:
+
+```python
+runner = AutoRunner(
+    data_config=DATA_CONFIG,
+    output_folder="/path/to/output/folder", #where you want experiment outputs and logs to be saved
+    output_filename = "experiments", # the name of the file with the summary of experiment results
+    default_models=DEFAULT_MODELS,
+    random_state=42,
+    execution_mode="hyperopt",  # Hyperparameter optimization mode
+    max_evals=50,  # Max number of evaluations for hyperparameter search
+)
+```
+
+### 4. Run the Experiment
+
+Run the experiment by calling runner.run().
+
+```python
+runner.run()
+```
+
+This will start the training and evaluation of models on the specified datasets. The results will be saved in the output folder.
+
+### 5. View Results
+
+After the experiment finishes, the results are saved in a CSV format in the `output_folder`, including performance metrics (train, validation, test) and hyperparameters.
+
+#### Available Functions:
+
+1. 
+**`view_results(dataset_name=None, model_name=None)`**:
+- Displays all key columns (e.g., `run_id`, `dataset`, `best_score`), performance metrics, and hyperparameters.
+- Filters by `dataset_name` and `model_name`.
+
+**Example**:
+
+```python
+results = analyzer.view_results(dataset_name="multiclass_dataset", model_name="node")
+```
+
+2. 
+
+**`view_performance(dataset_name=None, model_name=None)`**:
+- Displays performance columns (e.g., accuracy, best score).
+- Filters by dataset_name and model_name.
+**Example**:
+```python
+results = analyzer.view_performance(dataset_name="housing", model_name="resnet")
+```
+
+3. 
+
+**`view_parameters(dataset_name=None, model_name=None)`**:
+- Displays hyperparameter columns (e.g., batch_size, learning_rate).
+- Filters by dataset_name and model_name.
+**Example**:
+```python
+results = analyzer.view_performance(dataset_name="housing", model_name="resnet")
+```
+
+#### Example Result Table
+
+![Example Table](images/results_example_table.png)
 
 ## Repository Structure
-The repository is structured as follows:
+The repository is organized as follows:
 
-## Run Tests on Currently Developed Models
-### Files that can be modified
-
-#### configuration/experiment_config.yml: 
-This file contains configuration YAML format. These files specify various parameters for the evaluation process, including model configurations, dataset configurations, and execution modes. 
-
-random_state: This sets the random seed for reproducibility of the experiments.
-
-include_models: This is a list of machine learning models to include in the experiments. Each model is identified by its name. Models such as XGBoost, CatBoost, MLP, TabNet, GATE, and others are included.
-
-include_datasets: This is a list of datasets to include in the experiments. Each dataset is identified by its name, such as "iris," "titanic," "breastcancer," and others.
-
-model_configs: This section specifies the configuration settings for each machine learning model included in the experiments. For each model, you can set parameters like execution_mode, normalize_features, encode_categorical, return_extra_info, and retrain. These parameters control how the model will be trained and evaluated.
-
-dataset_configs: This section specifies the configuration settings for each dataset included in the experiments. For each dataset, you can set parameters like test_size, problem_type, and eval_metrics. These parameters define how the dataset will be split, the type of problem (e.g., binary classification, multiclass classification, regression), and the evaluation metrics to use.
-
-#### notebooks/Add_run_elements.ipynb: 
-
-This file is used to set the hyperparameter search grids for the experiments.
-
-
-#### Files Do Not Touch
-output: This directory is used to store the output of the evaluation process, including trained models and evaluation result CSV files.
-
-runner.py: This is the main Python script that orchestrates the training and evaluation process in the train_test split mode. It reads configuration files, loads data, trains models, and records evaluation results.
-
-runner_k.py: This is the main Python script that orchestrates the training and evaluation process in the k-fold mode. It reads configuration files, loads data, trains models, and records evaluation results.
-
-evaluation: This directory contains code related to the evaluation of machine learning models. The main evaluation logic can be found in the generalevaluator.py file.
-
-outputhandler: This directory contains code for handling the output of the evaluation process. The outputwriter.py file is responsible for writing the evaluation results to a CSV file.
-
-factory: This module contains code for creating data loaders and models. The create_full_data_loader and create_model functions are used to instantiate data loaders and models, respectively.
-
+autodeep/ – Core library containing models, data loaders, and evaluation code.
+autodeep/examples/ – Example scripts for running experiments.
+autodeep/configuration/ – Configuration files for model and dataset settings.
 
 ## License
-If you do use this repo in any of your works please cite the repo. 
+This project is licensed under the MIT License. See the LICENSE file for details.
 
-# Acknowledgments
-The library https://github.com/manujosephv/pytorch_tabular is essential to this project and I can say I have built some functionalities on top of it to automate hyperparameter search, evaluation on multiple datasets and models and I hope this could be useful to someone. All neural network architectures are developed in torch with the exception of the simple MLP developed with sklearn. XGBoost and CatBoost are also used.
-Hyperopt was used for hyperparameter optimization.
+## Acknowledgments
+
+This library builds on top of several popular open-source projects, including:
+
+PyTorch Tabular
+Hyperopt
+Torch (Obviously)
+
+Special thanks to PyTorch tabular which provided a very intuitive API for deep learning models on tabular data. If the owner ever sees this I would be honoured to try and integrate some of the AutoDeep functionalities in the project.
+
+Contributions and suggestions for improvements are welcome. If you find this project useful, feel free to give it a star!

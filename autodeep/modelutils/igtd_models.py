@@ -123,23 +123,15 @@ def get_data_for_cross_validation(res, ccl, drug, sampleID):
     train = {}
     train["data"] = trainData
     train["label"] = trainLabel
-    train["sample"] = (
-        res.iloc[sampleID["trainID"], :].CCL
-        + "|"
-        + res.iloc[sampleID["trainID"], :].Drug
-    )
+    train["sample"] = res.iloc[sampleID["trainID"], :].CCL + "|" + res.iloc[sampleID["trainID"], :].Drug
     val = {}
     val["data"] = valData
     val["label"] = valLabel
-    val["sample"] = (
-        res.iloc[sampleID["valID"], :].CCL + "|" + res.iloc[sampleID["valID"], :].Drug
-    )
+    val["sample"] = res.iloc[sampleID["valID"], :].CCL + "|" + res.iloc[sampleID["valID"], :].Drug
     test = {}
     test["data"] = testData
     test["label"] = testLabel
-    test["sample"] = (
-        res.iloc[sampleID["testID"], :].CCL + "|" + res.iloc[sampleID["testID"], :].Drug
-    )
+    test["sample"] = res.iloc[sampleID["testID"], :].CCL + "|" + res.iloc[sampleID["testID"], :].Drug
 
     return train, val, test
 
@@ -234,16 +226,8 @@ class CNN2D_Regressor:
             )
             input.append(in_id)
             for j in range(num_kernel_size):
-                min_row_size = (
-                    self.params["pool_size"][j][0] * 2
-                    + self.params["kernel_size"][j][0]
-                    - 1
-                )
-                min_col_size = (
-                    self.params["pool_size"][j][1] * 2
-                    + self.params["kernel_size"][j][1]
-                    - 1
-                )
+                min_row_size = self.params["pool_size"][j][0] * 2 + self.params["kernel_size"][j][0] - 1
+                min_col_size = self.params["pool_size"][j][1] * 2 + self.params["kernel_size"][j][1] - 1
                 for i in range(num_conv_layer[j]):
                     if i == 0:
                         d = Conv2D(
@@ -252,12 +236,7 @@ class CNN2D_Regressor:
                             strides=self.params["strides"][j],
                             padding="valid",
                             data_format="channels_last",
-                            name="Conv2D_"
-                            + str(i)
-                            + "_Kernel_"
-                            + str(j)
-                            + "_Input_"
-                            + str(input_id),
+                            name="Conv2D_" + str(i) + "_Kernel_" + str(j) + "_Input_" + str(input_id),
                         )(in_id)
                     else:
                         d = Conv2D(
@@ -266,41 +245,19 @@ class CNN2D_Regressor:
                             strides=self.params["strides"][j],
                             padding="valid",
                             data_format="channels_last",
-                            name="Conv2D_"
-                            + str(i)
-                            + "_Kernel_"
-                            + str(j)
-                            + "_Input_"
-                            + str(input_id),
+                            name="Conv2D_" + str(i) + "_Kernel_" + str(j) + "_Input_" + str(input_id),
                         )(d)
                     d = BatchNormalization(
                         axis=-1,
-                        name="BatchNorm_"
-                        + str(i)
-                        + "_Kernel_"
-                        + str(j)
-                        + "_Input_"
-                        + str(input_id),
+                        name="BatchNorm_" + str(i) + "_Kernel_" + str(j) + "_Input_" + str(input_id),
                     )(inputs=d)
                     if self.params["subnetwork_activation"] == "relu":
-                        d = ReLU(
-                            name="ReLU_"
-                            + str(i)
-                            + "_Kernel_"
-                            + str(j)
-                            + "_Input_"
-                            + str(input_id)
-                        )(d)
+                        d = ReLU(name="ReLU_" + str(i) + "_Kernel_" + str(j) + "_Input_" + str(input_id))(d)
                     else:
                         raise TypeError("Activation is not ReLU in subnetwork.")
                     d = MaxPooling2D(
                         pool_size=self.params["pool_size"][j],
-                        name="MaxPooling_"
-                        + str(i)
-                        + "_Kernel_"
-                        + str(j)
-                        + "_Input_"
-                        + str(input_id),
+                        name="MaxPooling_" + str(i) + "_Kernel_" + str(j) + "_Input_" + str(input_id),
                     )(d)
                     dim = np.array(d.shape.as_list())
                     flag_0 = dim[1] < min_row_size
@@ -378,16 +335,8 @@ class CNN2D_Classifier:
             )
             input.append(in_id)
             for j in range(num_kernel_size):
-                min_row_size = (
-                    self.params["pool_size"][j][0] * 2
-                    + self.params["kernel_size"][j][0]
-                    - 1
-                )
-                min_col_size = (
-                    self.params["pool_size"][j][1] * 2
-                    + self.params["kernel_size"][j][1]
-                    - 1
-                )
+                min_row_size = self.params["pool_size"][j][0] * 2 + self.params["kernel_size"][j][0] - 1
+                min_col_size = self.params["pool_size"][j][1] * 2 + self.params["kernel_size"][j][1] - 1
                 for i in range(num_conv_layer[j]):
                     if i == 0:
                         d = Conv2D(
@@ -396,12 +345,7 @@ class CNN2D_Classifier:
                             strides=self.params["strides"][j],
                             padding="valid",
                             data_format="channels_last",
-                            name="Conv2D_"
-                            + str(i)
-                            + "_Kernel_"
-                            + str(j)
-                            + "_Input_"
-                            + str(input_id),
+                            name="Conv2D_" + str(i) + "_Kernel_" + str(j) + "_Input_" + str(input_id),
                         )(in_id)
                     else:
                         d = Conv2D(
@@ -410,41 +354,19 @@ class CNN2D_Classifier:
                             strides=self.params["strides"][j],
                             padding="valid",
                             data_format="channels_last",
-                            name="Conv2D_"
-                            + str(i)
-                            + "_Kernel_"
-                            + str(j)
-                            + "_Input_"
-                            + str(input_id),
+                            name="Conv2D_" + str(i) + "_Kernel_" + str(j) + "_Input_" + str(input_id),
                         )(d)
                     d = BatchNormalization(
                         axis=-1,
-                        name="BatchNorm_"
-                        + str(i)
-                        + "_Kernel_"
-                        + str(j)
-                        + "_Input_"
-                        + str(input_id),
+                        name="BatchNorm_" + str(i) + "_Kernel_" + str(j) + "_Input_" + str(input_id),
                     )(inputs=d)
                     if self.params["subnetwork_activation"] == "relu":
-                        d = ReLU(
-                            name="ReLU_"
-                            + str(i)
-                            + "_Kernel_"
-                            + str(j)
-                            + "_Input_"
-                            + str(input_id)
-                        )(d)
+                        d = ReLU(name="ReLU_" + str(i) + "_Kernel_" + str(j) + "_Input_" + str(input_id))(d)
                     else:
                         raise TypeError("Activation is not ReLU in subnetwork.")
                     d = MaxPooling2D(
                         pool_size=self.params["pool_size"][j],
-                        name="MaxPooling_"
-                        + str(i)
-                        + "_Kernel_"
-                        + str(j)
-                        + "_Input_"
-                        + str(input_id),
+                        name="MaxPooling_" + str(i) + "_Kernel_" + str(j) + "_Input_" + str(input_id),
                         padding="same",
                     )(d)
                     dim = np.array(d.shape.as_list())
@@ -572,9 +494,7 @@ def CNN2D_Regression_Analysis(train, resultFolder, para, val=None, test=None):
             monitor = "val_loss"
         else:
             monitor = "loss"
-        train_logger = CSVLogger(
-            resultFolder + "/log_dropout_" + str(para["drop"][dpID]) + ".csv"
-        )
+        train_logger = CSVLogger(resultFolder + "/log_dropout_" + str(para["drop"][dpID]) + ".csv")
         model_saver = ModelCheckpoint(
             resultFolder + "/model_dropout_" + str(para["drop"][dpID]) + ".h5",
             monitor=monitor,
@@ -634,16 +554,10 @@ def CNN2D_Regression_Analysis(train, resultFolder, para, val=None, test=None):
         backend.clear_session()
 
     if val is not None:
-        dpID, epID = np.unravel_index(
-            np.argmin(perM["val"].values, axis=None), perM["val"].shape
-        )
+        dpID, epID = np.unravel_index(np.argmin(perM["val"].values, axis=None), perM["val"].shape)
     else:
-        dpID, epID = np.unravel_index(
-            np.argmin(perM["train"].values, axis=None), perM["train"].shape
-        )
-    model = load_model(
-        resultFolder + "/model_dropout_" + str(para["drop"][dpID]) + ".h5"
-    )
+        dpID, epID = np.unravel_index(np.argmin(perM["train"].values, axis=None), perM["train"].shape)
+    model = load_model(resultFolder + "/model_dropout_" + str(para["drop"][dpID]) + ".h5")
 
     for i in range(len(para["drop"])):
         if i == dpID:
@@ -653,16 +567,10 @@ def CNN2D_Regression_Analysis(train, resultFolder, para, val=None, test=None):
 
     predResult = {}
     if test is not None:
-        predResult["test"] = pd.DataFrame(
-            model.predict(testData), index=testSample, columns=["prediction"]
-        )
-    predResult["train"] = pd.DataFrame(
-        model.predict(trainData), index=trainSample, columns=["prediction"]
-    )
+        predResult["test"] = pd.DataFrame(model.predict(testData), index=testSample, columns=["prediction"])
+    predResult["train"] = pd.DataFrame(model.predict(trainData), index=trainSample, columns=["prediction"])
     if val is not None:
-        predResult["val"] = pd.DataFrame(
-            model.predict(valData), index=valSample, columns=["prediction"]
-        )
+        predResult["val"] = pd.DataFrame(model.predict(valData), index=valSample, columns=["prediction"])
 
     backend.clear_session()
 
@@ -677,12 +585,8 @@ def CNN2D_Regression_Analysis(train, resultFolder, para, val=None, test=None):
         if (eval(k + "Data") is None) or (eval(k + "Label") is None):
             continue
         perf.loc[k, "R2"] = r2_score(eval(k + "Label"), predResult[k].values[:, 0])
-        perf.loc[k, "MSE"] = mean_squared_error(
-            eval(k + "Label"), predResult[k].values[:, 0]
-        )
-        perf.loc[k, "MAE"] = mean_absolute_error(
-            eval(k + "Label"), predResult[k].values[:, 0]
-        )
+        perf.loc[k, "MSE"] = mean_squared_error(eval(k + "Label"), predResult[k].values[:, 0])
+        perf.loc[k, "MAE"] = mean_absolute_error(eval(k + "Label"), predResult[k].values[:, 0])
         rho, pval = stats.pearsonr(eval(k + "Label"), predResult[k].values[:, 0])
         perf.loc[k, "pCor"] = rho
         perf.loc[k, "pCorPvalue"] = pval
@@ -699,9 +603,7 @@ def CNN2D_Regression_Analysis(train, resultFolder, para, val=None, test=None):
     )
 
 
-def CNN2D_Classification_Analysis(
-    train, num_class, resultFolder, para, class_weight=None, val=None, test=None
-):
+def CNN2D_Classification_Analysis(train, num_class, resultFolder, para, class_weight=None, val=None, test=None):
     """
     This function does CNN2D regression analysis without HPO.
 
@@ -788,9 +690,7 @@ def CNN2D_Classification_Analysis(
             monitor = "val_loss"
         else:
             monitor = "loss"
-        train_logger = CSVLogger(
-            resultFolder + "/log_dropout_" + str(para["drop"][dpID]) + ".csv"
-        )
+        train_logger = CSVLogger(resultFolder + "/log_dropout_" + str(para["drop"][dpID]) + ".csv")
         model_saver = ModelCheckpoint(
             resultFolder + "/model_dropout_" + str(para["drop"][dpID]) + ".h5",
             monitor=monitor,
@@ -852,16 +752,10 @@ def CNN2D_Classification_Analysis(
         backend.clear_session()
 
     if val is not None:
-        dpID, epID = np.unravel_index(
-            np.argmin(perM["val"].values, axis=None), perM["val"].shape
-        )
+        dpID, epID = np.unravel_index(np.argmin(perM["val"].values, axis=None), perM["val"].shape)
     else:
-        dpID, epID = np.unravel_index(
-            np.argmin(perM["train"].values, axis=None), perM["train"].shape
-        )
-    model = load_model(
-        resultFolder + "/model_dropout_" + str(para["drop"][dpID]) + ".h5"
-    )
+        dpID, epID = np.unravel_index(np.argmin(perM["train"].values, axis=None), perM["train"].shape)
+    model = load_model(resultFolder + "/model_dropout_" + str(para["drop"][dpID]) + ".h5")
 
     for i in range(len(para["drop"])):
         if i == dpID:
@@ -910,19 +804,13 @@ def CNN2D_Classification_Analysis(
 
     perf = np.empty((3, 3))
     perf.fill(np.nan)
-    perf = pd.DataFrame(
-        perf, columns=["ACC", "AUROC", "MCC"], index=["train", "val", "test"]
-    )
+    perf = pd.DataFrame(perf, columns=["ACC", "AUROC", "MCC"], index=["train", "val", "test"])
     for k in ["train", "val", "test"]:
         if (eval(k + "Data") is None) or (eval(k + "Label") is None):
             continue
-        perf.loc[k, "ACC"] = accuracy_score(
-            eval(k + "Label"), predResult[k]["label"].values[:, 0]
-        )
+        perf.loc[k, "ACC"] = accuracy_score(eval(k + "Label"), predResult[k]["label"].values[:, 0])
         if num_class == 2:
-            perf.loc[k, "AUROC"] = roc_auc_score(
-                eval(k + "Label"), predResult[k]["proba"].values[:, 1]
-            )
+            perf.loc[k, "AUROC"] = roc_auc_score(eval(k + "Label"), predResult[k]["proba"].values[:, 1])
         else:
             perf.loc[k, "AUROC"] = roc_auc_score(
                 keras.utils.to_categorical(eval(k + "Label")),
@@ -930,9 +818,7 @@ def CNN2D_Classification_Analysis(
                 labels=range(num_class),
                 multi_class="ovr",
             )
-        perf.loc[k, "MCC"] = matthews_corrcoef(
-            eval(k + "Label"), predResult[k]["label"].values[:, 0]
-        )
+        perf.loc[k, "MCC"] = matthews_corrcoef(eval(k + "Label"), predResult[k]["label"].values[:, 0])
 
     return (
         predResult,

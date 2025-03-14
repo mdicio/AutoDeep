@@ -389,7 +389,17 @@ class ResNetTrainer:
 
         self._set_loss_function(y)
         self.num_features = extra_info["num_features"]
-        self.num_targets = len(np.unique(y))
+
+        if self.problem_type == "regression":
+            self.num_targets = 1  # Or y.shape[1] for multi-output regression
+        elif self.problem_type == "binary_classification":
+            self.num_targets = 1  # Output will be a single logit (use sigmoid in loss function)
+        elif self.problem_type == "multiclass_classification":
+            self.num_targets = len(np.unique(y))  # Number of unique classes
+        else:
+            raise ValueError("Unsupported task type")
+
+        self.logger.debug(f"Training on {self.device} for dataset")
 
         self.transformation = transforms.Compose([transforms.ToTensor()])
 
@@ -436,7 +446,7 @@ class ResNetTrainer:
                 pin_memory=True,
             )
 
-            self.model = self.build_model(self.problem_type, self.num_targets, depth=params["resnet_depth"])
+            self.model = self.build_model(self.problem_type, depth=params["resnet_depth"])
             params = self._set_optimizer_schedulers(params)
             self.model.to(self.device)
             self.model.train()

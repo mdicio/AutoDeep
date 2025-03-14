@@ -80,6 +80,7 @@ class Model(nn.Module):
 
         self.batch_norm3 = nn.BatchNorm1d(cha_po_2)
         self.dropout3 = nn.Dropout(0.2)
+        print("num targets", num_targets)
         self.dense3 = nn.utils.weight_norm(nn.Linear(cha_po_2, num_targets))
 
     def forward(self, x):
@@ -126,13 +127,8 @@ class SoftOrdering1DCNN:
         problem_type="binary_classification",
     ):
         self.model_name = "s1dcnn"
-        self.num_features = 42
-        self.hidden_size = 4096
         self.problem_type = problem_type
-
         self.scaler = StandardScaler()  # Initialize the scaler for scaling y values
-
-        self.batch_size = 512
         self.save_path = None
         self.transformation = None
         self.logger = logging.getLogger(__name__)
@@ -154,7 +150,6 @@ class SoftOrdering1DCNN:
         if not any(isinstance(handler, logging.FileHandler) for handler in self.logger.handlers):
             self.logger.addHandler(file_handler)
 
-        self.random_state = 4200
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.logger.info(f"Device {self.device} is available")
 
@@ -172,10 +167,11 @@ class SoftOrdering1DCNN:
         model = Model(num_features, num_targets, hidden_size)
         return model
 
-    def process_inputs_labels(self, inputs, labels):
+    def process_inputs_labels_training(self, inputs, labels):
         inputs, labels = inputs.to(self.device), labels.to(self.device)
         if self.problem_type == "binary_classification":
-            outputs = torch.sigmoid(self.model(inputs)).reshape(-1)
+            # outputs = torch.sigmoid(self.model(inputs)).reshape(-1)
+            outputs = self.model(inputs).reshape(-1)
             labels = labels.float()
         elif self.problem_type == "regression":
             outputs = self.model(inputs).reshape(-1)
@@ -188,10 +184,37 @@ class SoftOrdering1DCNN:
 
         return outputs, labels
 
+    def process_inputs_labels_prediction(self, inputs, labels):
+        inputs, labels = inputs.to(self.device), labels.to(self.device)
+        probabilities = None
+        if self.problem_type == "binary_classification":
+            probabilities = torch.sigmoid(self.model(inputs)).reshape(-1)
+            predictions = (probabilities >= 0.5).float()
+            probabilities = probabilities.cpu().numpy()
+            labels = labels.float()
+        elif self.problem_type == "regression":
+            predictions = self.model(inputs).reshape(-1)
+            labels = labels.float()
+        elif self.problem_type == "multiclass_classification":
+            labels = labels.long()
+            _, predictions = torch.max(self.model(inputs), dim=1)
+            self.logger.debug(f"multiclass predictions {predictions[:10]}")
+        else:
+            raise ValueError("Invalid problem_type. Supported options: binary_classification, multiclass_classification")
+
+        return (
+            predictions.cpu().numpy(),
+            labels.cpu().numpy(),
+            probabilities,
+        )
+
     def train_step(self, train_loader):
         running_loss = 0.0
         for i, (inputs, labels) in enumerate(train_loader):
-            outputs, labels = self.process_inputs_labels(inputs, labels)
+            # print("inputs, labels", inputs.shape, labels.shape)
+            outputs, labels = self.process_inputs_labels_training(inputs, labels)
+
+            # print("inputs, labels, outputs", inputs.shape, labels.shape, outputs.shape)
 
             self.optimizer.zero_grad()
             loss = self.loss_fn(outputs, labels)
@@ -209,7 +232,7 @@ class SoftOrdering1DCNN:
 
         with torch.no_grad():
             for inputs, labels in validation_loader:
-                outputs, labels = self.process_inputs_labels(inputs, labels)
+                outputs, labels = self.process_inputs_labels_training(inputs, labels)
 
                 loss = self.loss_fn(outputs, labels)
                 val_loss += loss.item() * inputs.size(0)
@@ -229,7 +252,7 @@ class SoftOrdering1DCNN:
             print("CLASSES", classes)
             class_weights = compute_class_weight("balanced", classes=np.array(classes), y=y_train.values)
             class_weights = torch.tensor(class_weights, dtype=torch.float32).to(self.device)
-            print(class_weights)
+            print("Class weights:", class_weights)
             self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, reduction="mean")
         elif self.problem_type == "regression":
             self.loss_fn = nn.MSELoss()
@@ -384,7 +407,14 @@ class SoftOrdering1DCNN:
         self.num_features = extra_info["num_features"]
 
         self._set_loss_function(y)
-        self.num_targets = len(np.unique(y))
+        if self.problem_type == "regression":
+            self.num_targets = 1  # Or y.shape[1] for multi-output regression
+        elif self.problem_type == "binary_classification":
+            self.num_targets = 1  # Output will be a single logit (use sigmoid in loss function)
+        elif self.problem_type == "multiclass_classification":
+            self.num_targets = len(np.unique(y))  # Number of unique classes
+        else:
+            raise ValueError("Unsupported task type")
 
         self.logger.debug(f"Training on {self.device} for dataset")
 

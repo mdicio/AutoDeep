@@ -96,9 +96,7 @@ class AutoRunner:
                 print(f"Running {model_name} on {dataset_name}...")
                 run_id = datetime.now().strftime("%Y%m%d-%H%M%S-") + str(uuid4())
                 igtd_configs = data_config.get("igtd_configs", self.igtd_config)
-                igtd_configs["img_size"] = data_config.get("igtd_configs", {}).get(
-                    "img_size", "auto"
-                )
+                igtd_configs["img_size"] = data_config.get("igtd_configs", {}).get("img_size", "auto")
 
                 run_igtd = model_name == "resnet"
                 data_loader = create_dynamic_data_loader(
@@ -111,15 +109,9 @@ class AutoRunner:
                     train_value=data_config.get("train_value"),
                     test_value=data_config.get("test_value"),
                     random_state=self.random_state,
-                    normalize_features=self.model_config["model_configs"]
-                    .get(model_name, {})
-                    .get("data_params", {})
-                    .get("normalize_features"),
+                    normalize_features=self.model_config["model_configs"].get(model_name, {}).get("data_params", {}).get("normalize_features"),
                     return_extra_info=True,
-                    encode_categorical=self.model_config["model_configs"]
-                    .get(model_name, {})
-                    .get("data_params", {})
-                    .get("encode_categorical"),
+                    encode_categorical=self.model_config["model_configs"].get(model_name, {}).get("data_params", {}).get("encode_categorical"),
                     run_igtd=run_igtd,
                     igtd_configs=igtd_configs,
                     igtd_result_base_dir=self.igtd_path,
@@ -133,10 +125,8 @@ class AutoRunner:
                 )
                 model.num_workers = 12
 
-                best_params, best_score, train_metrics, validation_metrics = (
-                    self._train_model(
-                        model, X_train, y_train, model_name, data_config, extra_info
-                    )
+                best_params, best_score, train_metrics, validation_metrics = self._train_model(
+                    model, X_train, y_train, model_name, data_config, extra_info
                 )
 
                 y_pred, y_prob = self._get_predictions(model, X_test, data_config)
@@ -153,9 +143,7 @@ class AutoRunner:
                     best_score,
                 )
 
-    def _train_model(
-        self, model, X_train, y_train, model_name, data_config, extra_info
-    ):
+    def _train_model(self, model, X_train, y_train, model_name, data_config, extra_info):
         model_config = self.model_config["model_configs"].get(model_name, {})
         if self.execution_mode == "hyperopt_kfold":
             raise ValueError("Not implemented yet, coming soon!")

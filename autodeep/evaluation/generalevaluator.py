@@ -59,9 +59,7 @@ class Evaluator:
             average = "weighted"
         else:
             raise ValueError(f"Invalid problem type: {self.problem_type}")
-        return precision_score(
-            self.y_true, self.y_pred, average=average, zero_division=0
-        )
+        return precision_score(self.y_true, self.y_pred, average=average, zero_division=0)
 
     def mse(self):
         return mean_squared_error(self.y_true, self.y_pred)
@@ -108,9 +106,7 @@ class Evaluator:
         p_true = np.sum(self.y_true) / n
 
         top_indices = np.argsort(self.y_prob)[::-1][: int(percentile / 100 * n)]
-        p_top_true = np.sum(np.take(self.y_true, top_indices, axis=0)) / len(
-            top_indices
-        )
+        p_top_true = np.sum(np.take(self.y_true, top_indices, axis=0)) / len(top_indices)
 
         return p_top_true / p_true
 

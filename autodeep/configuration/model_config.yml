@@ -64,7 +64,7 @@ model_configs:
         - 1.0
       gamma:
         - 0.0
-        - 0.1
+        - 0.01
         - 0.2
 
   catboost:
@@ -138,7 +138,7 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         SGD:
           weight_decay:
@@ -148,19 +148,19 @@ model_configs:
             - 0.9
             - 0.99
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
-            - 0.1
+            - 0.01
             - 0.5
           patience:
             - 5
@@ -170,7 +170,7 @@ model_configs:
             - 10
             - 30
           gamma:
-            - 0.1
+            - 0.01
             - 0.5
         ExponentialLR:
           gamma:
@@ -216,17 +216,17 @@ model_configs:
         - 8
       gflu_dropout:
         - 0.0
-        - 0.1
+        - 0.01
       embedding_dropout:
         - 0.0
-        - 0.1
+        - 0.01
       optimizer_fn:
         Adam:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         SGD:
           weight_decay:
@@ -236,19 +236,19 @@ model_configs:
             - 0.9
             - 0.99
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
-            - 0.1
+            - 0.01
             - 0.5
           patience:
             - 5
@@ -258,7 +258,7 @@ model_configs:
             - 10
             - 30
           gamma:
-            - 0.1
+            - 0.01
             - 0.5
         ExponentialLR:
           gamma:
@@ -304,7 +304,7 @@ model_configs:
         - 8
         - 32
       shared_embedding_fraction:
-        - 0.1
+        - 0.01
         - 0.4
       layers:
         - "64-32"
@@ -343,7 +343,7 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         SGD:
           weight_decay:
@@ -353,19 +353,19 @@ model_configs:
             - 0.9
             - 0.99
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
-            - 0.1
+            - 0.01
             - 0.5
           patience:
             - 5
@@ -375,7 +375,7 @@ model_configs:
             - 10
             - 30
           gamma:
-            - 0.1
+            - 0.01
             - 0.5
         ExponentialLR:
           gamma:
@@ -427,7 +427,7 @@ model_configs:
         - 2
         - 6
       shared_embedding_fraction:
-        - 0.1
+        - 0.01
         - 0.4
       transformer_activation:
         - GEGLU
@@ -456,7 +456,7 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         SGD:
           weight_decay:
@@ -466,19 +466,19 @@ model_configs:
             - 0.9
             - 0.99
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
-            - 0.1
+            - 0.01
             - 0.5
           patience:
             - 5
@@ -488,7 +488,7 @@ model_configs:
             - 10
             - 30
           gamma:
-            - 0.1
+            - 0.01
             - 0.5
         ExponentialLR:
           gamma:
@@ -560,7 +560,7 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         SGD:
           weight_decay:
@@ -570,19 +570,19 @@ model_configs:
             - 0.9
             - 0.99
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
-            - 0.1
+            - 0.01
             - 0.5
           patience:
             - 5
@@ -592,7 +592,7 @@ model_configs:
             - 10
             - 30
           gamma:
-            - 0.1
+            - 0.01
             - 0.5
         ExponentialLR:
           gamma:
@@ -669,7 +669,7 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         SGD:
           weight_decay:
@@ -679,19 +679,19 @@ model_configs:
             - 0.9
             - 0.99
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
-            - 0.1
+            - 0.01
             - 0.5
           patience:
             - 5
@@ -701,7 +701,7 @@ model_configs:
             - 10
             - 30
           gamma:
-            - 0.1
+            - 0.01
             - 0.5
         ExponentialLR:
           gamma:
@@ -766,7 +766,7 @@ model_configs:
 
       embedding_dropout:
         - 0.0
-        - 0.1
+        - 0.01
         - 0.2
       batch_norm_continuous_input:
         - True
@@ -778,7 +778,7 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         SGD:
           weight_decay:
@@ -788,19 +788,19 @@ model_configs:
             - 0.9
             - 0.99
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
-            - 0.1
+            - 0.01
             - 0.5
           patience:
             - 5
@@ -810,7 +810,7 @@ model_configs:
             - 10
             - 30
           gamma:
-            - 0.1
+            - 0.01
             - 0.5
         ExponentialLR:
           gamma:
@@ -871,14 +871,14 @@ model_configs:
         - 64
         - 128
       attn_dropout:
-        - 0.1
+        - 0.01
         - 0.2
         - 0.3
       add_norm_dropout:
-        - 0.1
+        - 0.01
         - 0.2
       ff_dropout:
-        - 0.1
+        - 0.01
         - 0.2
       ff_hidden_multiplier:
         - 2
@@ -896,7 +896,7 @@ model_configs:
         - LeakyReLU
       out_ff_dropout:
         - 0.0
-        - 0.1
+        - 0.01
         - 0.2
       out_ff_initialization:
         - kaiming
@@ -904,7 +904,7 @@ model_configs:
         - random
       embedding_dropout:
         - 0.0
-        - 0.1
+        - 0.01
         - 0.2
       batch_norm_continuous_input:
         - True
@@ -916,7 +916,7 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         SGD:
           weight_decay:
@@ -926,19 +926,19 @@ model_configs:
             - 0.9
             - 0.99
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
-            - 0.1
+            - 0.01
             - 0.5
           patience:
             - 5
@@ -948,7 +948,7 @@ model_configs:
             - 10
             - 30
           gamma:
-            - 0.1
+            - 0.01
             - 0.5
         ExponentialLR:
           gamma:
@@ -987,7 +987,7 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         SGD:
           weight_decay:
@@ -997,19 +997,19 @@ model_configs:
             - 0.9
             - 0.99
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
-            - 0.1
+            - 0.01
             - 0.5
           patience:
             - 5
@@ -1019,7 +1019,7 @@ model_configs:
             - 10
             - 30
           gamma:
-            - 0.1
+            - 0.01
             - 0.5
         ExponentialLR:
           gamma:
@@ -1053,7 +1053,7 @@ model_configs:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         SGD:
           weight_decay:
@@ -1063,19 +1063,19 @@ model_configs:
             - 0.9
             - 0.99
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
         AdamW:
           weight_decay:
             - 0.0
             - 0.0000001
           learning_rate:
-            - 0.1
+            - 0.01
             - 0.00001
       scheduler_fn:
         ReduceLROnPlateau:
           factor:
-            - 0.1
+            - 0.01
             - 0.5
           patience:
             - 5
@@ -1085,7 +1085,7 @@ model_configs:
             - 10
             - 30
           gamma:
-            - 0.1
+            - 0.01
             - 0.5
         ExponentialLR:
           gamma:
