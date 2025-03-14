@@ -35,23 +35,16 @@ class CatBoostTrainer(BaseModel):
         self.script_filename = os.path.basename(__file__)
         self.problem_type = problem_type
         self.model_name = "catboost"
-        formatter = logging.Formatter(
-            f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
-        )
+        formatter = logging.Formatter(f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s")
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.StreamHandler)
-            for handler in self.logger.handlers
-        ):
+        if not any(isinstance(handler, logging.StreamHandler) for handler in self.logger.handlers):
             self.logger.addHandler(console_handler)
         file_handler = logging.FileHandler("logfile.log")
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.FileHandler) for handler in self.logger.handlers
-        ):
+        if not any(isinstance(handler, logging.FileHandler) for handler in self.logger.handlers):
             self.logger.addHandler(file_handler)
         self.device = "GPU" if torch.cuda.is_available() else "CPU"
         self.extra_info = None
@@ -116,9 +109,7 @@ class CatBoostTrainer(BaseModel):
         else:
             return predictions
 
-    def hyperopt_search(
-        self, X, y, model_config, metric, eval_metrics, max_evals=16, extra_info=None
-    ):
+    def hyperopt_search(self, X, y, model_config, metric, eval_metrics, max_evals=16, extra_info=None):
         """hyperopt_search
 
         Args:
@@ -151,18 +142,14 @@ class CatBoostTrainer(BaseModel):
         param_grid = model_config["param_grid"]
         space = infer_hyperopt_space(param_grid)
         self.num_targets = len(np.unique(y))
-        X_train, X_val, y_train, y_val = train_test_split(
-            X, y, test_size=val_size, random_state=self.random_state
-        )
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=val_size, random_state=self.random_state)
         eval_set = [(X_val, y_val)]
 
         def objective(params):
             self.logger.info(f"Hyperopt training with hyperparameters: {params}")
             params["cat_features"] = self.cat_features
             if self.problem_type == "binary_classification":
-                model = CatBoostClassifier(
-                    od_type="Iter", od_wait=20, task_type=self.device, **params
-                )
+                model = CatBoostClassifier(od_type="Iter", od_wait=20, task_type=self.device, **params)
             elif self.problem_type == "multiclass_classification":
                 params.pop("scale_pos_weight", None)
                 model = CatBoostClassifier(
@@ -175,13 +162,9 @@ class CatBoostTrainer(BaseModel):
                 )
             elif self.problem_type == "regression":
                 params.pop("scale_pos_weight", None)
-                model = CatBoostRegressor(
-                    od_type="Iter", od_wait=20, task_type=self.device, **params
-                )
+                model = CatBoostRegressor(od_type="Iter", od_wait=20, task_type=self.device, **params)
             else:
-                raise ValueError(
-                    "Problem type must be binary_classification, multiclass_classification, or regression"
-                )
+                raise ValueError("Problem type must be binary_classification, multiclass_classification, or regression")
             model.fit(
                 X_train,
                 y_train,
@@ -241,7 +224,5 @@ class CatBoostTrainer(BaseModel):
         train_metrics = best_trial["result"]["train_metrics"]
         validation_metrics = best_trial["result"]["validation_metrics"]
         self.logger.info(f"Best hyperparameters: {best_params}")
-        self.logger.info(
-            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
-        )
+        self.logger.info(f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}")
         return best_params, best_score, train_metrics, validation_metrics

@@ -68,18 +68,10 @@ class ResultsAnalyzer:
         Returns:
             type: Description
         """
-        self.results_df = self.normalize_dict_column(
-            self.results_df, "train_metrics", "train"
-        )
-        self.results_df = self.normalize_dict_column(
-            self.results_df, "validation_metrics", "validation"
-        )
-        self.results_df = self.normalize_dict_column(
-            self.results_df, "test_metrics", "test"
-        )
-        self.results_df = self.normalize_dict_column(
-            self.results_df, "best_params", "param"
-        )
+        self.results_df = self.normalize_dict_column(self.results_df, "train_metrics", "train")
+        self.results_df = self.normalize_dict_column(self.results_df, "validation_metrics", "validation")
+        self.results_df = self.normalize_dict_column(self.results_df, "test_metrics", "test")
+        self.results_df = self.normalize_dict_column(self.results_df, "best_params", "param")
 
     def get_dynamic_columns(self, column_prefix):
         """get_dynamic_columns
@@ -130,15 +122,9 @@ class ResultsAnalyzer:
         Returns:
             type: Description
         """
-        performance_cols = (
-            self.get_dynamic_columns("train_")
-            + self.get_dynamic_columns("validation_")
-            + self.get_dynamic_columns("test_")
-        )
+        performance_cols = self.get_dynamic_columns("train_") + self.get_dynamic_columns("validation_") + self.get_dynamic_columns("test_")
         param_cols = self.get_dynamic_columns("param_")
-        df_filtered = self.filter_by_params(
-            dataset_name=dataset_name, model_name=model_name
-        )
+        df_filtered = self.filter_by_params(dataset_name=dataset_name, model_name=model_name)
         all_columns = self.key_cols + performance_cols + param_cols
         return df_filtered[all_columns]
 
@@ -156,14 +142,8 @@ class ResultsAnalyzer:
         Returns:
             type: Description
         """
-        performance_cols = (
-            self.get_dynamic_columns("train_")
-            + self.get_dynamic_columns("validation_")
-            + self.get_dynamic_columns("test_")
-        )
-        df_filtered = self.filter_by_params(
-            dataset_name=dataset_name, model_name=model_name
-        )
+        performance_cols = self.get_dynamic_columns("train_") + self.get_dynamic_columns("validation_") + self.get_dynamic_columns("test_")
+        df_filtered = self.filter_by_params(dataset_name=dataset_name, model_name=model_name)
         return df_filtered[self.key_cols + performance_cols]
 
     def view_parameters(self, dataset_name=None, model_name=None):
@@ -181,7 +161,5 @@ class ResultsAnalyzer:
             type: Description
         """
         param_cols = self.get_dynamic_columns("param_")
-        df_filtered = self.filter_by_params(
-            dataset_name=dataset_name, model_name=model_name
-        )
+        df_filtered = self.filter_by_params(dataset_name=dataset_name, model_name=model_name)
         return df_filtered[self.key_cols + param_cols]

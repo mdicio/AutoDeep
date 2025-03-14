@@ -36,23 +36,16 @@ class XGBoostTrainer(BaseModel):
         self.random_state = 4200
         self.script_filename = os.path.basename(__file__)
         self.problem_type = problem_type
-        formatter = logging.Formatter(
-            f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
-        )
+        formatter = logging.Formatter(f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s")
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.StreamHandler)
-            for handler in self.logger.handlers
-        ):
+        if not any(isinstance(handler, logging.StreamHandler) for handler in self.logger.handlers):
             self.logger.addHandler(console_handler)
         file_handler = logging.FileHandler("logfile.log")
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.FileHandler) for handler in self.logger.handlers
-        ):
+        if not any(isinstance(handler, logging.FileHandler) for handler in self.logger.handlers):
             self.logger.addHandler(file_handler)
         self.extra_info = None
         num_cpu_cores = os.cpu_count()
@@ -116,9 +109,7 @@ class XGBoostTrainer(BaseModel):
         else:
             return predictions
 
-    def hyperopt_search(
-        self, X, y, model_config, metric, eval_metrics, max_evals=16, extra_info=None
-    ):
+    def hyperopt_search(self, X, y, model_config, metric, eval_metrics, max_evals=16, extra_info=None):
         """hyperopt_search
 
         Args:
@@ -160,13 +151,9 @@ class XGBoostTrainer(BaseModel):
         def objective(params):
             self.logger.info(f"Hyperopt training with hyperparameters: {params}")
             if self.problem_type == "regression":
-                model = xgb.XGBRegressor(
-                    **params, early_stopping_rounds=early_stopping_rounds
-                )
+                model = xgb.XGBRegressor(**params, early_stopping_rounds=early_stopping_rounds)
             else:
-                model = xgb.XGBClassifier(
-                    **params, early_stopping_rounds=early_stopping_rounds
-                )
+                model = xgb.XGBClassifier(**params, early_stopping_rounds=early_stopping_rounds)
             model.fit(X_train, y_train, verbose=verbose, eval_set=eval_set)
             y_pred = model.predict(X_val)
             probabilities = None
@@ -222,7 +209,5 @@ class XGBoostTrainer(BaseModel):
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
         self.logger.info(f"Best hyperparameters: {best_params}")
-        self.logger.info(
-            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
-        )
+        self.logger.info(f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}")
         return best_params, best_score, train_metrics, validation_metrics

@@ -60,9 +60,7 @@ class ResNetModel(nn.Module):
         elif depth == "resnet50":
             self.resnet = resnet50(pretrained=self.pretrained)
         else:
-            raise ValueError(
-                "Invalid depth. Supported options: resnet18, resnet34, resnet50."
-            )
+            raise ValueError("Invalid depth. Supported options: resnet18, resnet34, resnet50.")
         self.num_features = self.resnet.fc.in_features
         if self.problem_type == "binary_classification":
             self.classifier = nn.Linear(self.num_features, 1)
@@ -71,9 +69,7 @@ class ResNetModel(nn.Module):
         elif self.problem_type == "regression":
             self.classifier = nn.Linear(self.num_features, 1)
         else:
-            raise ValueError(
-                "Invalid problem_type. Supported options: binary_classification, multiclass_classification, regression."
-            )
+            raise ValueError("Invalid problem_type. Supported options: binary_classification, multiclass_classification, regression.")
         self.resnet.fc = nn.Identity()
 
     def forward(self, x):
@@ -127,23 +123,16 @@ class ResNetTrainer:
         self.logger.setLevel(logging.DEBUG)
         self.random_state = 4200
         self.script_filename = os.path.basename(__file__)
-        formatter = logging.Formatter(
-            f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
-        )
+        formatter = logging.Formatter(f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s")
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.StreamHandler)
-            for handler in self.logger.handlers
-        ):
+        if not any(isinstance(handler, logging.StreamHandler) for handler in self.logger.handlers):
             self.logger.addHandler(console_handler)
         file_handler = logging.FileHandler("logfile.log")
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.FileHandler) for handler in self.logger.handlers
-        ):
+        if not any(isinstance(handler, logging.FileHandler) for handler in self.logger.handlers):
             self.logger.addHandler(file_handler)
         self.random_state = 4200
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -205,9 +194,7 @@ class ResNetTrainer:
             labels = labels.long()
             outputs = self.model(inputs)
         else:
-            raise ValueError(
-                "Invalid problem_type. Supported options: binary_classification, multiclass_classification"
-            )
+            raise ValueError("Invalid problem_type. Supported options: binary_classification, multiclass_classification")
         return outputs, labels
 
     def process_inputs_labels_prediction(self, inputs, labels):
@@ -239,9 +226,7 @@ class ResNetTrainer:
             _, predictions = torch.max(self.model(inputs), dim=1)
             self.logger.debug(f"multiclass predictions {predictions[:10]}")
         else:
-            raise ValueError(
-                "Invalid problem_type. Supported options: binary_classification, multiclass_classification"
-            )
+            raise ValueError("Invalid problem_type. Supported options: binary_classification, multiclass_classification")
         return predictions.cpu().numpy(), labels.cpu().numpy(), probabilities
 
     def train_step(self, train_loader):
@@ -309,23 +294,15 @@ class ResNetTrainer:
         elif self.problem_type == "multiclass_classification":
             y_train_tensor = torch.tensor(y_train.values, dtype=torch.long).flatten()
             classes = torch.unique(y_train_tensor)
-            class_weights = compute_class_weight(
-                "balanced", classes=np.array(classes), y=y_train.values
-            )
-            class_weights = torch.tensor(class_weights, dtype=torch.float32).to(
-                self.device
-            )
+            class_weights = compute_class_weight("balanced", classes=np.array(classes), y=y_train.values)
+            class_weights = torch.tensor(class_weights, dtype=torch.float32).to(self.device)
             self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, reduction="mean")
         elif self.problem_type == "regression":
             self.loss_fn = nn.MSELoss()
         else:
-            raise ValueError(
-                "Invalid problem_type. Supported values are 'binary', 'multiclass', and 'regression'."
-            )
+            raise ValueError("Invalid problem_type. Supported values are 'binary', 'multiclass', and 'regression'.")
 
-    def _pandas_to_torch_image_datasets(
-        self, X_train, y_train, img_rows, img_columns, transform, val_size, batch_size
-    ):
+    def _pandas_to_torch_image_datasets(self, X_train, y_train, img_rows, img_columns, transform, val_size, batch_size):
         """_pandas_to_torch_image_datasets
 
         Args:
@@ -361,14 +338,10 @@ class ResNetTrainer:
         if num_train_samples % batch_size == 1:
             num_train_samples += 1
         num_val_samples = num_samples - num_train_samples
-        train_dataset, val_dataset = random_split(
-            dataset, [num_train_samples, num_val_samples]
-        )
+        train_dataset, val_dataset = random_split(dataset, [num_train_samples, num_val_samples])
         return train_dataset, val_dataset
 
-    def single_pandas_to_torch_image_dataset(
-        self, X_train, y_train, img_rows, img_columns, transform
-    ):
+    def single_pandas_to_torch_image_dataset(self, X_train, y_train, img_rows, img_columns, transform):
         """single_pandas_to_torch_image_dataset
 
         Args:
@@ -397,9 +370,7 @@ class ResNetTrainer:
         )
         return dataset
 
-    def _torch_image_datasets_to_dataloaders(
-        self, train_dataset, val_dataset, batch_size
-    ):
+    def _torch_image_datasets_to_dataloaders(self, train_dataset, val_dataset, batch_size):
         """_torch_image_datasets_to_dataloaders
 
         Args:
@@ -508,9 +479,7 @@ class ResNetTrainer:
                 gamma=params["StepLR_gamma"],
             )
         elif params["scheduler_fn"] == torch.optim.lr_scheduler.ExponentialLR:
-            self.scheduler = torch.optim.lr_scheduler.ExponentialLR(
-                self.optimizer, gamma=params["ExponentialLR_gamma"]
-            )
+            self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=params["ExponentialLR_gamma"])
         elif params["scheduler_fn"] == torch.optim.lr_scheduler.ReduceLROnPlateau:
             self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 self.optimizer,
@@ -522,9 +491,7 @@ class ResNetTrainer:
             )
         return params
 
-    def hyperopt_search(
-        self, X, y, model_config, metric, eval_metrics, max_evals=16, extra_info=None
-    ):
+    def hyperopt_search(self, X, y, model_config, metric, eval_metrics, max_evals=16, extra_info=None):
         """hyperopt_search
 
         Args:
@@ -591,12 +558,8 @@ class ResNetTrainer:
             print(y_train.shape)
             print(self.img_rows)
             print(self.img_columns)
-            train_torch_dataset = self.single_pandas_to_torch_image_dataset(
-                X_train, y_train, self.img_rows, self.img_columns, self.transformation
-            )
-            val_torch_dataset = self.single_pandas_to_torch_image_dataset(
-                X_val, y_val, self.img_rows, self.img_columns, self.transformation
-            )
+            train_torch_dataset = self.single_pandas_to_torch_image_dataset(X_train, y_train, self.img_rows, self.img_columns, self.transformation)
+            val_torch_dataset = self.single_pandas_to_torch_image_dataset(X_val, y_val, self.img_rows, self.img_columns, self.transformation)
             if X_train.shape[0] % params["batch_size"] == 1:
                 bs = params["batch_size"] + 1
             else:
@@ -617,9 +580,7 @@ class ResNetTrainer:
                 num_workers=self.num_workers,
                 pin_memory=True,
             )
-            self.model = self.build_model(
-                self.problem_type, depth=params["resnet_depth"]
-            )
+            self.model = self.build_model(self.problem_type, depth=params["resnet_depth"])
             params = self._set_optimizer_schedulers(params)
             self.model.to(self.device)
             self.model.train()
@@ -627,27 +588,20 @@ class ResNetTrainer:
             best_epoch = 0
             current_patience = 0
             best_model_state_dict = None
-            with tqdm(
-                total=max_epochs, desc="Training", unit="epoch", ncols=80
-            ) as pbar:
+            with tqdm(total=max_epochs, desc="Training", unit="epoch", ncols=80) as pbar:
                 for epoch in range(max_epochs):
                     epoch_loss = self.train_step(train_loader)
                     if early_stopping and val_size > 0:
                         val_loss = self.validate_step(val_loader)
                         self.scheduler.step(val_loss)
-                        if (
-                            val_loss + self.default_params.get("tol", 0.0)
-                            < best_val_loss
-                        ):
+                        if val_loss + self.default_params.get("tol", 0.0) < best_val_loss:
                             best_val_loss = val_loss
                             best_epoch = epoch
                             current_patience = 0
                             best_model_state_dict = self.model.state_dict()
                         else:
                             current_patience += 1
-                        print(
-                            f"Epoch [{epoch + 1}/{max_epochs}],Train Loss: {epoch_loss:.4f},Val Loss: {val_loss:.4f}"
-                        )
+                        print(f"Epoch [{epoch + 1}/{max_epochs}],Train Loss: {epoch_loss:.4f},Val Loss: {val_loss:.4f}")
                         if current_patience >= patience:
                             print(f"Early stopping triggered at epoch {epoch + 1}")
                             break
@@ -659,9 +613,7 @@ class ResNetTrainer:
             y_pred, y_true, y_prob = np.array([]), np.array([]), np.array([])
             with torch.no_grad():
                 for inputs, labels in val_loader:
-                    predictions, labels, probabilities = (
-                        self.process_inputs_labels_prediction(inputs, labels)
-                    )
+                    predictions, labels, probabilities = self.process_inputs_labels_prediction(inputs, labels)
                     y_true = np.append(y_true, labels)
                     y_pred = np.append(y_pred, predictions)
                     y_prob = np.append(y_prob, probabilities)
@@ -673,9 +625,7 @@ class ResNetTrainer:
             score = metrics_for_split_val[metric]
             with torch.no_grad():
                 for inputs, labels in train_loader:
-                    predictions, labels, probabilities = (
-                        self.process_inputs_labels_prediction(inputs, labels)
-                    )
+                    predictions, labels, probabilities = self.process_inputs_labels_prediction(inputs, labels)
                     y_true = np.append(y_true, labels)
                     y_pred = np.append(y_pred, predictions)
                     y_prob = np.append(y_prob, probabilities)
@@ -720,9 +670,7 @@ class ResNetTrainer:
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
         self.logger.info(f"Best hyperparameters: {best_params}")
-        self.logger.info(
-            f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}"
-        )
+        self.logger.info(f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}")
         return best_params, best_score, train_metrics, validation_metrics
 
     def predict(self, X_test, predict_proba=False, batch_size=4096):
@@ -779,9 +727,7 @@ class ResNetTrainer:
                 elif self.problem_type == "regression":
                     preds = outputs.cpu().numpy()
                 else:
-                    raise ValueError(
-                        "Invalid problem_type. Supported options: binary_classification, multiclass_classification, regression."
-                    )
+                    raise ValueError("Invalid problem_type. Supported options: binary_classification, multiclass_classification, regression.")
                 predictions.extend(preds)
         self.logger.debug("Model predicting success")
         predictions = np.array(predictions).squeeze()

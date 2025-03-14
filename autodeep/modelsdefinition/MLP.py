@@ -36,23 +36,16 @@ class MLP(BaseModel):
         self.logger.setLevel(logging.DEBUG)
         self.random_state = 4200
         self.script_filename = os.path.basename(__file__)
-        formatter = logging.Formatter(
-            f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s"
-        )
+        formatter = logging.Formatter(f"%(asctime)s - %(levelname)s - {self.script_filename} - %(message)s")
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.StreamHandler)
-            for handler in self.logger.handlers
-        ):
+        if not any(isinstance(handler, logging.StreamHandler) for handler in self.logger.handlers):
             self.logger.addHandler(console_handler)
         file_handler = logging.FileHandler("logfile.log")
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
-        if not any(
-            isinstance(handler, logging.FileHandler) for handler in self.logger.handlers
-        ):
+        if not any(isinstance(handler, logging.FileHandler) for handler in self.logger.handlers):
             self.logger.addHandler(file_handler)
         self.extra_info = None
         self.metric_mapping = {
@@ -126,9 +119,7 @@ class MLP(BaseModel):
         else:
             return predictions
 
-    def hyperopt_search(
-        self, X, y, model_config, metric, eval_metrics, max_evals=16, extra_info=None
-    ):
+    def hyperopt_search(self, X, y, model_config, metric, eval_metrics, max_evals=16, extra_info=None):
         """hyperopt_search
 
         Args:
@@ -156,21 +147,13 @@ class MLP(BaseModel):
         val_size = self.default_params.get("val_size")
         param_grid = model_config["param_grid"]
         space = infer_hyperopt_space(param_grid)
-        self.logger.info(
-            f"Starting hyperopt search with {max_evals} evaluations, optimizing {metric} metric"
-        )
+        self.logger.info(f"Starting hyperopt search with {max_evals} evaluations, optimizing {metric} metric")
 
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")
-            n_iter_no_change = params.get(
-                "n_iter_no_change", self.default_params.get("n_iter_no_change", 10)
-            )
+            n_iter_no_change = params.get("n_iter_no_change", self.default_params.get("n_iter_no_change", 10))
             max_iter = params.get("max_iter", self.default_params.get("max_iter", 100))
-            filtered_params = {
-                k: v
-                for k, v in params.items()
-                if k not in {"n_iter_no_change", "max_iter"}
-            }
+            filtered_params = {k: v for k, v in params.items() if k not in {"n_iter_no_change", "max_iter"}}
             if self.problem_type == "regression":
                 model = MLPRegressor(
                     verbose=False,

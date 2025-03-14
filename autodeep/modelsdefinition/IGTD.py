@@ -72,9 +72,7 @@ class IGTDPreprocessor:
             ch.setFormatter(formatter)
             self.logger.addHandler(ch)
 
-    def run(
-        self, X: pd.DataFrame, base_result_dir: str, ordering_configs: Dict[str, Dict]
-    ) -> Dict[str, str]:
+    def run(self, X: pd.DataFrame, base_result_dir: str, ordering_configs: Dict[str, Dict]) -> Dict[str, str]:
         """run
 
         Args:
@@ -94,9 +92,7 @@ class IGTDPreprocessor:
         for config_name, config in ordering_configs.items():
             result_dir = os.path.join(base_result_dir, f"{config_name}")
             os.makedirs(result_dir, exist_ok=True)
-            self.logger.info(
-                f"Running IGTD ordering for config '{config_name}' in: {result_dir}"
-            )
+            self.logger.info(f"Running IGTD ordering for config '{config_name}' in: {result_dir}")
             table_to_image(
                 X,
                 [self.img_rows, self.img_columns],
@@ -198,18 +194,14 @@ class DynamicDataLoader(DataLoader):
         """
         df = pd.read_csv(self.dataset_path)
         if self.target_column not in df.columns:
-            raise ValueError(
-                f"Target column '{self.target_column}' not found in dataset"
-            )
+            raise ValueError(f"Target column '{self.target_column}' not found in dataset")
         X = df.drop(columns=[self.target_column])
         y = df[self.target_column]
         if self.encode_categorical:
             X = self.force_encode_categorical(X)
         if self.split_col and self.split_col in df.columns:
             if self.train_value is None or self.test_value is None:
-                raise ValueError(
-                    "When using split_col, you must specify train_value and test_value."
-                )
+                raise ValueError("When using split_col, you must specify train_value and test_value.")
             train_mask = df[self.split_col] == self.train_value
             test_mask = df[self.split_col] == self.test_value
             X_train, X_test = X[train_mask], X[test_mask]
@@ -223,18 +215,12 @@ class DynamicDataLoader(DataLoader):
                 stratify=y,
             )
         if self.normalize_features:
-            X_train, X_test = self.scale_features(
-                X_train, X_test, mode=self.normalize_features
-            )
+            X_train, X_test = self.scale_features(X_train, X_test, mode=self.normalize_features)
         igtd_results = None
         if self.igtd_preprocessor is not None and self.igtd_configs is not None:
             if not self.igtd_result_base_dir:
-                raise ValueError(
-                    "igtd_result_base_dir must be provided if using the IGTD preprocessor."
-                )
-            igtd_results = self.igtd_preprocessor.run(
-                X_train, self.igtd_result_base_dir, self.igtd_configs
-            )
+                raise ValueError("igtd_result_base_dir must be provided if using the IGTD preprocessor.")
+            igtd_results = self.igtd_preprocessor.run(X_train, self.igtd_result_base_dir, self.igtd_configs)
         extra_info = None
         if self.return_extra_info:
             extra_info = self.create_extra_info(df)
@@ -349,9 +335,7 @@ class IGTDPreprocessor:
             ch.setFormatter(formatter)
             self.logger.addHandler(ch)
 
-    def run(
-        self, X: pd.DataFrame, base_result_dir: str, ordering_configs: Dict[str, Dict]
-    ) -> Dict[str, str]:
+    def run(self, X: pd.DataFrame, base_result_dir: str, ordering_configs: Dict[str, Dict]) -> Dict[str, str]:
         """run
 
         Args:
@@ -369,13 +353,9 @@ class IGTDPreprocessor:
         """
         result_dirs = {}
         for config_name, config in ordering_configs.items():
-            result_dir = os.path.join(
-                base_result_dir, self.dataset_name, f"{config_name}"
-            )
+            result_dir = os.path.join(base_result_dir, self.dataset_name, f"{config_name}")
             os.makedirs(result_dir, exist_ok=True)
-            self.logger.info(
-                f"Running IGTD ordering for config '{config_name}' in: {result_dir}"
-            )
+            self.logger.info(f"Running IGTD ordering for config '{config_name}' in: {result_dir}")
             table_to_image(
                 X,
                 [self.img_rows, self.img_columns],
@@ -480,18 +460,14 @@ class DynamicDataLoader(DataLoader):
         """
         df = pd.read_csv(self.dataset_path)
         if self.target_column not in df.columns:
-            raise ValueError(
-                f"Target column '{self.target_column}' not found in dataset"
-            )
+            raise ValueError(f"Target column '{self.target_column}' not found in dataset")
         X = df.drop(columns=[self.target_column])
         y = df[self.target_column]
         if self.encode_categorical:
             X = self.force_encode_categorical(X)
         if self.split_col and self.split_col in df.columns:
             if self.train_value is None or self.test_value is None:
-                raise ValueError(
-                    "When using split_col, you must specify train_value and test_value."
-                )
+                raise ValueError("When using split_col, you must specify train_value and test_value.")
             train_mask = df[self.split_col] == self.train_value
             test_mask = df[self.split_col] == self.test_value
             X_train, X_test = X[train_mask], X[test_mask]
@@ -505,18 +481,12 @@ class DynamicDataLoader(DataLoader):
                 stratify=y,
             )
         if self.normalize_features:
-            X_train, X_test = self.scale_features(
-                X_train, X_test, mode=self.normalize_features
-            )
+            X_train, X_test = self.scale_features(X_train, X_test, mode=self.normalize_features)
         igtd_results = None
         if self.igtd_preprocessor is not None and self.igtd_configs is not None:
             if not self.igtd_result_base_dir:
-                raise ValueError(
-                    "igtd_result_base_dir must be provided if using the IGTD preprocessor."
-                )
-            igtd_results = self.igtd_preprocessor.run(
-                X_train, self.igtd_result_base_dir, self.igtd_configs
-            )
+                raise ValueError("igtd_result_base_dir must be provided if using the IGTD preprocessor.")
+            igtd_results = self.igtd_preprocessor.run(X_train, self.igtd_result_base_dir, self.igtd_configs)
             self.logger.info(f"IGTD results: {igtd_results}")
         extra_info = None
         if self.return_extra_info:
@@ -528,9 +498,7 @@ class DynamicDataLoader(DataLoader):
                 igtd_path = os.path.join(igtd_results[first_config], "ordering.txt")
                 img_rows = self.igtd_preprocessor.img_rows
                 img_columns = self.igtd_preprocessor.img_columns
-            extra_info = self.create_extra_info(
-                df, igtd_path=igtd_path, img_rows=img_rows, img_columns=img_columns
-            )
+            extra_info = self.create_extra_info(df, igtd_path=igtd_path, img_rows=img_rows, img_columns=img_columns)
         return X_train, X_test, y_train, y_test, extra_info
 
     def create_extra_info(self, df, igtd_path=None, img_rows=None, img_columns=None):
@@ -567,9 +535,7 @@ class DynamicDataLoader(DataLoader):
             with open(igtd_path) as f:
                 lines = f.readlines()
                 if lines:
-                    extra_info["column_ordering"] = list(
-                        map(int, lines[-1].strip().split())
-                    )
+                    extra_info["column_ordering"] = list(map(int, lines[-1].strip().split()))
             extra_info["img_rows"] = img_rows
             extra_info["img_columns"] = img_columns
         return extra_info
