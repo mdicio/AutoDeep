@@ -1,0 +1,453 @@
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/factory.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/automl.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/modelutils/igtd_models.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_housing.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_heloc.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_covertype.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_ageconditions.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_adult.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_breastcancer.py Imports are incorrectly sorted and/or formatted.
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/factory.py:before	2025-03-10 17:02:28.135378
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/factory.py:after	2025-03-14 16:37:53.555714
+@@ -5,22 +5,21 @@
+ import torch
+ 
+ # from SCRATCH.SqueezeNet import SqueezeNetTrainer
+-from autodeep.dataloaders.dataloader import (
+-    AdultDataLoader,
+-    BreastCancerDataLoader,
+-    BufixDataLoader,
+-    CaliforniaHousingDataLoader,
+-    CoverTypeDataLoader,
+-    CreditDataLoader,
+-    DynamicDataLoader,
+-    HelocDataLoader,
+-    IrisDataLoader,
+-    KaggleAgeConditionsLoader,
+-    TitanicDataLoader,
+-)
+-from autodeep.modelsdefinition.AutomaticFeatureInteractionModel import AutoIntTrainer
++from autodeep.dataloaders.dataloader import (AdultDataLoader,
++                                             BreastCancerDataLoader,
++                                             BufixDataLoader,
++                                             CaliforniaHousingDataLoader,
++                                             CoverTypeDataLoader,
++                                             CreditDataLoader,
++                                             DynamicDataLoader,
++                                             HelocDataLoader, IrisDataLoader,
++                                             KaggleAgeConditionsLoader,
++                                             TitanicDataLoader)
++from autodeep.modelsdefinition.AutomaticFeatureInteractionModel import \
++    AutoIntTrainer
+ from autodeep.modelsdefinition.CatBoostModel import CatBoostTrainer
+-from autodeep.modelsdefinition.CategoryEmbeddingModel import CategoryEmbeddingTrainer
++from autodeep.modelsdefinition.CategoryEmbeddingModel import \
++    CategoryEmbeddingTrainer
+ from autodeep.modelsdefinition.FTTransformerModel import FTTransformerTrainer
+ from autodeep.modelsdefinition.GANDALF import GandalfTrainer
+ from autodeep.modelsdefinition.GATE import GateTrainer
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/automl.py:before	2025-03-14 16:31:40.900334
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/automl.py:after	2025-03-14 16:37:53.561532
+@@ -6,7 +6,8 @@
+ import yaml
+ 
+ from autodeep.evaluation.generalevaluator import Evaluator
+-from autodeep.factory import create_dynamic_data_loader, create_model, seed_everything
++from autodeep.factory import (create_dynamic_data_loader, create_model,
++                              seed_everything)
+ from autodeep.outputhandler.outputwriter import OutputWriter
+ 
+ DEFAULT_MODELS = [
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/modelutils/igtd_models.py:before	2025-03-14 16:31:41.724340
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/modelutils/igtd_models.py:after	2025-03-14 16:37:53.585468
+@@ -7,29 +7,16 @@
+ import numpy as np
+ import pandas as pd
+ from keras import backend, optimizers
+-from keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+-from keras.layers import (
+-    AlphaDropout,
+-    BatchNormalization,
+-    Conv2D,
+-    Dense,
+-    Dropout,
+-    Flatten,
+-    Input,
+-    MaxPooling2D,
+-    ReLU,
+-    concatenate,
+-)
++from keras.callbacks import (CSVLogger, EarlyStopping, ModelCheckpoint,
++                             ReduceLROnPlateau)
++from keras.layers import (AlphaDropout, BatchNormalization, Conv2D, Dense,
++                          Dropout, Flatten, Input, MaxPooling2D, ReLU,
++                          concatenate)
+ from keras.models import Model, load_model
+ from scipy import stats
+-from sklearn.metrics import (
+-    accuracy_score,
+-    matthews_corrcoef,
+-    mean_absolute_error,
+-    mean_squared_error,
+-    r2_score,
+-    roc_auc_score,
+-)
++from sklearn.metrics import (accuracy_score, matthews_corrcoef,
++                             mean_absolute_error, mean_squared_error, r2_score,
++                             roc_auc_score)
+ 
+ 
+ def ID_mapping(l1, l2):
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_housing.py:before	2025-03-14 16:31:41.065335
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_housing.py:after	2025-03-14 16:37:54.286063
+@@ -3,13 +3,11 @@
+ 
+ import numpy as np
+ import pandas as pd
++from Scripts.IGTD_Functions import (drop_numerical_outliers, min_max_transform,
++                                    table_to_image)
++
+ from autodeep.factory import create_data_loader
+ from dataloaders.dataloader import *
+-from Scripts.IGTD_Functions import (
+-    drop_numerical_outliers,
+-    min_max_transform,
+-    table_to_image,
+-)
+ 
+ # Create an instance of the specified data loader class
+ dataset_name = "housing"
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_heloc.py:before	2025-03-14 16:31:41.068335
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_heloc.py:after	2025-03-14 16:37:54.288021
+@@ -3,13 +3,11 @@
+ 
+ import numpy as np
+ import pandas as pd
++from Scripts.IGTD_Functions import (drop_numerical_outliers, min_max_transform,
++                                    table_to_image)
++
+ from autodeep.factory import create_data_loader
+ from dataloaders.dataloader import *
+-from Scripts.IGTD_Functions import (
+-    drop_numerical_outliers,
+-    min_max_transform,
+-    table_to_image,
+-)
+ 
+ # Create an instance of the specified data loader class
+ dataset_name = "heloc"
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_covertype.py:before	2025-03-14 16:31:40.997335
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_covertype.py:after	2025-03-14 16:37:54.289977
+@@ -3,13 +3,11 @@
+ 
+ import numpy as np
+ import pandas as pd
++from Scripts.IGTD_Functions import (drop_numerical_outliers, min_max_transform,
++                                    table_to_image)
++
+ from autodeep.factory import create_data_loader
+ from dataloaders.dataloader import *
+-from Scripts.IGTD_Functions import (
+-    drop_numerical_outliers,
+-    min_max_transform,
+-    table_to_image,
+-)
+ 
+ # Create an instance of the specified data loader class
+ dataset_name = "covertype"
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_ageconditions.py:before	2025-03-14 16:31:40.950334
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_ageconditions.py:after	2025-03-14 16:37:54.291939
+@@ -3,13 +3,11 @@
+ 
+ import numpy as np
+ import pandas as pd
++from Scripts.IGTD_Functions import (drop_numerical_outliers, min_max_transform,
++                                    table_to_image)
++
+ from autodeep.factory import create_data_loader
+ from dataloaders.dataloader import *
+-from Scripts.IGTD_Functions import (
+-    drop_numerical_outliers,
+-    min_max_transform,
+-    table_to_image,
+-)
+ 
+ # Create an instance of the specified data loader class
+ dataset_name = "ageconditions"
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_adult.py:before	2025-03-14 16:31:40.934334
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_adult.py:after	2025-03-14 16:37:54.293883
+@@ -3,13 +3,11 @@
+ 
+ import numpy as np
+ import pandas as pd
++from Scripts.IGTD_Functions import (drop_numerical_outliers, min_max_transform,
++                                    table_to_image)
++
+ from autodeep.factory import create_data_loader
+ from dataloaders.dataloader import *
+-from Scripts.IGTD_Functions import (
+-    drop_numerical_outliers,
+-    min_max_transform,
+-    table_to_image,
+-)
+ 
+ # Create an instance of the specified data loader class
+ dataset_name = "adult"
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_breastcancer.py:before	2025-03-14 16:31:40.980335
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_breastcancer.py:after	2025-03-14 16:37:54.295828
+@@ -3,13 +3,11 @@
+ 
+ import numpy as np
+ import pandas as pd
++from Scripts.IGTD_Functions import (drop_numerical_outliers, min_max_transform,
++                                    table_to_image)
++
+ from autodeep.factory import create_data_loader
+ from dataloaders.dataloader import *
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_iris.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_titanic.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_diabetes.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_creditcard.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/SoftOrdering1DCNN.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/MLP.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/IGTD.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/XGBoostTrainer.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/ResNetModel.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/CommonStructure.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/CatBoostModel.py Imports are incorrectly sorted and/or formatted.
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/evaluation/generalevaluator.py Imports are incorrectly sorted and/or formatted.
+-from Scripts.IGTD_Functions import (
+-    drop_numerical_outliers,
+-    min_max_transform,
+-    table_to_image,
+-)
+ 
+ # Create an instance of the specified data loader class
+ dataset_name = "breastcancer"
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_iris.py:before	2025-03-14 16:31:41.077335
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_iris.py:after	2025-03-14 16:37:54.297814
+@@ -3,13 +3,11 @@
+ 
+ import numpy as np
+ import pandas as pd
++from Scripts.IGTD_Functions import (drop_numerical_outliers, min_max_transform,
++                                    table_to_image)
++
+ from autodeep.factory import create_data_loader
+ from dataloaders.dataloader import *
+-from Scripts.IGTD_Functions import (
+-    drop_numerical_outliers,
+-    min_max_transform,
+-    table_to_image,
+-)
+ 
+ # Create an instance of the specified data loader class
+ dataset_name = "iris"
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_titanic.py:before	2025-03-14 16:31:41.088335
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_titanic.py:after	2025-03-14 16:37:54.299749
+@@ -3,13 +3,11 @@
+ 
+ import numpy as np
+ import pandas as pd
++from Scripts.IGTD_Functions import (drop_numerical_outliers, min_max_transform,
++                                    table_to_image)
++
+ from autodeep.factory import create_data_loader
+ from dataloaders.dataloader import *
+-from Scripts.IGTD_Functions import (
+-    drop_numerical_outliers,
+-    min_max_transform,
+-    table_to_image,
+-)
+ 
+ # Create an instance of the specified data loader class
+ dataset_name = "titanic"
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_diabetes.py:before	2025-03-14 16:31:41.027335
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_diabetes.py:after	2025-03-14 16:37:54.302129
+@@ -3,13 +3,11 @@
+ 
+ import numpy as np
+ import pandas as pd
++from Scripts.IGTD_Functions import (drop_numerical_outliers, min_max_transform,
++                                    table_to_image)
++
+ from autodeep.factory import create_full_data_loader
+ from dataloaders.fulldataloader import *
+-from Scripts.IGTD_Functions import (
+-    drop_numerical_outliers,
+-    min_max_transform,
+-    table_to_image,
+-)
+ 
+ # Create an instance of the specified data loader class
+ dataset_name = "diabetes"
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_creditcard.py:before	2025-03-14 16:31:41.034335
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/myexamples/igtd_notebooks/preprocess_tabs_creditcard.py:after	2025-03-14 16:37:54.304070
+@@ -3,13 +3,11 @@
+ 
+ import numpy as np
+ import pandas as pd
++from Scripts.IGTD_Functions import (drop_numerical_outliers, min_max_transform,
++                                    table_to_image)
++
+ from autodeep.factory import create_data_loader
+ from dataloaders.dataloader import *
+-from Scripts.IGTD_Functions import (
+-    drop_numerical_outliers,
+-    min_max_transform,
+-    table_to_image,
+-)
+ 
+ # Create an instance of the specified data loader class
+ dataset_name = "creditcard"
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/SoftOrdering1DCNN.py:before	2025-03-14 16:31:41.372337
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/SoftOrdering1DCNN.py:after	2025-03-14 16:37:54.317000
+@@ -16,10 +16,8 @@
+ 
+ from autodeep.evaluation.generalevaluator import Evaluator
+ from autodeep.modelutils.trainingutilities import (
+-    infer_hyperopt_space_pytorch_tabular,
+-    prepare_shared_optimizer_configs,
+-    stop_on_perfect_lossCondition,
+-)
++    infer_hyperopt_space_pytorch_tabular, prepare_shared_optimizer_configs,
++    stop_on_perfect_lossCondition)
+ 
+ 
+ class Model(nn.Module):
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/MLP.py:before	2025-03-14 16:31:40.865334
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/MLP.py:after	2025-03-14 16:37:54.322115
+@@ -10,9 +10,7 @@
+ from autodeep.evaluation.generalevaluator import Evaluator
+ from autodeep.modelsdefinition.CommonStructure import BaseModel
+ from autodeep.modelutils.trainingutilities import (
+-    infer_hyperopt_space,
+-    stop_on_perfect_lossCondition,
+-)
++    infer_hyperopt_space, stop_on_perfect_lossCondition)
+ 
+ 
+ class MLP(BaseModel):
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/IGTD.py:before	2025-03-14 16:31:41.092335
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/IGTD.py:after	2025-03-14 16:37:54.328843
+@@ -102,10 +102,10 @@
+ # Example integration within a custom DataLoader
+ # =============================================================================
+ 
+-from dataloaders.dataloader import (  # Assume this is your base DataLoader class
+-    DataLoader,
+-)
+ from sklearn.model_selection import train_test_split
++
++from dataloaders.dataloader import \
++    DataLoader  # Assume this is your base DataLoader class
+ 
+ 
+ class DynamicDataLoader(DataLoader):
+@@ -260,11 +260,11 @@
+ 
+ import numpy as np
+ import pandas as pd
+-from dataloaders.dataloader import (  # Assume this is your base DataLoader class
+-    DataLoader,
+-)
+ from Scripts.IGTD_Functions import table_to_image
+ from sklearn.model_selection import train_test_split
++
++from dataloaders.dataloader import \
++    DataLoader  # Assume this is your base DataLoader class
+ 
+ 
+ class IGTDPreprocessor:
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/XGBoostTrainer.py:before	2025-03-14 16:31:40.999335
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/XGBoostTrainer.py:after	2025-03-14 16:37:54.334246
+@@ -10,9 +10,7 @@
+ from autodeep.evaluation.generalevaluator import Evaluator
+ from autodeep.modelsdefinition.CommonStructure import BaseModel
+ from autodeep.modelutils.trainingutilities import (
+-    infer_hyperopt_space,
+-    stop_on_perfect_lossCondition,
+-)
++    infer_hyperopt_space, stop_on_perfect_lossCondition)
+ 
+ 
+ class XGBoostTrainer(BaseModel):
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/ResNetModel.py:before	2025-03-14 16:31:41.407337
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/ResNetModel.py:after	2025-03-14 16:37:54.345044
+@@ -17,9 +17,7 @@
+ 
+ from autodeep.evaluation.generalevaluator import Evaluator
+ from autodeep.modelutils.trainingutilities import (
+-    infer_hyperopt_space_pytorch_custom,
+-    stop_on_perfect_lossCondition,
+-)
++    infer_hyperopt_space_pytorch_custom, stop_on_perfect_lossCondition)
+ 
+ 
+ class ResNetModel(nn.Module):
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/CommonStructure.py:before	2025-03-14 16:31:40.979335
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/CommonStructure.py:after	2025-03-14 16:37:54.352815
+@@ -17,12 +17,8 @@
+ 
+ from autodeep.evaluation.generalevaluator import Evaluator
+ from autodeep.modelutils.trainingutilities import (
+-    handle_rogue_batch_size,
+-    infer_hyperopt_space_pytorch_tabular,
+-    prepare_optimizer,
+-    prepare_scheduler,
+-    stop_on_perfect_lossCondition,
+-)
++    handle_rogue_batch_size, infer_hyperopt_space_pytorch_tabular,
++    prepare_optimizer, prepare_scheduler, stop_on_perfect_lossCondition)
+ 
+ 
+ class BaseModel:
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/CatBoostModel.py:before	2025-03-14 16:31:40.807333
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/modelsdefinition/CatBoostModel.py:after	2025-03-14 16:37:54.358208
+@@ -10,9 +10,7 @@
+ from autodeep.evaluation.generalevaluator import Evaluator
+ from autodeep.modelsdefinition.CommonStructure import BaseModel
+ from autodeep.modelutils.trainingutilities import (
+-    infer_hyperopt_space,
+-    stop_on_perfect_lossCondition,
+-)
++    infer_hyperopt_space, stop_on_perfect_lossCondition)
+ 
+ 
+ class CatBoostTrainer(BaseModel):
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/evaluation/generalevaluator.py:before	2025-03-14 16:31:40.730333
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/evaluation/generalevaluator.py:after	2025-03-14 16:37:54.366127
+@@ -1,16 +1,8 @@
+ import numpy as np
+-from sklearn.metrics import (
+ERROR: /home/boom/Desktop/repos/AutoDeep/autodeep/dataloaders/dataloader.py Imports are incorrectly sorted and/or formatted.
+-    accuracy_score,
+-    average_precision_score,
+-    f1_score,
+-    mean_absolute_error,
+-    mean_squared_error,
+-    multilabel_confusion_matrix,
+-    precision_score,
+-    r2_score,
+-    recall_score,
+-    roc_auc_score,
+-)
++from sklearn.metrics import (accuracy_score, average_precision_score, f1_score,
++                             mean_absolute_error, mean_squared_error,
++                             multilabel_confusion_matrix, precision_score,
++                             r2_score, recall_score, roc_auc_score)
+ 
+ 
+ class Evaluator:
+--- /home/boom/Desktop/repos/AutoDeep/autodeep/dataloaders/dataloader.py:before	2025-03-14 16:31:41.604339
++++ /home/boom/Desktop/repos/AutoDeep/autodeep/dataloaders/dataloader.py:after	2025-03-14 16:37:54.379428
+@@ -5,7 +5,8 @@
+ import numpy as np
+ import pandas as pd
+ import seaborn as sns
+-from sklearn.datasets import fetch_california_housing, load_breast_cancer, load_iris
++from sklearn.datasets import (fetch_california_housing, load_breast_cancer,
++                              load_iris)
+ from sklearn.model_selection import train_test_split
+ from sklearn.preprocessing import MinMaxScaler, StandardScaler
+ from sklearn.utils import shuffle
