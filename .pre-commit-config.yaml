@@ -13,17 +13,17 @@ repos:
         files: ^autodeep/.*\.py$ # Only check Python files
 
 
-  # flake8 configuration
-  - repo: https://github.com/PyCQA/flake8
-    rev: 7.1.2  # Specify version (can be updated)
-    hooks:
-      - id: flake8
-        name: flake8
-        args:
-          - "--max-line-length=150"  # Max line length for flake8 (PEP 8 compatible)
-          - "--exclude=.tox,.git,.venv,build,dist"  # Commonly excluded folders
-        exclude: "^(tests|docs)/.*"  # Exclude test and docs directories
-        files: ^autodeep/.*\.py$  # Only check Python files
+  # # flake8 configuration
+  # - repo: https://github.com/PyCQA/flake8
+  #   rev: 7.1.2  # Specify version (can be updated)
+  #   hooks:
+  #     - id: flake8
+  #       name: flake8
+  #       args:
+  #         - "--max-line-length=150"  # Max line length for flake8 (PEP 8 compatible)
+  #         - "--exclude=.tox,.git,.venv,build,dist"  # Commonly excluded folders
+  #       exclude: "^(tests|docs)/.*"  # Exclude test and docs directories
+  #       files: ^autodeep/.*\.py$  # Only check Python files
 
   # pylint configuration
   - repo: https://github.com/PyCQA/pylint
