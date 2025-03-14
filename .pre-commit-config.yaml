@@ -9,7 +9,7 @@ repos:
         args:
           - "--profile"
           - "black"
-        exclude: "^(tests|docs)/.*"  # Exclude test and docs directories
+        exclude: "^(tests|docs|autodeep/myexamples|autodeep/modelutils)/.*"   # Exclude test and docs directories
         files: ^autodeep/.*\.py$ # Only check Python files
 
 
@@ -34,7 +34,7 @@ repos:
         args:
           - "--max-line-length=150"  # Max line length for pylint (PEP 8 compatible)
           - "--disable=missing-docstring,invalid-name"  # Disable warnings for missing docstrings and invalid names (you can customize this)
-        exclude: "^(tests|docs)/.*"  # Exclude test and docs directories
+        exclude: "^(tests|docs|autodeep/myexamples|autodeep/modelutils)/.*"   # Exclude test and docs directories
         files: ^autodeep/.*\.py$  # Only check Python files
 
   # black configuration
@@ -45,5 +45,5 @@ repos:
         name: black
         args:
           - "--line-length=150"
-        exclude: "^(tests|docs)/.*"  # Exclude test and docs directories
+        exclude: "^(tests|docs|autodeep/myexamples|autodeep/modelutils)/.*"  # Exclude test and docs directories
         files: ^autodeep/.*\.py$  # Only check Python files
