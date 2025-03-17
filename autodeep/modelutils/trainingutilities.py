@@ -218,7 +218,6 @@ def prepare_scheduler(scheduler_fn):
                 "factor": scheduler_details.get("ReduceLROnPlateau_factor", 0.1),
                 "patience": scheduler_details.get("ReduceLROnPlateau_patience", 5),
                 "min_lr": 1e-08,
-                "verbose": True,
                 "mode": "min",
             }
     return None, {}
@@ -376,13 +375,10 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
                             )
         elif (
             isinstance(param_values[0], (str, bool, list))
-            or param_name in ["virtual_batch_size_ratio", "weights", "hidden_size"]
+            or param_name in ["virtual_batch_size_ratio", "hidden_size"]
             or any(value is None for value in param_values)
         ):
-            if param_name in ["weights"]:
-                space[param_name] = scope.int(hp.choice(param_name, param_values))
-            else:
-                space[param_name] = hp.choice(param_name, param_values)
+            space[param_name] = hp.choice(param_name, param_values)
         elif isinstance(param_values[0], int):
             min_value, max_value = ensure_min_max(param_values)
             if param_name in ["batch_size"]:

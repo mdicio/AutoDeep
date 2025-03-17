@@ -1,23 +1,29 @@
 import logging
 import os
-from typing import Dict, Optional
-
+from torch.optim import SGD, Adam, AdamW
+from torch.optim.lr_scheduler import ExponentialLR, ReduceLROnPlateau, StepLR
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torchvision.transforms as transforms
 from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 from torch.utils.data import DataLoader, Dataset, random_split
-from torchvision.models import resnet18, resnet34, resnet50
+from torchvision.models import (
+    resnet18,
+    resnet34,
+    resnet50,
+    ResNet18_Weights,
+    ResNet34_Weights,
+    ResNet50_Weights,
+)
 from tqdm import tqdm
 
 from autodeep.evaluation.generalevaluator import Evaluator
 from autodeep.modelutils.trainingutilities import (
-    infer_hyperopt_space_pytorch_custom,
+    infer_hyperopt_space_pytorch_tabular,
     stop_on_perfect_lossCondition,
 )
 
@@ -29,7 +35,7 @@ class ResNetModel(nn.Module):
         problem_type="binary_classification",
         num_targets=None,
         depth="resnet18",
-        pretrained=True,
+        weights=None,
     ):
         """__init__
 
@@ -49,16 +55,31 @@ class ResNetModel(nn.Module):
             type: Description
         """
         super(ResNetModel, self).__init__()
-        self.pretrained = pretrained
         self.problem_type = problem_type
         self.num_targets = num_targets
         self.depth = depth
+
+        print("weights", weights, type(weights))
+        if weights not in ["None", "default"]:
+            raise ValueError("weights must be one of [None, 'default']")
+        if weights == "None":
+            weights = None
+        self.weights = weights
         if depth == "resnet18":
-            self.resnet = resnet18(pretrained=self.pretrained)
+            if self.weights == "default":
+                weights = ResNet18_Weights.DEFAULT
+
+            self.resnet = resnet18(weights=weights)
         elif depth == "resnet34":
-            self.resnet = resnet34(pretrained=self.pretrained)
+            if self.weights == "default":
+                weights = ResNet34_Weights.DEFAULT
+
+            self.resnet = resnet34(weights=weights)
         elif depth == "resnet50":
-            self.resnet = resnet50(pretrained=self.pretrained)
+            if self.weights == "default":
+                weights = ResNet50_Weights.DEFAULT
+
+            self.resnet = resnet50(weights=weights)
         else:
             raise ValueError("Invalid depth. Supported options: resnet18, resnet34, resnet50.")
         self.num_features = self.resnet.fc.in_features
@@ -108,7 +129,6 @@ class ResNetTrainer:
         self.model_name = "resnet"
         self.problem_type = problem_type
         self.batch_size = 512
-        self.pretrained = pretrained
         self.problem_type = problem_type
         self.depth = None
         self.save_path = None
@@ -152,7 +172,7 @@ class ResNetTrainer:
         self.model = self.best_model
         self.logger.debug("Model loaded successfully")
 
-    def build_model(self, problem_type, depth):
+    def build_model(self, problem_type, depth, weights):
         """build_model
 
         Args:
@@ -166,7 +186,7 @@ class ResNetTrainer:
         Returns:
             type: Description
         """
-        model = ResNetModel(problem_type, depth)
+        model = ResNetModel(problem_type=problem_type, depth=depth, weights=weights)
         return model
 
     def process_inputs_labels_training(self, inputs, labels):
@@ -440,7 +460,7 @@ class ResNetTrainer:
         torch.save(self.model.state_dict(), save_path)
         print(f"Model saved successfully at {save_path}")
 
-    def _set_optimizer_schedulers(self, params, default_params: Optional[Dict] = None):
+    def _set_optimizer_schedulers(self, params):
         """_set_optimizer_schedulers
 
         Args:
@@ -454,37 +474,48 @@ class ResNetTrainer:
         Returns:
             type: Description
         """
-        if params["optimizer_fn"] == torch.optim.Adam:
-            self.optimizer = optim.Adam(
+
+        print(params["optimizer_fn"])
+
+        optimizer_details = params["optimizer_fn"]
+        optimizer_fn = optimizer_details["optimizer_fn"]
+
+        scheduler_details = params["scheduler_fn"]
+        scheduler_fn = scheduler_details["scheduler_fn"]
+
+        if optimizer_fn == Adam:
+            self.optimizer = Adam(
                 self.model.parameters(),
-                lr=params["Adam_learning_rate"],
-                weight_decay=params["Adam_weight_decay"],
+                lr=optimizer_details["Adam_learning_rate"],
+                weight_decay=optimizer_details["Adam_weight_decay"],
             )
-        elif params["optimizer_fn"] == torch.optim.SGD:
-            self.optimizer = optim.SGD(
+        elif optimizer_fn == SGD:
+            self.optimizer = SGD(
                 self.model.parameters(),
-                lr=params["SGD_learning_rate"],
-                momentum=params["SGD_momentum"],
+                lr=optimizer_details["SGD_learning_rate"],
+                momentum=optimizer_details["SGD_momentum"],
             )
-        elif params["optimizer_fn"] == torch.optim.AdamW:
-            self.optimizer = torch.optim.AdamW(
+        elif optimizer_fn == AdamW:
+            self.optimizer = AdamW(
                 self.model.parameters(),
-                lr=params["AdamW_learning_rate"],
-                weight_decay=params["AdamW_weight_decay"],
+                lr=optimizer_details["AdamW_learning_rate"],
+                weight_decay=optimizer_details["AdamW_weight_decay"],
             )
-        if params["scheduler_fn"] == torch.optim.lr_scheduler.StepLR:
-            self.scheduler = torch.optim.lr_scheduler.StepLR(
+        if scheduler_fn == StepLR:
+            self.scheduler = StepLR(
                 self.optimizer,
-                step_size=params["StepLR_step_size"],
-                gamma=params["StepLR_gamma"],
+                step_size=scheduler_details["StepLR_step_size"],
+                gamma=scheduler_details["StepLR_gamma"],
             )
-        elif params["scheduler_fn"] == torch.optim.lr_scheduler.ExponentialLR:
-            self.scheduler = torch.optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=params["ExponentialLR_gamma"])
-        elif params["scheduler_fn"] == torch.optim.lr_scheduler.ReduceLROnPlateau:
-            self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        elif scheduler_fn == ExponentialLR:
+            self.scheduler = ExponentialLR(
+                self.optimizer, gamma=scheduler_details["ExponentialLR_gamma"]
+            )
+        elif scheduler_fn == ReduceLROnPlateau:
+            self.scheduler = ReduceLROnPlateau(
                 self.optimizer,
-                factor=params["ReduceLROnPlateau_factor"],
-                patience=params["ReduceLROnPlateau_patience"],
+                factor=scheduler_details["ReduceLROnPlateau_factor"],
+                patience=scheduler_details["ReduceLROnPlateau_patience"],
                 min_lr=1e-07,
                 verbose=True,
                 mode="min",
@@ -524,7 +555,9 @@ class ResNetTrainer:
         val_size = self.default_params.get("val_size", 0.2)
         self.logger.debug(f"Training on {self.device} for dataset")
         param_grid = model_config["param_grid"]
-        space = infer_hyperopt_space_pytorch_custom(param_grid)
+        space = infer_hyperopt_space_pytorch_tabular(param_grid)
+        print("space")
+        print(space)
         self.extra_info = extra_info
         index_ordering = extra_info["column_ordering"]
         self.img_rows = extra_info["img_rows"]
@@ -547,6 +580,7 @@ class ResNetTrainer:
 
         def objective(params):
             self.logger.info(f"Training with hyperparameters: {params}")
+            print(f"Training with hyperparameters: {params}")
             X_train, X_val, y_train, y_val = train_test_split(
                 X,
                 y,
@@ -554,6 +588,7 @@ class ResNetTrainer:
                 random_state=42,
                 stratify=y if self.problem_type != "regression" else None,
             )
+            print(params["weights"])
             print(X_train.shape)
             print(y_train.shape)
             print(self.img_rows)
@@ -580,7 +615,11 @@ class ResNetTrainer:
                 num_workers=self.num_workers,
                 pin_memory=True,
             )
-            self.model = self.build_model(self.problem_type, depth=params["resnet_depth"])
+            self.model = self.build_model(
+                self.problem_type,
+                depth=params["resnet_depth"],
+                weights=params["weights"],
+            )
             params = self._set_optimizer_schedulers(params)
             self.model.to(self.device)
             self.model.train()
@@ -617,24 +656,44 @@ class ResNetTrainer:
                     y_true = np.append(y_true, labels)
                     y_pred = np.append(y_pred, predictions)
                     y_prob = np.append(y_prob, probabilities)
-            self.evaluator.y_true = y_true.reshape(-1)
-            self.evaluator.y_pred = y_pred.reshape(-1)
-            self.evaluator.y_prob = y_prob
-            self.evaluator.run_metrics = eval_metrics
-            metrics_for_split_val = self.evaluator.evaluate_model()
-            score = metrics_for_split_val[metric]
+
+            if np.isnan(y_pred).any():
+                self.logger.warning(
+                    "Warning: NaN values detected in predictions. Returning high loss."
+                )
+                score = float("inf")  #
+                metrics_for_split_val = {}
+            else:
+                self.evaluator.y_true = y_true.reshape(-1)
+                self.evaluator.y_pred = y_pred.reshape(-1)
+                self.evaluator.y_prob = y_prob
+                self.evaluator.run_metrics = eval_metrics
+                metrics_for_split_val = self.evaluator.evaluate_model()
+                score = metrics_for_split_val[metric]
+
             with torch.no_grad():
                 for inputs, labels in train_loader:
                     predictions, labels, probabilities = self.process_inputs_labels_prediction(inputs, labels)
                     y_true = np.append(y_true, labels)
                     y_pred = np.append(y_pred, predictions)
                     y_prob = np.append(y_prob, probabilities)
-            self.evaluator.y_true = y_true.reshape(-1)
-            self.evaluator.y_pred = y_pred.reshape(-1)
-            self.evaluator.y_prob = y_prob
-            self.evaluator.run_metrics = eval_metrics
-            metrics_for_split_train = self.evaluator.evaluate_model()
+
+            if np.isnan(y_pred).any():
+                self.logger.warning(
+                    "Warning: NaN values detected in predictions. Returning high loss."
+                )
+                score = float("inf")  #
+                metrics_for_split_train = {metric: score}
+            else:
+                self.evaluator.y_true = y_true.reshape(-1)
+                self.evaluator.y_pred = y_pred.reshape(-1)
+                self.evaluator.y_prob = y_prob
+                self.evaluator.run_metrics = eval_metrics
+                metrics_for_split_train = self.evaluator.evaluate_model()
+                score = metrics_for_split_train[metric]
+
             self.logger.info(f"Validation metrics {metric}: {score}")
+
             if self.evaluator.maximize[metric][0]:
                 score = -1 * score
             return {

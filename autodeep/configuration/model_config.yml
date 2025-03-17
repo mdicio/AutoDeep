@@ -75,7 +75,7 @@ model_configs:
 
     default_params:
       
-      val_size: 0.15
+      val_size: 0.2
       early_stopping_rounds: 100
       verbose: false
       iterations: 500
@@ -98,7 +98,7 @@ model_configs:
       verbose: false
       auto_lr_find: False
       max_epochs: 1000
-      val_size: 0.15
+      val_size: 0.2
       early_stopping_patience: 5
       batch_size: 128
 
@@ -192,7 +192,7 @@ model_configs:
       
       auto_lr_find: False
       max_epochs: 1000
-      val_size: 0.15
+      val_size: 0.2
       early_stopping_patience: 5
 
     param_grid:
@@ -279,7 +279,7 @@ model_configs:
       
       auto_lr_find: False
       max_epochs: 1000
-      val_size: 0.15
+      val_size: 0.2
       early_stopping_patience: 5
 
     param_grid:
@@ -396,7 +396,7 @@ model_configs:
       
       auto_lr_find: False
       max_epochs: 1000
-      val_size: 0.15
+      val_size: 0.2
       early_stopping_patience: 5
 
     param_grid:
@@ -509,7 +509,7 @@ model_configs:
       
       auto_lr_find: False
       max_epochs: 1000
-      val_size: 0.15
+      val_size: 0.2
       early_stopping_patience: 5
 
     param_grid:
@@ -613,7 +613,7 @@ model_configs:
       
       auto_lr_find: False
       max_epochs: 1000
-      val_size: 0.15
+      val_size: 0.2
       early_stopping_patience: 5
 
     param_grid:
@@ -722,7 +722,7 @@ model_configs:
       
       auto_lr_find: False
       max_epochs: 1000
-      val_size: 0.15
+      val_size: 0.2
       early_stopping_patience: 5
 
     param_grid:
@@ -831,7 +831,7 @@ model_configs:
       
       auto_lr_find: False
       max_epochs: 1000
-      val_size: 0.15
+      val_size: 0.2
       early_stopping_patience: 5
 
     param_grid:
@@ -976,6 +976,9 @@ model_configs:
         - resnet18
         - resnet34
         - resnet50
+      weights:
+        - None
+        - default
       batch_size:
         - 1024
         - 512
@@ -1035,7 +1038,7 @@ model_configs:
     default_params:
       
       max_epochs: 1000
-      val_size: 0.15
+      val_size: 0.2
       early_stopping_patience: 5
 
     param_grid:
@@ -1106,7 +1109,7 @@ model_configs:
       activation: relu
       solver: adam
       batch_size: 1024
-      val_size: 0.15
+      val_size: 0.2
 
 
     param_grid:

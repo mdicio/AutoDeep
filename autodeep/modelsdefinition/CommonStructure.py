@@ -342,11 +342,12 @@ class PytorchTabularTrainer:
             self.logger.debug(f"Shape of y_val: {y_val.shape}")
             self.logger.debug(f"Batch Size, VBS: {params['batch_size']}")
             model = self.prepare_tabular_model(params, self.default_params, default=self.default)
-            if torch.cuda.is_available():
-                self.logger.debug(f"GPU Memory Allocated: {torch.cuda.memory_allocated() / 1000000.0} MB")
-                self.logger.debug(f"GPU Memory Reserved: {torch.cuda.memory_reserved() / 1000000.0} MB")
+
             try:
                 model.fit(train=train_data, validation=val_data, loss=self.loss_fn)
+                if torch.cuda.is_available():
+                    self.logger.debug(f"GPU Memory Allocated: {torch.cuda.memory_allocated() / 1000000.0} MB")
+                    self.logger.debug(f"GPU Memory Reserved: {torch.cuda.memory_reserved() / 1000000.0} MB")
             except Exception as e:
                 error_message = "".join(traceback.format_exception(*sys.exc_info()))
                 error_message += str(repr(e))

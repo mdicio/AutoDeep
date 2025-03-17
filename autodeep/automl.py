@@ -230,9 +230,8 @@ class AutoRunner:
             type: Description
         """
         model_config = self.model_config["model_configs"].get(model_name, {})
-        if self.execution_mode == "hyperopt_kfold":
-            raise ValueError("Not implemented yet, coming soon!")
-        elif self.execution_mode == "hyperopt":
+  
+        if self.execution_mode == "hyperopt":
             return model.hyperopt_search(
                 X_train,
                 y_train,
@@ -242,6 +241,8 @@ class AutoRunner:
                 max_evals=self.max_evals,
                 extra_info=extra_info,
             )
+        elif self.execution_mode == "hyperopt_kfold":
+            raise ValueError("Not implemented yet, coming soon!")
         else:
             raise ValueError("Not implemented yet, coming soon!")
 
