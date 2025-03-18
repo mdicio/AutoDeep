@@ -99,14 +99,15 @@ model_configs:
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.2
-      early_stopping_patience: 5
+      early_stopping_patience: 15
       batch_size: 128
 
     param_grid:
       batch_size:
-        - 1024
         - 512
-        - 256
+        - 64
+        - 32
+        - 16
       layers:
         - "128-64-32"
         - "256-128"
@@ -192,13 +193,14 @@ model_configs:
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.2
-      early_stopping_patience: 5
+      early_stopping_patience: 15
 
     param_grid:
       batch_size:
-        - 1024
         - 512
-        - 256
+        - 64
+        - 32
+        - 16
       layers:
         - "128-64-32"
         - "256-128"
@@ -278,13 +280,14 @@ model_configs:
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.2
-      early_stopping_patience: 5
+      early_stopping_patience: 15
 
     param_grid:
       batch_size:
-        - 1024
         - 512
-        - 256
+        - 64
+        - 32
+        - 16
       attn_embed_dim_multiplier:
         - 8
         - 32
@@ -394,13 +397,14 @@ model_configs:
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.2
-      early_stopping_patience: 5
+      early_stopping_patience: 15
 
     param_grid:
       batch_size:
-        - 1024
         - 512
-        - 256
+        - 64
+        - 32
+        - 16
       input_embed_dim_multiplier:
         - 1
         - 8
@@ -506,13 +510,14 @@ model_configs:
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.2
-      early_stopping_patience: 5
+      early_stopping_patience: 15
 
     param_grid:
       batch_size:
-        - 1024
         - 512
-        - 256
+        - 64
+        - 32
+        - 16
       gflu_stages:
         - 4
         - 7
@@ -609,13 +614,14 @@ model_configs:
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.2
-      early_stopping_patience: 5
+      early_stopping_patience: 15
 
     param_grid:
       batch_size:
-        - 1024
         - 512
-        - 256
+        - 64
+        - 32
+        - 16
       num_layers:
         - 1
         - 2
@@ -717,7 +723,7 @@ model_configs:
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.2
-      early_stopping_patience: 5
+      early_stopping_patience: 15
 
     param_grid:
       batch_size:
@@ -826,13 +832,14 @@ model_configs:
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.2
-      early_stopping_patience: 5
+      early_stopping_patience: 15
 
     param_grid:
       batch_size:
-        - 1024
         - 512
-        - 256
+        - 64
+        - 32
+        - 16
       input_embed_dim_multiplier:
         - 1
         - 8
@@ -962,7 +969,7 @@ model_configs:
       auto_lr_find: False
       max_epochs: 1500
       val_size: 0.2
-      early_stopping_patience: 5
+      early_stopping_patience: 15
 
     param_grid:
       resnet_depth:
@@ -973,9 +980,10 @@ model_configs:
         - None
         - default
       batch_size:
-        - 1024
         - 512
-        - 256
+        - 64
+        - 32
+        - 16
       optimizer_fn:
         Adam:
           weight_decay:
@@ -1021,13 +1029,14 @@ model_configs:
       
       max_epochs: 1000
       val_size: 0.2
-      early_stopping_patience: 5
+      early_stopping_patience: 15
 
     param_grid:
       batch_size:
-        - 1024
         - 512
-        - 256
+        - 64
+        - 32
+        - 16
       hidden_size:
         - 4096
         - 2048
@@ -1110,6 +1119,7 @@ model_configs:
         - adam
         - sgd
       batch_size:
-        - 1024
         - 512
-        - 256
+        - 64
+        - 32
+        - 16

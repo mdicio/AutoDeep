@@ -24,6 +24,8 @@ DEFAULT_MODELS = [
 ]
 DEFAULT_OUTPUT_FOLDER = Path("./output")
 DEFAULT_MODEL_CONFIG_FILE = Path(__file__).parent / "configuration" / "model_config.yml"
+XS_MODEL_CONFIG_FILE = Path(__file__).parent / "configuration" / "model_config_XS.yml"
+
 DEFAULT_IGTD_CONFIG = {
     "img_size": "auto",
     "save_image_size": 3,
@@ -190,6 +192,12 @@ class AutoRunner:
                     random_state=self.random_state,
                     problem_type=data_config["problem_type"],
                 )
+                if len(X_train) <= 5000:
+                    self.model_config = self._load_config(XS_MODEL_CONFIG_FILE)
+
+                else:
+                    self.model_config = self._load_config(DEFAULT_MODEL_CONFIG_FILE)
+
                 model.num_workers = 12
                 (best_params, best_score, train_metrics, validation_metrics) = self._train_model(
                     model, X_train, y_train, model_name, data_config, extra_info
@@ -230,7 +238,7 @@ class AutoRunner:
             type: Description
         """
         model_config = self.model_config["model_configs"].get(model_name, {})
-  
+
         if self.execution_mode == "hyperopt":
             return model.hyperopt_search(
                 X_train,

@@ -1,23 +1,23 @@
 import logging
 import os
-from typing import Dict, Optional
 
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_class_weight
+from torch.optim import SGD, Adam, AdamW
+from torch.optim.lr_scheduler import ExponentialLR, ReduceLROnPlateau, StepLR
 from torch.utils.data import DataLoader, Dataset, TensorDataset, random_split
 from tqdm import tqdm
 
 from autodeep.evaluation.generalevaluator import Evaluator
 from autodeep.modelutils.trainingutilities import (
     infer_hyperopt_space_pytorch_tabular,
-    prepare_shared_optimizer_configs,
     stop_on_perfect_lossCondition,
 )
 
@@ -459,7 +459,7 @@ class SoftOrdering1DCNN:
         torch.save(self.model.state_dict(), save_path)
         print(f"Model saved successfully at {save_path}")
 
-    def _set_optimizer_schedulers(self, params, default_params: Optional[Dict] = None):
+    def _set_optimizer_schedulers(self, params):
         """_set_optimizer_schedulers
 
         Args:
@@ -473,42 +473,51 @@ class SoftOrdering1DCNN:
         Returns:
             type: Description
         """
-        (optimizer_fn_name, optimizer_params, scheduler_fn_name, scheduler_params) = prepare_shared_optimizer_configs(params)
-        if optimizer_fn_name == "Adam":
-            self.optimizer = optim.Adam(
+
+        print(params["optimizer_fn"])
+
+        optimizer_details = params["optimizer_fn"]
+        optimizer_fn = optimizer_details["optimizer_fn"]
+
+        scheduler_details = params["scheduler_fn"]
+        scheduler_fn = scheduler_details["scheduler_fn"]
+
+        if optimizer_fn == Adam:
+            self.optimizer = Adam(
                 self.model.parameters(),
-                lr=optimizer_params["learning_rate"],
-                weight_decay=optimizer_params["weight_decay"],
+                lr=optimizer_details["Adam_learning_rate"],
+                weight_decay=optimizer_details["Adam_weight_decay"],
             )
-        elif optimizer_fn_name == "SGD":
-            self.optimizer = optim.SGD(
+        elif optimizer_fn == SGD:
+            self.optimizer = SGD(
                 self.model.parameters(),
-                lr=optimizer_params["learning_rate"],
-                momentum=optimizer_params["momentum"],
+                lr=optimizer_details["SGD_learning_rate"],
+                momentum=optimizer_details["SGD_momentum"],
             )
-        elif optimizer_fn_name == "AdamW":
-            self.optimizer = optim.AdamW(
+        elif optimizer_fn == AdamW:
+            self.optimizer = AdamW(
                 self.model.parameters(),
-                lr=optimizer_params["learning_rate"],
-                weight_decay=optimizer_params["weight_decay"],
+                lr=optimizer_details["AdamW_learning_rate"],
+                weight_decay=optimizer_details["AdamW_weight_decay"],
             )
-        if scheduler_fn_name == "StepLR":
-            self.scheduler = optim.lr_scheduler.StepLR(
+        if scheduler_fn == StepLR:
+            self.scheduler = StepLR(
                 self.optimizer,
-                step_size=scheduler_params["step_size"],
-                gamma=scheduler_params["gamma"],
+                step_size=scheduler_details["StepLR_step_size"],
+                gamma=scheduler_details["StepLR_gamma"],
             )
-        elif scheduler_fn_name == "ExponentialLR":
-            self.scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, gamma=scheduler_params["gamma"])
-        elif scheduler_fn_name == "ReduceLROnPlateau":
-            self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        elif scheduler_fn == ExponentialLR:
+            self.scheduler = ExponentialLR(self.optimizer, gamma=scheduler_details["ExponentialLR_gamma"])
+        elif scheduler_fn == ReduceLROnPlateau:
+            self.scheduler = ReduceLROnPlateau(
                 self.optimizer,
-                factor=scheduler_params["factor"],
-                patience=scheduler_params["patience"],
+                factor=scheduler_details["ReduceLROnPlateau_factor"],
+                patience=scheduler_details["ReduceLROnPlateau_patience"],
                 min_lr=1e-07,
                 verbose=True,
                 mode="min",
             )
+        return params
 
     def hyperopt_search(self, X, y, model_config, metric, eval_metrics, max_evals=16, extra_info=None):
         """hyperopt_search
@@ -537,6 +546,7 @@ class SoftOrdering1DCNN:
         self.default_params = model_config["default_params"]
         val_size = self.default_params.get("val_size", 0.2)
         max_epochs = self.default_params.get("max_epochs", 3)
+        self.extra_info = extra_info
         early_stopping = self.default_params.get("early_stopping", True)
         patience = self.default_params.get("early_stopping_patience", 5)
         param_grid = model_config["param_grid"]
@@ -613,29 +623,45 @@ class SoftOrdering1DCNN:
             if best_model_state_dict is not None:
                 self.model.load_state_dict(best_model_state_dict)
                 print(f"Best model loaded from epoch {best_epoch + 1}")
+
             y_pred, y_prob = self.predict(X_val, predict_proba=True)
-            self.evaluator.y_true = y_val.values.squeeze()
-            self.evaluator.y_pred = y_pred.reshape(-1)
-            self.evaluator.y_prob = y_prob
-            self.evaluator.run_metrics = eval_metrics
-            validation_metrics = self.evaluator.evaluate_model()
+
+            if np.isnan(y_pred).any():
+                self.logger.warning("Warning: NaN values detected in predictions. Returning high loss.")
+                score = float("inf")  #
+                validation_metrics = {metric: score}
+            else:
+                self.evaluator.y_true = y_val.values.squeeze()
+                self.evaluator.y_pred = y_pred.reshape(-1)
+                self.evaluator.y_prob = y_prob
+                self.evaluator.run_metrics = eval_metrics
+                validation_metrics = self.evaluator.evaluate_model()
+
             y_pred_train, y_prob_train = self.predict(X_train, predict_proba=True)
-            self.evaluator.y_true = y_train.values.squeeze()
-            self.evaluator.y_pred = y_pred_train.reshape(-1)
-            self.evaluator.y_prob = y_prob_train
-            train_metrics = self.evaluator.evaluate_model()
+
+            if np.isnan(y_pred_train).any():
+                self.logger.warning("Warning: NaN values detected in predictions. Returning high loss.")
+                score = float("inf")  #
+                train_metrics = {metric: score}
+            else:
+                self.evaluator.y_true = y_train.values.squeeze()
+                self.evaluator.y_pred = y_pred_train.reshape(-1)
+                self.evaluator.y_prob = y_prob_train
+                train_metrics = self.evaluator.evaluate_model()
+
             self.logger.info(f"Validation metrics: {validation_metrics}")
             self.logger.info(f"Training metrics: {train_metrics}")
-            final_score = validation_metrics[metric]
+            score = validation_metrics[metric]
             if self.evaluator.maximize[metric][0]:
-                final_score = -1 * final_score
+                score = -1 * score
             return {
-                "loss": final_score,
+                "loss": score,
                 "params": params,
                 "status": STATUS_OK,
                 "trained_model": self.model,
                 "validation_metrics": validation_metrics,
                 "train_metrics": train_metrics,
+                "extra_info": self.extra_info,
             }
 
         trials = Trials()
@@ -660,6 +686,36 @@ class SoftOrdering1DCNN:
         train_metrics = best_trial["result"]["train_metrics"]
         self.logger.info(f"Final Validation Metrics: {validation_metrics}")
         self.logger.info(f"Final Training Metrics: {train_metrics}")
+
+        def extract_optimizer_scheduler(params):
+            """
+            Convert optimizer and scheduler class objects to their string names.
+            """
+            if "optimizer_fn" in params and isinstance(params["optimizer_fn"], type):
+                params["optimizer_fn"] = params["optimizer_fn"].__name__
+            if "scheduler_fn" in params and isinstance(params["scheduler_fn"], type):
+                params["scheduler_fn"] = params["scheduler_fn"].__name__
+            return params
+
+        results_df = pd.DataFrame(
+            [
+                {
+                    **extract_optimizer_scheduler(t["result"]["params"]),
+                    **{("train_" + k): v for k, v in t["result"]["train_metrics"].items()},
+                    **{("val_" + k): v for k, v in t["result"]["validation_metrics"].items()},
+                    **t["result"]["extra_info"],
+                }
+                for t in trials.trials
+            ]
+        )
+        results_csv_path = f"hyperopt_results_{self.model_name}_{self.problem_type}.csv"
+        if os.path.exists(results_csv_path):
+            existing_df = pd.read_csv(results_csv_path)
+            results_df = pd.concat([existing_df, results_df], ignore_index=True)
+        results_df.to_csv(results_csv_path, index=False)
+        self.logger.info(f"All trial results saved to {results_csv_path}")
+        self.logger.info(f"Final validation metrics: {validation_metrics}")
+
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
         self.logger.info(f"Best hyperparameters: {best_params}")

@@ -1,7 +1,6 @@
 import logging
 import os
-from torch.optim import SGD, Adam, AdamW
-from torch.optim.lr_scheduler import ExponentialLR, ReduceLROnPlateau, StepLR
+
 import numpy as np
 import pandas as pd
 import torch
@@ -10,14 +9,16 @@ import torchvision.transforms as transforms
 from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
+from torch.optim import SGD, Adam, AdamW
+from torch.optim.lr_scheduler import ExponentialLR, ReduceLROnPlateau, StepLR
 from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision.models import (
-    resnet18,
-    resnet34,
-    resnet50,
     ResNet18_Weights,
     ResNet34_Weights,
     ResNet50_Weights,
+    resnet18,
+    resnet34,
+    resnet50,
 )
 from tqdm import tqdm
 
@@ -172,7 +173,7 @@ class ResNetTrainer:
         self.model = self.best_model
         self.logger.debug("Model loaded successfully")
 
-    def build_model(self, problem_type, depth, weights):
+    def build_model(self, problem_type, depth, num_targets, weights):
         """build_model
 
         Args:
@@ -186,7 +187,12 @@ class ResNetTrainer:
         Returns:
             type: Description
         """
-        model = ResNetModel(problem_type=problem_type, depth=depth, weights=weights)
+        model = ResNetModel(
+            problem_type=problem_type,
+            depth=depth,
+            num_targets=num_targets,
+            weights=weights,
+        )
         return model
 
     def process_inputs_labels_training(self, inputs, labels):
@@ -508,9 +514,7 @@ class ResNetTrainer:
                 gamma=scheduler_details["StepLR_gamma"],
             )
         elif scheduler_fn == ExponentialLR:
-            self.scheduler = ExponentialLR(
-                self.optimizer, gamma=scheduler_details["ExponentialLR_gamma"]
-            )
+            self.scheduler = ExponentialLR(self.optimizer, gamma=scheduler_details["ExponentialLR_gamma"])
         elif scheduler_fn == ReduceLROnPlateau:
             self.scheduler = ReduceLROnPlateau(
                 self.optimizer,
@@ -575,6 +579,7 @@ class ResNetTrainer:
             self.num_targets = len(np.unique(y))
         else:
             raise ValueError("Unsupported task type")
+        print("Final Layer Targets", self.num_targets)
         self.logger.debug(f"Training on {self.device} for dataset")
         self.transformation = transforms.Compose([transforms.ToTensor()])
 
@@ -618,6 +623,7 @@ class ResNetTrainer:
             self.model = self.build_model(
                 self.problem_type,
                 depth=params["resnet_depth"],
+                num_targets=self.num_targets,
                 weights=params["weights"],
             )
             params = self._set_optimizer_schedulers(params)
@@ -658,11 +664,9 @@ class ResNetTrainer:
                     y_prob = np.append(y_prob, probabilities)
 
             if np.isnan(y_pred).any():
-                self.logger.warning(
-                    "Warning: NaN values detected in predictions. Returning high loss."
-                )
+                self.logger.warning("Warning: NaN values detected in predictions. Returning high loss.")
                 score = float("inf")  #
-                metrics_for_split_val = {}
+                metrics_for_split_val = {metric: score}
             else:
                 self.evaluator.y_true = y_true.reshape(-1)
                 self.evaluator.y_pred = y_pred.reshape(-1)
@@ -679,9 +683,7 @@ class ResNetTrainer:
                     y_prob = np.append(y_prob, probabilities)
 
             if np.isnan(y_pred).any():
-                self.logger.warning(
-                    "Warning: NaN values detected in predictions. Returning high loss."
-                )
+                self.logger.warning("Warning: NaN values detected in predictions. Returning high loss.")
                 score = float("inf")  #
                 metrics_for_split_train = {metric: score}
             else:
@@ -703,6 +705,7 @@ class ResNetTrainer:
                 "trained_model": self.model,
                 "train_metrics": metrics_for_split_train,
                 "validation_metrics": metrics_for_split_val,
+                "extra_info": self.extra_info,
             }
 
         trials = Trials()
@@ -726,6 +729,36 @@ class ResNetTrainer:
         train_metrics = best_trial["result"]["train_metrics"]
         validation_metrics = best_trial["result"]["validation_metrics"]
         self.logger.info(f"Final Validation Metrics: {validation_metrics}")
+
+        def extract_optimizer_scheduler(params):
+            """
+            Convert optimizer and scheduler class objects to their string names.
+            """
+            if "optimizer_fn" in params and isinstance(params["optimizer_fn"], type):
+                params["optimizer_fn"] = params["optimizer_fn"].__name__
+            if "scheduler_fn" in params and isinstance(params["scheduler_fn"], type):
+                params["scheduler_fn"] = params["scheduler_fn"].__name__
+            return params
+
+        results_df = pd.DataFrame(
+            [
+                {
+                    **extract_optimizer_scheduler(t["result"]["params"]),
+                    **{("train_" + k): v for k, v in t["result"]["train_metrics"].items()},
+                    **{("val_" + k): v for k, v in t["result"]["validation_metrics"].items()},
+                    **t["result"]["extra_info"],
+                }
+                for t in trials.trials
+            ]
+        )
+        results_csv_path = f"hyperopt_results_{self.model_name}_{self.problem_type}.csv"
+        if os.path.exists(results_csv_path):
+            existing_df = pd.read_csv(results_csv_path)
+            results_df = pd.concat([existing_df, results_df], ignore_index=True)
+        results_df.to_csv(results_csv_path, index=False)
+        self.logger.info(f"All trial results saved to {results_csv_path}")
+        self.logger.info(f"Final validation metrics: {validation_metrics}")
+
         self.best_model = best_trial["result"]["trained_model"]
         self._load_best_model()
         self.logger.info(f"Best hyperparameters: {best_params}")

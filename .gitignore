@@ -4,6 +4,12 @@ output/
 notebooks/
 autodeep/myexamples/
 SCRATCH/
+*IGTD/
+*catboost_info/
+
+#TODO REMOVE TXT LATER
+*.txt 
+*.tsv
 
 */catboost_info/
 *.csv
