@@ -649,11 +649,14 @@ class SoftOrdering1DCNN:
                 self.evaluator.y_prob = y_prob_train
                 train_metrics = self.evaluator.evaluate_model()
 
+            torch.cuda.empty_cache()
+
             self.logger.info(f"Validation metrics: {validation_metrics}")
             self.logger.info(f"Training metrics: {train_metrics}")
             score = validation_metrics[metric]
             if self.evaluator.maximize[metric][0]:
                 score = -1 * score
+
             return {
                 "loss": score,
                 "params": params,

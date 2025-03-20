@@ -694,6 +694,8 @@ class ResNetTrainer:
                 metrics_for_split_train = self.evaluator.evaluate_model()
                 score = metrics_for_split_train[metric]
 
+            torch.cuda.empty_cache()
+
             self.logger.info(f"Validation metrics {metric}: {score}")
 
             if self.evaluator.maximize[metric][0]:

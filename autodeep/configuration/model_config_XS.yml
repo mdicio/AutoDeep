@@ -975,12 +975,11 @@ model_configs:
       resnet_depth:
         - resnet18
         - resnet34
-        - resnet50
       weights:
         - None
         - default
       batch_size:
-        - 512
+        - 256
         - 64
         - 32
         - 16
