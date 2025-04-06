@@ -85,7 +85,7 @@ def handle_rogue_batch_size(X_train, y_train, X_val, y_val, batch_size):
     return X_train, y_train, X_val, y_val
 
 
-def stop_on_perfect_lossCondition(x, threshold, *kwargs):
+def     stop_on_perfect_lossCondition(x, threshold, *kwargs):
     """stop_on_perfect_lossCondition
 
     Args:

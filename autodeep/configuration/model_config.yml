@@ -967,7 +967,6 @@ model_configs:
     param_grid:
       resnet_depth:
         - resnet18
-        - resnet34
       weights:
         - None
         - default

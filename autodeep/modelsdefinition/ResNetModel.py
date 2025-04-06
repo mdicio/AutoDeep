@@ -665,7 +665,7 @@ class ResNetTrainer:
 
             if np.isnan(y_pred).any():
                 self.logger.warning("Warning: NaN values detected in predictions. Returning high loss.")
-                score = float("inf")  #
+                score = -float("inf")  #
                 metrics_for_split_val = {metric: score}
             else:
                 self.evaluator.y_true = y_true.reshape(-1)
@@ -684,7 +684,7 @@ class ResNetTrainer:
 
             if np.isnan(y_pred).any():
                 self.logger.warning("Warning: NaN values detected in predictions. Returning high loss.")
-                score = float("inf")  #
+                score = -float("inf")  #
                 metrics_for_split_train = {metric: score}
             else:
                 self.evaluator.y_true = y_true.reshape(-1)

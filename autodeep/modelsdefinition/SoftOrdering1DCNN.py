@@ -626,9 +626,9 @@ class SoftOrdering1DCNN:
 
             y_pred, y_prob = self.predict(X_val, predict_proba=True)
 
-            if np.isnan(y_pred).any():
+            if np.isnan(y_pred).any() or np.isnan(y_prob).any():
                 self.logger.warning("Warning: NaN values detected in predictions. Returning high loss.")
-                score = float("inf")  #
+                score = -float("inf")  #
                 validation_metrics = {metric: score}
             else:
                 self.evaluator.y_true = y_val.values.squeeze()
@@ -639,9 +639,9 @@ class SoftOrdering1DCNN:
 
             y_pred_train, y_prob_train = self.predict(X_train, predict_proba=True)
 
-            if np.isnan(y_pred_train).any():
+            if np.isnan(y_pred_train).any() or np.isnan(y_prob_train).any():
                 self.logger.warning("Warning: NaN values detected in predictions. Returning high loss.")
-                score = float("inf")  #
+                score = -float("inf")
                 train_metrics = {metric: score}
             else:
                 self.evaluator.y_true = y_train.values.squeeze()
