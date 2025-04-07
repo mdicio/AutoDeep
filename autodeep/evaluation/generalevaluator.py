@@ -301,7 +301,7 @@ class Evaluator:
         Args:
         self : type
             Description
-        metric_name : type
+        metric_name : name of metric
             Description
 
         Returns:
