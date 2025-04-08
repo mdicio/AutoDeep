@@ -20,7 +20,7 @@ model_configs:
   xgb:
 
     data_params:
-      normalize_features: false
+      normalize_features: False
       encode_categorical: True
       return_extra_info: False
 
@@ -28,7 +28,7 @@ model_configs:
       retrain: True
       val_size: 0.2
       early_stopping_rounds: 30
-      verbose: false
+      verbose: False
       learning_rate: 0.3
       max_depth: 6
       n_estimators: 100
@@ -77,7 +77,7 @@ model_configs:
       
       val_size: 0.2
       early_stopping_rounds: 100
-      verbose: false
+      verbose: False
       iterations: 500
 
     param_grid:
@@ -95,7 +95,7 @@ model_configs:
 
     default_params:
       early_stopping_rounds: 10
-      verbose: false
+      verbose: False
       auto_lr_find: False
       max_epochs: 1000
       val_size: 0.2
@@ -120,7 +120,7 @@ model_configs:
         - "LeakyReLU"
       use_batch_norm:
         - True
-        - false
+        - False
       initialization:
         - "kaiming"
         - "xavier"
@@ -187,7 +187,7 @@ model_configs:
 
     default_params:
       early_stopping_rounds: 10
-      verbose: false
+      verbose: False
       iterations: 20
       
       auto_lr_find: False
@@ -274,7 +274,7 @@ model_configs:
 
     default_params:
       early_stopping_rounds: 10
-      verbose: false
+      verbose: False
       iterations: 20
       
       auto_lr_find: False
@@ -391,7 +391,7 @@ model_configs:
 
     default_params:
       early_stopping_rounds: 10
-      verbose: false
+      verbose: False
       iterations: 20
       
       auto_lr_find: False
@@ -504,7 +504,7 @@ model_configs:
 
     default_params:
       early_stopping_rounds: 10
-      verbose: false
+      verbose: False
       iterations: 20
       
       auto_lr_find: False
@@ -608,7 +608,7 @@ model_configs:
 
     default_params:
       early_stopping_rounds: 10
-      verbose: false
+      verbose: False
       iterations: 20
       
       auto_lr_find: False
@@ -717,7 +717,7 @@ model_configs:
 
     default_params:
       early_stopping_rounds: 10
-      verbose: false
+      verbose: False
       iterations: 20
       
       auto_lr_find: False
@@ -826,7 +826,7 @@ model_configs:
 
     default_params:
       early_stopping_rounds: 10
-      verbose: false
+      verbose: False
       iterations: 20
       
       auto_lr_find: False
@@ -963,7 +963,7 @@ model_configs:
 
     default_params:
       early_stopping: True
-      verbose: false
+      verbose: False
       iterations: 20
       
       auto_lr_find: False
