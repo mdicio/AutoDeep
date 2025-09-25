@@ -1,9 +1,4 @@
  # Custom
-data/
-output/
-notebooks/
-autodeep/myexamples/
-SCRATCH/
 *IGTD/
 *catboost_info/
 
