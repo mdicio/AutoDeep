@@ -52,6 +52,11 @@ PRIORS: Dict[str, Dict[str, float]] = {
     "danet": dict(base=1.0, per_krow=20.0, a=1.0, b=0.6, gpu=4.0, epochs=True),
     "s1dcnn": dict(base=1.0, per_krow=80.0, a=1.0, b=0.1, gpu=10.0, epochs=True),
     "resnet": dict(base=1.0, per_krow=95.0, a=1.0, b=0.3, gpu=10.0, epochs=True),
+    # added 2026-11 (same machine). tabicl: one forward pass, cost ~ rows x context (2k: 38 s, 16k: 497 s on CPU).
+    # realmlp: fixed 256 epochs (2k: 17 s, 16k: 110 s). tabm: early stopping (2k: 109 s; 16k extrapolated).
+    "tabicl": dict(base=3.0, per_krow=16.0, a=1.23, b=0.5, gpu=15.0, epochs=False),
+    "realmlp": dict(base=0.5, per_krow=9.4, a=0.89, b=0.5, gpu=5.0, epochs=True, typical_epochs=256),
+    "tabm": dict(base=1.0, per_krow=60.0, a=0.85, b=0.5, gpu=10.0, epochs=True, typical_epochs=100),
 }
 DEFAULT_PRIOR = dict(base=5.0, per_krow=5.0, a=1.0, b=0.5, gpu=3.0, epochs=True)
 
@@ -98,7 +103,7 @@ def prior_seconds_per_trial(model: str, n_train: int, n_features: int, device: s
     if device == "cuda" and p["gpu"] > 1:
         t = p["base"] + (t - p["base"]) / p["gpu"]
     if p["epochs"] and max_epochs:
-        t = p["base"] + (t - p["base"]) * min(1.0, max_epochs / TYPICAL_EPOCHS)
+        t = p["base"] + (t - p["base"]) * min(1.0, max_epochs / p.get("typical_epochs", TYPICAL_EPOCHS))
     return float(t)
 
 

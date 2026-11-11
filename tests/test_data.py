@@ -27,6 +27,17 @@ def test_builtin_datasets_resolve(name):
     assert spec.target and spec.problem_type and spec.metric in spec.eval_metrics
 
 
+def test_downloaded_builtin_has_renamed_target():
+    """California housing's sklearn target is called MedHouseVal, not "target"."""
+    spec = DatasetSpec.builtin("california_housing")
+    try:
+        df = spec.read()
+    except Exception as e:  # no network and no cached copy
+        pytest.skip(f"california_housing not available: {e}")
+    spec.resolve(df)
+    assert spec.target == "median_house_value" and spec.problem_type == "regression"
+
+
 def test_legacy_keys_and_unknown_option(mixed_csv):
     spec = parse_datasets({"m": {"dataset_path": str(mixed_csv), "target_col": "label", "eval_metrics": ["f1_score"]}})[0]
     spec.resolve()

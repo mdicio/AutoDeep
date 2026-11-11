@@ -9,6 +9,13 @@
 - Models can declare `max_trials` (a cap on search trials) and run with an empty `param_grid`. The runtime estimate and progress bar follow that cap.
 - Models can also set their own CPU thread count and a cap on the rows used for train metrics.
 - GitHub Actions CI runs lint and tests on Python 3.10 and 3.12. The README has CI, Python and licence badges.
+- Runtime-estimate priors for the new models, measured on CPU. A model's epoch cap now scales against that model's own typical number of epochs.
+- `benchmarks/larger_datasets.py` compares the new models with XGBoost and CatBoost on three datasets with more than 20,000 rows.
+
+### Fixed
+- The built-in `california_housing` dataset failed with "target column not found", because scikit-learn names its target `MedHouseVal`.
+
+### Also
 - `examples/walkthrough.ipynb` replaces the old example notebook, which used the pre-0.2 API and did not run.
 
 ## 0.2.0: plug-and-play release

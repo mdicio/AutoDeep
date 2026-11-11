@@ -38,8 +38,9 @@ from autodeep.evaluation.generalevaluator import (
 def _sk_frame(loader, target_name="target", **kwargs):
     data = loader(as_frame=True, **kwargs)
     df = data.frame.copy()
-    if "target" in df.columns and target_name != "target":
-        df = df.rename(columns={"target": target_name})
+    source = getattr(data.target, "name", None) or "target"  # e.g. "MedHouseVal" for California housing
+    if source in df.columns and source != target_name:
+        df = df.rename(columns={source: target_name})
     return df
 
 
