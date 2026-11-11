@@ -310,7 +310,7 @@ model_configs:
       activation:
         - ReLU
         - LeakyReLU
-        - TanH
+        - Tanh
       dropout:
         - 0.0
         - 0.2
@@ -1111,3 +1111,114 @@ model_configs:
         - 1024
         - 512
         - 256
+
+  danet:
+    data_params:
+      normalize_features: mean_std
+      encode_categorical: False
+      return_extra_info: True
+
+    default_params:
+      auto_lr_find: False
+      max_epochs: 1000
+      val_size: 0.2
+      early_stopping_patience: 5
+
+    param_grid:
+      batch_size:
+        - 1024
+        - 512
+        - 256
+      n_layers:
+        - 4
+        - 12
+      abstlay_dim_1:
+        - 16
+        - 64
+      k:
+        - 3
+        - 7
+      dropout_rate:
+        - 0.0
+        - 0.3
+      optimizer_fn:
+        Adam:
+          weight_decay:
+            - 0.00001
+            - 0.000000001
+          learning_rate:
+            - 0.01
+            - 0.0001
+        AdamW:
+          weight_decay:
+            - 0.00001
+            - 0.000000001
+          learning_rate:
+            - 0.01
+            - 0.0001
+      scheduler_fn:
+        ReduceLROnPlateau:
+          factor:
+            - 0.1
+            - 0.5
+          patience:
+            - 3
+            - 10
+        ExponentialLR:
+          gamma:
+            - 0.9
+            - 0.99
+
+  # ---- recent models (TabArena 2025-26). They do their own scaling and categorical handling.
+  tabicl:
+    data_params:
+      normalize_features: false
+      encode_categorical: False
+      return_extra_info: True
+
+    default_params:
+      val_size: 0.2
+      n_estimators: 8          # ensemble of feature/class permutations (more = slower, slightly better)
+      max_context_rows: 50000  # larger training sets are subsampled to bound memory
+
+    param_grid: {}             # nothing to tune: a search runs a single trial
+
+  realmlp:
+    data_params:
+      normalize_features: false
+      encode_categorical: False
+      return_extra_info: True
+
+    default_params:
+      val_size: 0.2
+      n_epochs: 256
+
+    # null = pytabkit's tuned default (differs between classification and regression). The first trial
+    # uses all defaults (RealMLP-TD); later trials search around them (Holzmüller et al., 2024, HPO space).
+    param_grid:
+      lr: [null, 0.01, 0.02, 0.04, 0.08, 0.15, 0.3]
+      p_drop: [null, 0.0, 0.15, 0.3]
+      wd: [null, 0.0, 0.02]
+      plr_sigma: [null, 0.05, 0.1, 0.2, 0.5]
+      hidden_sizes: [null, [256, 256, 256], [64, 64, 64, 64, 64], [512]]
+      act: [null, selu, mish, relu]
+
+  tabm:
+    data_params:
+      normalize_features: false
+      encode_categorical: False
+      return_extra_info: True
+
+    default_params:
+      val_size: 0.2
+      n_epochs: 256
+      patience: 16
+      batch_size: 256
+
+    # null = pytabkit's tuned default; the first trial uses all defaults (TabM-D), later trials search around them.
+    # TabM trains k=32 MLPs at once: wide blocks are slow on CPU.
+    param_grid:
+      lr: [null, 0.0005, 0.001, 0.002, 0.004]
+      dropout: [null, 0.0, 0.1, 0.25, 0.4]
+      d_block: [null, 128, 256, 512]
+      n_blocks: [null, 1, 2, 3]

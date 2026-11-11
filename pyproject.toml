@@ -1,30 +1,74 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "autodeep"
-version = "0.1.0"
-description = "A short description of your library."
-authors = [
-    {name = "Your Name", email = "youremail@example.com"}
-]
-license = {text = "MIT"}
+version = "0.3.0"
+description = "Benchmark gradient-boosted trees and deep learning models on tabular data with hyperparameter search, runtime estimates and a local web UI."
 readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "mdicio" }]
+requires-python = ">=3.10,<3.14"
+keywords = ["automl", "deep learning", "tabular", "benchmark", "hyperparameter optimization"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent"
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-keywords = ["automl", "deep learning", "machine learning"]
-dynamic = ["dependencies"]
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.0,<3",               # pytorch-tabular 1.2 does not support pandas 3 yet
+    "scipy>=1.10",
+    "scikit-learn>=1.3,<2",
+    "pyyaml>=6.0",
+    "matplotlib>=3.7",              # IGTD writes diagnostic PNGs
+    "torch>=2.2",
+    "torchvision>=0.17",
+    "pytorch-tabular>=1.1.1,<1.3",
+    "requests>=2.28",               # imported by pytorch-tabular but not declared by it
+    "pytorch-tabnet>=4.1,<4.2",     # pytorch-tabular's TabNet needs it (optional there, required here)
+    "xgboost>=2.0",
+    "catboost>=1.2.5",
+    "tabicl>=2.2,<3",               # TabICLv2 foundation model (BSD-3; weights downloaded on first use)
+    "pytabkit>=1.8,<2",             # RealMLP and TabM (Apache-2.0)
+    "hyperopt>=0.2.7,<0.4",
+    "setuptools<81",                # hyperopt imports pkg_resources, removed in setuptools 81
+    "fastapi>=0.110",
+    "uvicorn>=0.27",
+    "python-multipart>=0.0.9",
+]
 
-[tool.setuptools]
-packages = ["autodeep"]
+[project.optional-dependencies]
+files = ["pyarrow>=14", "openpyxl>=3.1"]   # parquet/feather and Excel input
+dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.5", "pre-commit>=3"]
+
+[project.scripts]
+autodeep = "autodeep.cli:main"
+
+[project.urls]
+Repository = "https://github.com/mdicio/AutoDeep"
+
+[tool.setuptools.packages.find]
+include = ["autodeep*"]
 
 [tool.setuptools.package-data]
-autodeep = ["py.typed"]
+autodeep = ["configuration/*.yml", "web/static/*"]
 
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: trains every model (minutes)"]
+addopts = "-m 'not slow'"
+filterwarnings = ["ignore::DeprecationWarning", "ignore::FutureWarning", "ignore::UserWarning"]
+
+[tool.ruff]
+line-length = 150
+extend-exclude = ["autodeep/modelutils/igtdutilities.py"]
+
+[tool.black]
+line-length = 150

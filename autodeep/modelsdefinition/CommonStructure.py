@@ -1,444 +1,400 @@
-import logging
-import os
-import sys
-import traceback
-from functools import partial
+"""Base classes shared by every AutoDeep model.
+
+Every trainer exposes the same public API::
+
+    trainer = SomeTrainer(problem_type="binary_classification")
+    best_params, best_score, train_metrics, val_metrics = trainer.hyperopt_search(
+        X_train, y_train, model_config, metric="roc_auc", eval_metrics=[...], max_evals=20, extra_info=extra_info)
+    y_pred, y_prob = trainer.predict(X_test, predict_proba=True)
+
+Subclasses only implement :meth:`BaseTrainer.fit_trial` and :meth:`BaseTrainer.predict_with`
+(plus optional hooks), the search loop / evaluation / bookkeeping lives here.
+"""
+
+from __future__ import annotations
+
+import copy
+from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-import torch
-import torch.nn as nn
-from hyperopt import STATUS_OK, Trials, fmin, space_eval, tpe
-from IPython.display import clear_output
-from pytorch_tabular import TabularModel
-from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 
+from autodeep.device import resolve_device
 from autodeep.evaluation.generalevaluator import Evaluator
+from autodeep.logging_utils import get_logger
+from autodeep.modelutils.search import TrialOutcome, run_hyperopt
 from autodeep.modelutils.trainingutilities import (
     handle_rogue_batch_size,
+    infer_hyperopt_space,
     infer_hyperopt_space_pytorch_tabular,
     prepare_optimizer,
     prepare_scheduler,
-    stop_on_perfect_lossCondition,
 )
 
+MAX_ROWS_FOR_TRAIN_METRICS = 50_000
 
-class BaseModel:
-    """
-    Base class for all models.
-    """
 
-    def __init__(self, random_state=4200, problem_type=None):
-        """__init__
+def _set_torch_threads(n_threads: int):
+    """Set torch intra-op threads for CPU training; returns the previous value to restore."""
+    import sys
 
-        Args:
-        self : type
-            Description
-        random_state : type
-            Description
-        problem_type : type
-            Description
+    if "torch" not in sys.modules:
+        return None
+    import torch
 
-        Returns:
-            type: Description
-        """
-        super(BaseModel, self).__init__()
-        """
-        Constructor for the base model class.
-        Parameters
-        ----------
-        model_params : dict
-            Dictionary containing the hyperparameters for the model.
-        """
-        self.parameters = None
-        self.model = None
-        self.random_state = random_state
+    previous = torch.get_num_threads()
+    torch.set_num_threads(int(n_threads))
+    return previous
+
+
+TARGET = "target"
+_NO_PARAMS = "_defaults_only"
+
+
+class BaseTrainer:
+    """Common hyperparameter-search loop and prediction API."""
+
+    model_name = "base"
+    space_fn = staticmethod(infer_hyperopt_space)
+    #: upper bound on the number of search trials (1 for models with nothing to tune, e.g. TabICL)
+    max_trials: Optional[int] = None
+    #: allow running with an empty ``param_grid`` (defaults only)
+    allow_empty_grid = False
+    #: first trial uses the first option of every ``param_grid`` choice (``null`` = the library's tuned default)
+    first_trial_defaults = False
+    #: train metrics are computed on a subsample of at most this many rows
+    max_rows_for_train_metrics = MAX_ROWS_FOR_TRAIN_METRICS
+
+    def __init__(self, problem_type: str = "binary_classification", random_state: int = 42, num_workers: Optional[int] = None):
         self.problem_type = problem_type
+        self.random_state = random_state
+        self.task = "regression" if problem_type == "regression" else "classification"
+        self.logger = get_logger(self.model_name)
+        self.model = None
+        self.extra_info: Optional[Dict[str, Any]] = None
+        self.default_params: Dict[str, Any] = {}
+        self.num_workers = num_workers
+        self.output_dir: Optional[Path] = None  # set by AutoRunner; where per-trial files go
+        self.max_epochs: Optional[int] = None  # global override, e.g. for quick runs
+        self.timeout: Optional[float] = None  # seconds for the whole search
+        self.search_result = None
+        self.num_classes: Optional[int] = None
 
-    def train(self, X_train, y_train):
-        """train
+    # ------------------------------------------------------------------ hooks
+    def prepare(self, X: pd.DataFrame, y: pd.Series, extra_info: Optional[Dict]) -> None:
+        """Called once before the search (e.g. compute class weights)."""
 
-        Args:
-        self : type
-            Description
-        X_train : type
-            Description
-        y_train : type
-            Description
+    def transform_X(self, X: pd.DataFrame) -> pd.DataFrame:
+        """Applied to every feature matrix before fitting / predicting."""
+        return X
 
-        Returns:
-            type: Description
-        """
+    def fit_trial(self, params: Dict[str, Any], X_train, y_train, X_val, y_val):
         raise NotImplementedError
+
+    def predict_with(self, model, X: pd.DataFrame) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        """Return ``(predictions, probabilities)``; probabilities are 1-D (binary), 2-D (multiclass) or ``None``."""
+        raise NotImplementedError
+
+    # ------------------------------------------------------------------ helpers
+    @property
+    def device(self) -> str:
+        return resolve_device()
+
+    def _setting(self, name, default=None):
+        """Read a value from ``default_params`` honouring global overrides."""
+        if name == "max_epochs" and self.max_epochs:
+            return min(int(self.max_epochs), int(self.default_params.get("max_epochs", self.max_epochs)))
+        return self.default_params.get(name, default)
+
+    def cpu_torch_threads(self, n_rows: int) -> int:
+        """Torch intra-op threads on CPU. Few threads suit small tabular nets; large models override this."""
+        from autodeep.device import torch_threads
+
+        return torch_threads(n_rows)
+
+    def class_weights(self, y: pd.Series) -> Optional[np.ndarray]:
+        if self.problem_type == "regression":
+            return None
+        classes = np.arange(self.num_classes)
+        present = np.unique(y)
+        weights = np.ones(len(classes), dtype=np.float32)
+        weights[present] = compute_class_weight("balanced", classes=present, y=np.asarray(y))
+        return weights
+
+    def _split(self, X, y, val_size):
+        stratify = y if self.problem_type != "regression" and y.value_counts().min() >= 2 else None
+        return train_test_split(X, y, test_size=val_size, random_state=self.random_state, stratify=stratify)
+
+    def _metrics(self, evaluator: Evaluator, model, X, y) -> Dict[str, float]:
+        if len(X) > self.max_rows_for_train_metrics:
+            idx = np.random.default_rng(0).choice(len(X), self.max_rows_for_train_metrics, replace=False)
+            X, y = X.iloc[idx], y.iloc[idx]
+        pred, prob = self.predict_with(model, X)
+        evaluator.y_true, evaluator.y_pred, evaluator.y_prob = np.asarray(y), pred, prob
+        return evaluator.evaluate_model()
+
+    # ------------------------------------------------------------------ public API
+    def hyperopt_search(self, X, y, model_config, metric, eval_metrics, max_evals=16, extra_info=None, timeout=None):
+        from autodeep.device import patch_torch_cpu_optimizers
+
+        patch_torch_cpu_optimizers()  # CPU training must not touch a (possibly full) GPU
+        model_config = copy.deepcopy(model_config or {})
+        self.default_params = model_config.get("default_params", {}) or {}
+        param_grid = model_config.get("param_grid", {}) or {}
+        if not param_grid and not self.allow_empty_grid:
+            raise ValueError(f"No param_grid configured for model '{self.model_name}'")
+        # hyperopt cannot sample an empty space: use a constant placeholder that fit_trial never sees
+        space = self.space_fn(param_grid) if param_grid else {_NO_PARAMS: True}
+        if self.max_trials:
+            max_evals = min(int(max_evals), int(self.max_trials))
+        start = self._default_start_point(param_grid)
+
+        X = X if isinstance(X, pd.DataFrame) else pd.DataFrame(X)
+        y = (y if isinstance(y, pd.Series) else pd.Series(np.asarray(y).reshape(-1), index=X.index)).rename(TARGET)
+        self.extra_info = extra_info or {}
+        if self.problem_type != "regression":
+            self.num_classes = int(self.extra_info.get("num_classes") or (int(np.max(y)) + 1))
+        self.prepare(X, y, self.extra_info)
+        X = self.transform_X(X)
+
+        val_size = float(self.default_params.get("val_size", 0.2))
+        X_tr, X_val, y_tr, y_val = self._split(X, y, val_size)
+        evaluator = Evaluator(problem_type=self.problem_type, run_metrics=eval_metrics, metric=metric)
+
+        def objective(params):
+            params = {k: v for k, v in params.items() if k != _NO_PARAMS}
+            model = self.fit_trial(params, X_tr, y_tr, X_val, y_val)
+            return TrialOutcome(
+                validation_metrics=self._metrics(evaluator, model, X_val, y_val),
+                train_metrics=self._metrics(evaluator, model, X_tr, y_tr),
+                model=model,
+            )
+
+        self.logger.info(
+            f"{self.model_name}: searching {max_evals} trial(s) on {len(X_tr)} train / {len(X_val)} validation rows, "
+            f"{X.shape[1]} features, optimising {metric} [device={self.device}]"
+        )
+        previous_threads = _set_torch_threads(self.cpu_torch_threads(len(X_tr))) if self.device == "cpu" else None
+        try:
+            result = run_hyperopt(
+                objective,
+                space,
+                metric=metric,
+                max_evals=max_evals,
+                random_state=self.random_state,
+                timeout=timeout if timeout is not None else self.timeout,
+                model_name=self.model_name,
+                points_to_evaluate=start,
+            )
+        finally:
+            if previous_threads:
+                import torch
+
+                torch.set_num_threads(previous_threads)
+        self.search_result = result
+        self.model = result.best_model
+        self.best_model = self.model
+        self.on_search_end()
+        best_params = {k: v for k, v in result.best_params.items() if k != _NO_PARAMS}
+        best_params["default_params"] = self.default_params
+        return best_params, result.best_score, result.train_metrics, result.validation_metrics
+
+    def _default_start_point(self, param_grid):
+        """Hyperopt point selecting option 0 of every choice, if every parameter is a choice starting with ``None``."""
+        if not (self.first_trial_defaults and param_grid):
+            return None
+        if all(isinstance(v, (list, tuple)) and len(v) > 1 and v[0] is None for v in param_grid.values()):
+            return [{name: 0 for name in param_grid}]
+        self.logger.debug(f"{self.model_name}: param_grid is not all null-first choices, first trial is random")
+        return None
+
+    def on_search_end(self) -> None:
+        """Clean-up hook (temporary checkpoints...)."""
 
     def predict(self, X_test, predict_proba=False):
-        """predict
-
-        Args:
-        self : type
-            Description
-        X_test : type
-            Description
-        predict_proba : type
-            Description
-
-        Returns:
-            type: Description
-        """
-        raise NotImplementedError
-
-
-class PytorchTabularTrainer:
-    """Common base class for trainers."""
-
-    def __init__(self, problem_type):
-        """__init__
-
-        Args:
-        self : type
-            Description
-        problem_type : type
-            Description
-
-        Returns:
-            type: Description
-        """
-        super().__init__()
-        self.cv_size = None
-        self.random_state = 4200
-        self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
-        self.logger.setLevel(logging.DEBUG)
-        self.script_filename = os.path.basename(__file__)
-        formatter = logging.Formatter(f"%(asctime)s - %(levelname)s - {self.script_filename} - {self.__class__.__name__} - %(message)s")
-        if not self.logger.handlers:
-            console_handler = logging.StreamHandler(sys.stdout)
-            console_handler.setLevel(logging.DEBUG)
-            console_handler.setFormatter(formatter)
-            self.logger.addHandler(console_handler)
-            file_handler = logging.FileHandler("logfile.log", mode="a")
-            file_handler.setLevel(logging.DEBUG)
-            file_handler.setFormatter(formatter)
-            self.logger.addHandler(file_handler)
-        self.logger.propagate = False
-        self.problem_type = problem_type
-        self.logger.info(f"Initialized {self.__class__.__name__} with problem type {self.problem_type}")
-        logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
-        os.environ["PT_LOGLEVEL"] = "ERROR"
-        self.problem_type = problem_type
-        self.extra_info = None
-        self.save_path = "ptabular_checkpoints"
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.logger.info(f"Device {self.device} is available")
-        self.task = "regression" if self.problem_type == "regression" else "classification"
-        self.prediction_col = "target_prediction"
-        self.default = False
-        self.num_workers = max(1, os.cpu_count() // 2)
-        self.model = None
-        os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+        if self.model is None:
+            raise RuntimeError("Model is not trained yet: call hyperopt_search() first.")
+        X_test = X_test if isinstance(X_test, pd.DataFrame) else pd.DataFrame(X_test)
+        pred, prob = self.predict_with(self.model, self.transform_X(X_test))
+        return (pred, prob) if predict_proba else pred
 
     def _load_best_model(self):
-        """_load_best_model
-
-        Args:
-        self : type
-            Description
-
-        Returns:
-            type: Description
-        """
-        self.logger.info("Loading model")
-        self.logger.debug("Model loaded successfully")
         self.model = self.best_model
 
-    def _load_model(self, model_path):
-        """_load_model
 
-        Args:
-        self : type
-            Description
-        model_path : type
-            Description
+# backwards-compatible name
+BaseModel = BaseTrainer
 
-        Returns:
-            type: Description
-        """
-        self.logger.info(f"Loading model from {model_path}")
-        self.model = TabularModel.load_model(model_path)
-        self.logger.debug("Model loaded successfully")
 
-    def _save_model(self, model_dir, model_name):
-        """_save_model
+class SklearnLikeTrainer(BaseTrainer):
+    """Shared prediction logic for estimators exposing ``predict`` / ``predict_proba``."""
 
-        Args:
-        self : type
-            Description
-        model_dir : type
-            Description
-        model_name : type
-            Description
+    def predict_with(self, model, X):
+        if self.problem_type == "regression":
+            return np.asarray(model.predict(X)).reshape(-1), None
+        proba = np.asarray(model.predict_proba(X))
+        pred = proba.argmax(axis=1)
+        if self.problem_type == "binary_classification":
+            return pred, proba[:, 1]
+        return pred, proba
 
-        Returns:
-            type: Description
-        """
-        self.logger.info(f"Saving model to {model_dir + model_name}")
-        self.model.save_config(model_dir)
-        self.model.save_datamodule(model_dir)
-        self.model.save_model(model_dir)
-        self.model.save_model_for_inference(model_dir + model_name + "_inference")
-        self.model.save_weights(model_dir + model_name + "_weights")
-        self.logger.debug("Model saved successfully")
+    def save_model(self, path):
+        import joblib
 
-    def _set_loss_function(self, y):
-        """_set_loss_function
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        joblib.dump(self.model, path)
 
-        Args:
-        self : type
-            Description
-        y : type
-            Description
 
-        Returns:
-            type: Description
-        """
-        if self.problem_type in ["binary_classification", "multiclass_classification"]:
-            classes = np.sort(np.unique(y))
-            class_weights = compute_class_weight(class_weight="balanced", classes=classes, y=y.values)
-            class_weights = torch.tensor(class_weights, dtype=torch.float32)
-            self.loss_fn = nn.CrossEntropyLoss(weight=class_weights, reduction="mean")
-        elif self.problem_type == "regression":
+def _redirect_pt_tmp():
+    """PyTorch Tabular writes ``./.pt_tmp/exp_version_manager.yml`` in the working directory; keep it in AutoDeep's cache."""
+    import os
+
+    import pytorch_tabular.tabular_model as ptm
+
+    if getattr(ptm.ExperimentRunManager, "_autodeep", False):
+        return
+    cache = Path(os.environ.get("AUTODEEP_CACHE", Path.home() / ".cache" / "autodeep"))
+    path = str(cache / "pytorch_tabular" / "exp_version_manager.yml")
+    base = ptm.ExperimentRunManager
+
+    class _ExperimentRunManager(base):
+        _autodeep = True
+
+        def __init__(self, exp_version_manager: str = path):
+            super().__init__(exp_version_manager)
+
+    ptm.ExperimentRunManager = _ExperimentRunManager
+
+
+class PytorchTabularTrainer(BaseTrainer):
+    """Generic wrapper around any PyTorch Tabular model config class."""
+
+    config_class = None
+    space_fn = staticmethod(infer_hyperopt_space_pytorch_tabular)
+
+    def __init__(self, problem_type="binary_classification", random_state=42, num_workers=None):
+        super().__init__(problem_type, random_state=random_state, num_workers=num_workers)
+        self.loss_fn = None
+
+    # -- hooks
+    def adjust_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Model specific parameter fix-ups (override in subclasses)."""
+        return params
+
+    def prepare(self, X, y, extra_info):
+        import torch
+        import torch.nn as nn
+
+        if self.problem_type == "regression":
             self.loss_fn = nn.MSELoss()
         else:
-            raise ValueError("Invalid problem_type. Supported values are 'binary_classification', 'multiclass_classification', and 'regression'.")
+            self.loss_fn = nn.CrossEntropyLoss(weight=torch.tensor(self.class_weights(y), dtype=torch.float32))
+        cat_cols = [c for c in self.extra_info.get("cat_col_names", []) if c in X.columns]
+        self.categorical_cols = cat_cols
+        self.continuous_cols = [c for c in X.columns if c not in cat_cols]
 
-    def prepare_shared_tabular_configs(self, params, default_params, extra_info):
-        """prepare_shared_tabular_configs
+    def _configs(self, params):
+        from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig
 
-        Args:
-        self : type
-            Description
-        params : type
-            Description
-        default_params : type
-            Description
-        extra_info : type
-            Description
-
-        Returns:
-            type: Description
-        """
+        dp = self.default_params
         data_config = DataConfig(
-            target=["target"],
-            continuous_cols=[i for i in extra_info["num_col_names"] if i != "target"],
-            categorical_cols=extra_info["cat_col_names"],
-            num_workers=default_params.get("num_workers", 4),
+            target=[TARGET],
+            continuous_cols=self.continuous_cols,
+            categorical_cols=self.categorical_cols,
+            num_workers=self.num_workers if self.num_workers is not None else 0,
+            pin_memory=self.device == "cuda",
         )
         trainer_config = TrainerConfig(
-            auto_lr_find=default_params.get("auto_lr_find", False),
-            batch_size=params.get("batch_size", 32),
-            max_epochs=default_params.get("max_epochs", 100),
+            batch_size=int(params.get("batch_size", dp.get("batch_size", 256))),
+            max_epochs=int(self._setting("max_epochs", 100)),
+            accelerator="gpu" if self.device == "cuda" else "cpu",
+            devices=1,
+            auto_lr_find=bool(dp.get("auto_lr_find", False)),
             early_stopping="valid_loss",
             early_stopping_mode="min",
-            early_stopping_patience=default_params.get("early_stopping_patience", 10),
-            early_stopping_min_delta=default_params.get("tol", 0.0),
-            checkpoints=None,
-            load_best=True,
-            progress_bar=default_params.get("progress_bar", "simple"),
-            precision=default_params.get("precision", 32),
+            early_stopping_patience=int(dp.get("early_stopping_patience", 10)),
+            early_stopping_min_delta=float(dp.get("tol", 0.0)),
+            checkpoints=None,  # best weights are kept in memory by BestWeights (no torch.load of pickled configs)
+            load_best=False,
+            progress_bar="none",
+            precision=dp.get("precision", 32),
+            seed=self.random_state,
+            trainer_kwargs={"enable_model_summary": False},
         )
-        optimizer_fn_name, optimizer_params, learning_rate = prepare_optimizer(params["optimizer_fn"])
-        scheduler_fn_name, scheduler_params = prepare_scheduler(params["scheduler_fn"])
+        optimizer_name, optimizer_params, learning_rate = prepare_optimizer(params.get("optimizer_fn"))
+        scheduler_name, scheduler_params = prepare_scheduler(params.get("scheduler_fn"))
         optimizer_config = OptimizerConfig(
-            optimizer=optimizer_fn_name,
+            optimizer=optimizer_name,
             optimizer_params=optimizer_params,
-            lr_scheduler=scheduler_fn_name,
+            lr_scheduler=scheduler_name,
             lr_scheduler_params=scheduler_params,
             lr_scheduler_monitor_metric="valid_loss",
         )
         return data_config, trainer_config, optimizer_config, learning_rate
 
-    def predict(self, X_test, predict_proba=False):
-        """predict
+    def prepare_tabular_model(self, params, default_params=None, default=False):
+        import inspect
 
-        Args:
-        self : type
-            Description
-        X_test : type
-            Description
-        predict_proba : type
-            Description
+        from pytorch_tabular import TabularModel
 
-        Returns:
-            type: Description
-        """
-        self.logger.info("Computing predictions")
-        pred_df = self.model.predict(X_test)
-        probabilities = None
-        predictions = pred_df[self.prediction_col].values
-        if predict_proba:
-            probabilities = pred_df["target_1_probability"].fillna(0).values
-        self.logger.debug(f"{predictions[:10]}")
-        self.logger.debug("Computed predictions successfully")
-        if predict_proba:
-            return predictions, probabilities
-        else:
-            return predictions
-
-    def hyperopt_search(self, X, y, model_config, metric, eval_metrics, max_evals=16, extra_info=None):
-        """hyperopt_search
-
-        Args:
-        self : type
-            Description
-        X : type
-            Description
-        y : type
-            Description
-        model_config : type
-            Description
-        metric : type
-            Description
-        eval_metrics : type
-            Description
-        max_evals : type
-            Description
-        extra_info : type
-            Description
-
-        Returns:
-            type: Description
-        """
-        self.logger.info(f"Starting hyperopt search {max_evals} evals maximizing {metric} metric on dataset")
-        self.extra_info = extra_info
-        self.default_params = model_config["default_params"]
-        val_size = self.default_params.get("val_size")
-        param_grid = model_config["param_grid"]
-        space = infer_hyperopt_space_pytorch_tabular(param_grid)
-        if not isinstance(X, pd.DataFrame):
-            X = pd.DataFrame(X)
-        if not isinstance(y, pd.Series):
-            print(type(y))
-            y = pd.Series(y)
-        print(type(y))
-        self._set_loss_function(y)
-        if self.problem_type == "regression" and not hasattr(self, "target_range"):
-            self.target_range = [(float(np.min(y) * 0.8), float(np.max(y) * 1.2))]
-        stratify = y if self.problem_type != "regression" else None
-        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=val_size, random_state=42, stratify=stratify)
-        self.logger.debug(f"Feature matrix shape: {X.shape}")
-        self.logger.debug(f"Target distribution:\n{y.value_counts(normalize=True)}")
-        self.logger.debug(f"Problem Type {self.problem_type}")
-
-        def objective(params, X_train, X_val, y_train, y_val):
-            clear_output(wait=True)
-            self.logger.info(f"Training with hyperparameters: {params}")
-            X_train, y_train, X_val, y_val = handle_rogue_batch_size(X_train, y_train, X_val, y_val, params["batch_size"])
-            train_data = pd.concat([X_train, y_train], axis=1)
-            val_data = pd.concat([X_val, y_val], axis=1)
-            self.logger.debug(f"Shape of X_train: {X_train.shape}")
-            self.logger.debug(f"Shape of X_val: {X_val.shape}")
-            self.logger.debug(f"Shape of y_train: {y_train.shape}")
-            self.logger.debug(f"Shape of y_val: {y_val.shape}")
-            self.logger.debug(f"Batch Size, VBS: {params['batch_size']}")
-            model = self.prepare_tabular_model(params, self.default_params, default=self.default)
-
-            try:
-                model.fit(train=train_data, validation=val_data, loss=self.loss_fn)
-                if torch.cuda.is_available():
-                    self.logger.debug(f"GPU Memory Allocated: {torch.cuda.memory_allocated() / 1000000.0} MB")
-                    self.logger.debug(f"GPU Memory Reserved: {torch.cuda.memory_reserved() / 1000000.0} MB")
-            except Exception as e:
-                error_message = "".join(traceback.format_exception(*sys.exc_info()))
-                error_message += str(repr(e))
-                with open("cuda_error_log.txt", "w") as f:
-                    f.write(error_message)
-                print("Error captured in cuda_error_log.txt")
-            pred_df = model.predict(val_data)
-            predictions = pred_df[self.prediction_col].values
-            if self.problem_type == "binary_classification":
-                probabilities = pred_df["target_1_probability"].fillna(0).values
-                self.evaluator.y_prob = probabilities
-            self.evaluator.y_true = val_data["target"].values
-            self.evaluator.y_pred = predictions
-            self.evaluator.run_metrics = eval_metrics
-            metrics_for_split_val = self.evaluator.evaluate_model()
-            score = metrics_for_split_val[metric]
-            self.logger.info(f"Validation metrics: {metrics_for_split_val}")
-            if self.evaluator.maximize[metric][0]:
-                score = -1 * score
-            pred_df = model.predict(train_data)
-            predictions = pred_df[self.prediction_col].values
-            if self.problem_type == "binary_classification":
-                probabilities = pred_df["target_1_probability"].fillna(0).values
-                self.evaluator.y_prob = probabilities
-            self.evaluator.y_true = train_data["target"].values
-            self.evaluator.y_pred = predictions
-            self.evaluator.run_metrics = eval_metrics
-            metrics_for_split_train = self.evaluator.evaluate_model()
-            torch.cuda.empty_cache()
-            return {
-                "loss": score,
-                "params": params,
-                "status": STATUS_OK,
-                "trained_model": model,
-                "train_metrics": metrics_for_split_train,
-                "validation_metrics": metrics_for_split_val,
-                "extra_info": self.extra_info,
-            }
-
-        trials = Trials()
-        self.evaluator = Evaluator(problem_type=self.problem_type)
-        threshold = float(-1.0 * self.evaluator.maximize[metric][1])
-        fmin_objective = partial(objective, X_train=X_train, X_val=X_val, y_train=y_train, y_val=y_val)
-        best = fmin(
-            fmin_objective,
-            space=space,
-            algo=tpe.suggest,
-            max_evals=max_evals,
-            trials=trials,
-            rstate=np.random.default_rng(self.random_state),
-            early_stop_fn=lambda x: stop_on_perfect_lossCondition(x, threshold),
+        _redirect_pt_tmp()
+        params = self.adjust_params(dict(params))
+        data_config, trainer_config, optimizer_config, learning_rate = self._configs(params)
+        valid = inspect.signature(self.config_class).parameters
+        model_kwargs = {k: v for k, v in params.items() if k in valid and k not in ("task", "learning_rate")}
+        ignored = sorted(k for k in params if k not in valid and k not in ("batch_size", "optimizer_fn", "scheduler_fn"))
+        if ignored:
+            self.logger.debug(f"{self.model_name}: ignoring parameters not accepted by {self.config_class.__name__}: {ignored}")
+        model_config = self.config_class(task=self.task, learning_rate=learning_rate, **model_kwargs)
+        tabular_model = TabularModel(
+            data_config=data_config,
+            model_config=model_config,
+            optimizer_config=optimizer_config,
+            trainer_config=trainer_config,
+            verbose=False,
+            suppress_lightning_logger=True,
         )
-        best_params = space_eval(space, best)
-        best_params["default_params"] = self.default_params
-        best_trial = trials.best_trial
-        best_score = best_trial["result"]["loss"]
-        if self.evaluator.maximize[metric][0]:
-            best_score = -1 * best_score
-        train_metrics = best_trial["result"]["train_metrics"]
-        validation_metrics = best_trial["result"]["validation_metrics"]
+        tabular_model.logger = False  # otherwise Lightning writes ./lightning_logs/version_N for every trial
+        return tabular_model
 
-        def extract_optimizer_scheduler(params):
-            """
-            Convert optimizer and scheduler class objects to their string names.
-            """
-            if "optimizer_fn" in params and isinstance(params["optimizer_fn"], type):
-                params["optimizer_fn"] = params["optimizer_fn"].__name__
-            if "scheduler_fn" in params and isinstance(params["scheduler_fn"], type):
-                params["scheduler_fn"] = params["scheduler_fn"].__name__
-            return params
+    def fit_trial(self, params, X_train, y_train, X_val, y_val):
+        from sklearn.preprocessing import StandardScaler
 
-        results_df = pd.DataFrame(
-            [
-                {
-                    **extract_optimizer_scheduler(t["result"]["params"]),
-                    **{("train_" + k): v for k, v in t["result"]["train_metrics"].items()},
-                    **{("val_" + k): v for k, v in t["result"]["validation_metrics"].items()},
-                    **t["result"]["extra_info"],
-                }
-                for t in trials.trials
-            ]
+        batch_size = int(params.get("batch_size", self.default_params.get("batch_size", 256)))
+        X_train, y_train, X_val, y_val = handle_rogue_batch_size(X_train, y_train, X_val, y_val, batch_size)
+        model = self.prepare_tabular_model(params)
+        fit_kwargs = {}
+        if self.problem_type == "regression":
+            fit_kwargs["target_transform"] = StandardScaler()
+        from autodeep.modelsdefinition.lightning_callbacks import BestWeights
+
+        best = BestWeights()
+        model.fit(
+            train=pd.concat([X_train, y_train.rename(TARGET)], axis=1),
+            validation=pd.concat([X_val, y_val.rename(TARGET)], axis=1),
+            loss=self.loss_fn,
+            seed=self.random_state,
+            callbacks=[best],
+            **fit_kwargs,
         )
-        results_csv_path = f"hyperopt_results_{self.model_name}_{self.problem_type}.csv"
-        if os.path.exists(results_csv_path):
-            existing_df = pd.read_csv(results_csv_path)
-            results_df = pd.concat([existing_df, results_df], ignore_index=True)
-        results_df.to_csv(results_csv_path, index=False)
-        self.logger.info(f"All trial results saved to {results_csv_path}")
-        self.logger.info(f"Final validation metrics: {validation_metrics}")
-        self.best_model = best_trial["result"]["trained_model"]
-        self._load_best_model()
-        self.logger.info(f"Best hyperparameters: {best_params}")
-        self.logger.info(f"The best possible score for metric {metric} is {-threshold}, we reached {metric} = {best_score}")
-        return best_params, best_score, train_metrics, validation_metrics
+        if best.state is not None:
+            model.model.load_state_dict(best.state)
+        return model
+
+    def predict_with(self, model, X):
+        pred_df = model.predict(X, progress_bar="none")
+        if self.problem_type == "regression":
+            return pred_df[f"{TARGET}_prediction"].to_numpy(dtype=float), None
+        prob_cols = [f"{TARGET}_{k}_probability" for k in range(self.num_classes)]
+        proba = np.column_stack([pred_df[c].to_numpy(dtype=float) if c in pred_df else np.zeros(len(pred_df)) for c in prob_cols])
+        proba = np.nan_to_num(proba, nan=0.0)
+        pred = proba.argmax(axis=1)
+        if self.problem_type == "binary_classification":
+            return pred, proba[:, 1]
+        return pred, proba
+
+    def save_model(self, path):
+        self.model.save_model(str(path))

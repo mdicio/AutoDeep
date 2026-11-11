@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoDeep</title>
+<style>
+:root {
+  --bg: #f4f4f2; --surface: #fcfcfb; --surface-2: #f0efec; --border: #e2e1dc;
+  --text: #0b0b0b; --text-2: #52514e; --muted: #7a7974;
+  --accent: #2a78d6; --accent-strong: #1c5cab; --accent-soft: #cde2fb; --accent-ink: #ffffff;
+  --good: #0ca30c; --warning: #fab219; --critical: #d03b3b;
+  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 1px 1px rgba(0,0,0,.03);
+  --radius: 10px; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121211; --surface: #1a1a19; --surface-2: #232321; --border: #33332f;
+    --text: #f0efec; --text-2: #c3c2b7; --muted: #8f8e86;
+    --accent: #3987e5; --accent-strong: #86b6ef; --accent-soft: #0d366b; --accent-ink: #ffffff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121211; --surface: #1a1a19; --surface-2: #232321; --border: #33332f;
+  --text: #f0efec; --text-2: #c3c2b7; --muted: #8f8e86;
+  --accent: #3987e5; --accent-strong: #86b6ef; --accent-soft: #0d366b; --accent-ink: #ffffff;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--accent); }
+header { display: flex; align-items: center; gap: 16px; padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5; flex-wrap: wrap; }
+header h1 { font-size: 17px; margin: 0; letter-spacing: -.01em; }
+header h1 span { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 6px; }
+nav { display: flex; gap: 4px; }
+nav button { background: none; border: 0; padding: 7px 12px; border-radius: 8px; color: var(--text-2); font: inherit; cursor: pointer; }
+nav button.active { background: var(--surface-2); color: var(--text); font-weight: 600; }
+.sys { margin-left: auto; font-size: 12px; color: var(--text-2); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); font-size: 12px; color: var(--text-2); white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; flex: none; }
+main { max-width: 1180px; margin: 0 auto; padding: 20px 16px 80px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 16px; }
+.card > .hd { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.card > .hd h2 { margin: 0; font-size: 15px; }
+.card > .hd .step { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 12px; font-weight: 700; display: grid; place-items: center; flex: none; }
+.card > .hd .sub { color: var(--muted); font-size: 12.5px; }
+.card > .bd { padding: 16px; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.grow { flex: 1 1 200px; min-width: 0; }
+label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-2); font-weight: 500; min-width: 0; }
+input, select, textarea { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 7px 9px; min-width: 0; width: 100%; }
+input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; border-color: transparent; }
+input[type=checkbox] { width: auto; accent-color: var(--accent); }
+button.btn { font: inherit; border: 1px solid var(--border); background: var(--surface); color: var(--text); padding: 7px 13px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+button.btn:hover { background: var(--surface-2); }
+button.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+button.btn.primary:hover { filter: brightness(1.07); }
+button.btn.danger { color: var(--critical); }
+button.btn.sm { padding: 4px 9px; font-size: 12.5px; }
+button.btn:disabled { opacity: .5; cursor: not-allowed; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 14px; flex-wrap: wrap; }
+.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 7px 10px; font: inherit; color: var(--text-2); cursor: pointer; }
+.tabs button.active { border-color: var(--accent); color: var(--text); font-weight: 600; }
+.drop { border: 1.5px dashed var(--border); border-radius: var(--radius); padding: 26px; text-align: center; color: var(--text-2); cursor: pointer; }
+.drop.over { border-color: var(--accent); background: var(--surface-2); }
+.list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.item { border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px; display: flex; gap: 10px; align-items: flex-start; background: var(--surface); }
+.item .t { font-weight: 600; }
+.item .d { color: var(--muted); font-size: 12px; }
+.tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); margin-right: 4px; white-space: nowrap; }
+.ds { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 12px; }
+.ds .top { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--surface-2); border-radius: var(--radius) var(--radius) 0 0; flex-wrap: wrap; }
+.ds .top .name { font-weight: 600; }
+.ds .body { padding: 12px; }
+.ds .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.hint { font-size: 12px; color: var(--muted); }
+.warnline { font-size: 12.5px; color: var(--text-2); margin-top: 8px; }
+.warnline::before { content: "\26A0  "; color: var(--warning); }
+.err { color: var(--critical); font-size: 13px; margin-top: 8px; white-space: pre-wrap; }
+.tablewrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; max-width: 100%; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+th, td { text-align: left; padding: 6px 9px; border-bottom: 1px solid var(--border); white-space: nowrap; vertical-align: middle; }
+th { font-weight: 600; color: var(--text-2); background: var(--surface-2); position: sticky; top: 0; }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.models { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 8px; }
+.model { border: 1px solid var(--border); border-radius: 9px; padding: 9px 11px; display: flex; gap: 9px; cursor: pointer; align-items: flex-start; user-select: none; }
+.model.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.model .t { font-weight: 600; font-size: 13.5px; }
+.model .d { color: var(--muted); font-size: 12px; }
+.fam { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 0 6px; font-weight: 600; }
+.estimate { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; padding: 14px 16px; border-top: 1px solid var(--border); }
+.hero { font-size: 30px; font-weight: 650; letter-spacing: -.02em; }
+.hero-label { font-size: 12px; color: var(--text-2); }
+.meter { height: 10px; background: var(--accent-soft); border-radius: 999px; overflow: hidden; }
+.meter > div { height: 100%; background: var(--accent); border-radius: 999px; transition: width .4s; }
+.status { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--text-2); white-space: nowrap; }
+.status .ic { width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; color: #fff; font-weight: 700; flex: none; }
+.s-ok .ic, .s-finished .ic { background: var(--good); }
+.s-failed .ic, .s-error .ic, .s-crashed .ic { background: var(--critical); }
+.s-running .ic, .s-starting .ic { background: var(--accent); }
+.s-cancelled .ic, .s-queued .ic { background: var(--muted); }
+.barcell { display: flex; align-items: center; gap: 8px; min-width: 170px; }
+.bar { height: 8px; background: var(--accent); border-radius: 0 4px 4px 0; min-width: 2px; }
+.bar.best { background: var(--accent-strong); }
+.feed { font-family: var(--mono); font-size: 12px; max-height: 260px; overflow: auto; background: var(--surface-2); border-radius: 8px; padding: 8px 10px; }
+.feed div { white-space: pre; }
+pre.log { font-family: var(--mono); font-size: 11.5px; max-height: 380px; overflow: auto; background: var(--surface-2); border-radius: 8px; padding: 10px; margin: 0; white-space: pre-wrap; word-break: break-word; }
+.runs { display: grid; gap: 8px; }
+.run { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 9px; cursor: pointer; background: var(--surface); }
+.run:hover { border-color: var(--accent); }
+.run .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.run .d { color: var(--muted); font-size: 12px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.kpi .l { font-size: 12px; color: var(--text-2); }
+.kpi .v { font-size: 20px; font-weight: 650; }
+details > summary { cursor: pointer; color: var(--text-2); font-size: 12.5px; }
+.empty { color: var(--muted); padding: 20px; text-align: center; }
+.chk { display: inline-flex; gap: 6px; align-items: center; font-size: 13px; color: var(--text-2); }
+.sticky-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; flex-wrap: wrap; }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--surface); padding: 9px 16px; border-radius: 8px; font-size: 13px; z-index: 20; max-width: calc(100vw - 32px); }
+.hidden { display: none !important; }
+@media (max-width: 640px) { .hero { font-size: 24px; } header { padding: 10px 16px; } .sys { margin-left: 0; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>AutoDeep<span id="ver"></span></h1>
+  <nav>
+    <button id="nav-new" class="active" onclick="show('new')">New experiment</button>
+    <button id="nav-runs" onclick="show('runs')">Runs</button>
+  </nav>
+  <div class="sys" id="sys"><span class="pill"><span class="dot"></span>checking hardware…</span></div>
+</header>
+
+<main>
+<!-- ============================================================ NEW EXPERIMENT -->
+<section id="page-new">
+  <div class="card">
+    <div class="hd"><div class="step">1</div><h2>Datasets</h2><span class="sub">Add one or more tables. The target column is required; problem type and metrics are detected for you.</span></div>
+    <div class="bd">
+      <div class="tabs" id="srcTabs">
+        <button class="active" data-tab="builtin">Built-in examples</button>
+        <button data-tab="upload">Upload a file</button>
+        <button data-tab="path">Local path / OpenML</button>
+        <button data-tab="saved">Saved datasets</button>
+      </div>
+      <div data-pane="builtin"><div class="list" id="builtinList"></div></div>
+      <div data-pane="upload" class="hidden">
+        <div class="drop" id="drop">Drop a CSV / TSV / Parquet / Excel / JSON file here, or click to choose<br><span class="hint">Files are copied into the workspace on this machine; nothing leaves your computer.</span></div>
+        <input type="file" id="fileInput" class="hidden" accept=".csv,.tsv,.txt,.parquet,.pq,.feather,.json,.jsonl,.xlsx,.xls">
+      </div>
+      <div data-pane="path" class="hidden">
+        <div class="row">
+          <label class="f grow">Path to a file on this machine, or <code>openml:&lt;name or id&gt;</code><input id="pathInput" placeholder="/home/me/data/churn.csv   or   openml:adult"></label>
+          <label class="f" style="width:180px">Name<input id="pathName" placeholder="(from file name)"></label>
+          <button class="btn" onclick="addFromPath()">Add</button>
+        </div>
+      </div>
+      <div data-pane="saved" class="hidden"><div class="list" id="savedList"></div></div>
+      <div id="dsList" style="margin-top:16px"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="hd"><div class="step">2</div><h2>Models</h2><span class="sub" id="modelCount"></span>
+      <div style="margin-left:auto" class="row" id="presets"></div>
+    </div>
+    <div class="bd" id="modelGrid"></div>
+  </div>
+
+  <div class="card">
+    <div class="hd"><div class="step">3</div><h2>Search settings &amp; estimate</h2></div>
+    <div class="bd">
+      <div class="row">
+        <label class="f" style="width:150px">Trials per model<input type="number" id="maxEvals" min="1" max="500" value="20"></label>
+        <label class="f" style="width:170px">Time budget per model (min)<input type="number" id="timeout" min="0" step="0.5" placeholder="no limit"></label>
+        <label class="f" style="width:150px">Max epochs (neural)<input type="number" id="maxEpochs" min="1" placeholder="config default"></label>
+        <label class="f" style="width:130px">Device<select id="device"><option value="auto">auto</option><option value="cpu">CPU</option><option value="cuda">GPU (CUDA)</option></select></label>
+        <label class="f" style="width:110px">Random seed<input type="number" id="seed" value="42"></label>
+        <label class="chk" style="padding-bottom:8px"><input type="checkbox" id="saveModels"> save best models</label>
+        <label class="f grow">Run name<input id="runName" placeholder="optional"></label>
+      </div>
+      <p class="hint" style="margin:10px 0 0">Tip: for a first look use <b>5-10 trials</b> and <b>max epochs 30</b>. A time budget stops a model's search after the running trial finishes.</p>
+    </div>
+    <div class="estimate">
+      <div><div class="hero-label">Estimated time</div><div class="hero" id="estTotal">–</div><div class="hint" id="estRange"></div></div>
+      <div class="grow"><details id="estDetails"><summary>Per model breakdown</summary><div class="tablewrap" style="margin-top:8px;max-height:280px"><table id="estTable"></table></div></details>
+        <div class="hint" id="estNote" style="margin-top:6px"></div></div>
+      <div class="sticky-actions"><button class="btn primary" id="launchBtn" onclick="launch()">Start experiment</button></div>
+    </div>
+    <div class="err hidden" id="launchErr" style="padding:0 16px 14px"></div>
+  </div>
+</section>
+
+<!-- ============================================================ RUNS -->
+<section id="page-runs" class="hidden">
+  <div id="runsList" class="card"><div class="hd"><h2>Runs</h2><span class="sub">Every experiment runs in its own background process; you can close this page and come back.</span><button class="btn sm" style="margin-left:auto" onclick="loadRuns()">Refresh</button></div><div class="bd"><div class="runs" id="runs"></div></div></div>
+  <div id="runDetail" class="hidden">
+    <div class="row" style="margin-bottom:12px"><button class="btn sm" onclick="closeRun()">&larr; All runs</button><h2 id="rdTitle" style="margin:0;font-size:17px" class="grow"></h2>
+      <button class="btn sm" id="rdCsv">Download CSV</button><button class="btn sm danger" id="rdCancel">Stop</button><button class="btn sm danger" id="rdDelete">Delete</button></div>
+    <div class="card"><div class="bd">
+      <div class="kpis">
+        <div class="kpi"><div class="l">Status</div><div class="v" id="rdState">–</div></div>
+        <div class="kpi"><div class="l">Elapsed</div><div class="v" id="rdElapsed">–</div></div>
+        <div class="kpi"><div class="l">Remaining (estimate)</div><div class="v" id="rdEta">–</div></div>
+        <div class="kpi"><div class="l">Models finished</div><div class="v" id="rdJobs">–</div></div>
+      </div>
+      <div class="meter" role="progressbar" aria-label="Run progress" id="rdMeterWrap"><div id="rdMeter" style="width:0"></div></div>
+      <div class="hint" id="rdCurrent" style="margin-top:8px"></div>
+      <div class="err hidden" id="rdError"></div>
+    </div></div>
+    <div class="card"><div class="hd"><h2>Leaderboard</h2><span class="sub">Best hyperparameters per model, scored on the held-out test set</span></div><div class="bd" id="rdBoard"><div class="empty">Results appear here as models finish.</div></div></div>
+    <div class="card"><div class="hd"><h2>Activity</h2></div><div class="bd"><div class="feed" id="rdFeed"></div></div></div>
+    <div class="card"><div class="hd"><h2>Log</h2><button class="btn sm" style="margin-left:auto" onclick="loadLog()">Refresh</button></div><div class="bd"><pre class="log" id="rdLog"></pre></div></div>
+  </div>
+</section>
+</main>
+
+<script>
+// ------------------------------------------------------------------ state
+const S = { models: [], presets: {}, metrics: {}, builtin: [], datasets: [], selected: new Set(), run: null, runTimer: null, seq: 0, feed: [], polls: 0 };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtDur = (s) => { if (s == null || !isFinite(s)) return "–"; s = Math.max(0, Math.round(s)); if (s < 60) return s + "s"; const m = Math.floor(s/60), r = s%60; if (m < 60) return `${m}m ${String(r).padStart(2,"0")}s`; return `${Math.floor(m/60)}h ${String(m%60).padStart(2,"0")}m`; };
+const fmtNum = (v, d=4) => v == null || v === "" || !isFinite(v) ? "–" : Number(v).toFixed(d);
+const PT_LABEL = { binary_classification: "Binary classification", multiclass_classification: "Multiclass classification", regression: "Regression" };
+function toast(msg) { const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 3500); }
+async function api(path, opts = {}) {
+  const res = await fetch(path, { headers: opts.body && !(opts.body instanceof FormData) ? { "Content-Type": "application/json" } : {}, ...opts });
+  const ct = res.headers.get("content-type") || "";
+  const data = ct.includes("json") ? await res.json() : await res.text();
+  if (!res.ok) throw new Error((data && data.detail) ? (typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail)) : res.statusText);
+  return data;
+}
+const store = { get(k, d) { try { const v = localStorage.getItem("autodeep:" + k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem("autodeep:" + k, JSON.stringify(v)); } catch {} } };
+
+// ------------------------------------------------------------------ nav
+function show(page) {
+  for (const p of ["new", "runs"]) { $("page-" + p).classList.toggle("hidden", p !== page); $("nav-" + p).classList.toggle("active", p === page); }
+  if (page === "runs" && !S.run) loadRuns();
+  location.hash = page === "runs" ? (S.run ? "run=" + S.run : "runs") : "";
+}
+document.querySelectorAll("#srcTabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#srcTabs button").forEach(x => x.classList.toggle("active", x === b));
+  document.querySelectorAll("[data-pane]").forEach(p => p.classList.toggle("hidden", p.dataset.pane !== b.dataset.tab));
+});
+
+// ------------------------------------------------------------------ init
+async function init() {
+  const [models, metrics, ds] = await Promise.all([api("/api/models"), api("/api/metrics"), api("/api/datasets")]);
+  S.models = models.models; S.presets = models.presets; S.metrics = metrics; S.builtin = ds.builtin; S.saved = ds.registered;
+  const draft = store.get("draft", null);
+  S.selected = new Set(draft?.models?.length ? draft.models : models.default);
+  if (draft?.settings) for (const [k, v] of Object.entries(draft.settings)) { const el = $(k); if (el) el.type === "checkbox" ? el.checked = v : el.value = v; }
+  renderBuiltin(); renderSaved(); renderModels();
+  if (draft?.datasets?.length) for (const d of draft.datasets) await addDataset(d, { silent: true });
+  renderDatasets(); scheduleEstimate();
+  api("/api/system").then(renderSystem).catch(() => {});
+  const hash = location.hash;  // read before show() rewrites it
+  if (hash.startsWith("#run=") && hash.length > 5) { show("runs"); openRun(hash.slice(5)); } else if (hash.startsWith("#run")) show("runs");
+}
+function renderSystem(sys) {
+  $("ver").textContent = "v" + sys.version;
+  const g = sys.gpu || {};
+  let gpu = g.available ? `${esc(g.name)} · ${(g.free_mb/1024).toFixed(1)} of ${(g.total_mb/1024).toFixed(1)} GB free` : "no CUDA GPU";
+  const using = sys.device === "cuda" ? "GPU" : "CPU";
+  const note = g.available && sys.device !== "cuda" ? " (GPU busy: not enough free memory)" : "";
+  $("sys").innerHTML = `<span class="pill" title="Neural models will run on ${using}${note}"><span class="dot" style="background:${sys.device === "cuda" ? "var(--good)" : "var(--muted)"}"></span>runs on ${using}${note}</span><span class="pill">${gpu}</span><span class="pill">${sys.cpu_count} CPU threads</span>`;
+}
+
+// ------------------------------------------------------------------ datasets
+function renderBuiltin() {
+  $("builtinList").innerHTML = S.builtin.map(b => `<div class="item"><div class="grow"><div class="t">${esc(b.name)}</div><div class="d">${esc(b.description)}</div><div style="margin-top:4px"><span class="tag">${esc(PT_LABEL[b.problem_type])}</span><span class="tag">target: ${esc(b.target)}</span></div></div><button class="btn sm" onclick='addDataset({name:${JSON.stringify(b.name)}, path:${JSON.stringify(b.path)}, target:${JSON.stringify(b.target)}})'>Add</button></div>`).join("");
+}
+function renderSaved() {
+  $("savedList").innerHTML = (S.saved || []).length ? S.saved.map(d => `<div class="item"><div class="grow"><div class="t">${esc(d.name)}</div><div class="d" style="word-break:break-all">${esc(d.path)}</div><div style="margin-top:4px"><span class="tag">target: ${esc(d.target)}</span></div></div><div style="display:flex;flex-direction:column;gap:4px"><button class="btn sm" onclick='addDataset(${esc(JSON.stringify(d))})'>Add</button><button class="btn sm danger" onclick='forget(${esc(JSON.stringify(d.name))})'>Forget</button></div></div>`).join("") : `<div class="empty">Datasets you save from the list below appear here, ready for the next experiment.</div>`;
+}
+async function forget(name) { const r = await api("/api/datasets/register/" + encodeURIComponent(name), { method: "DELETE" }); S.saved = r.registered; renderSaved(); }
+const drop = $("drop");
+drop.onclick = () => $("fileInput").click();
+drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("over"); };
+drop.ondragleave = () => drop.classList.remove("over");
+drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("over"); if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]); };
+$("fileInput").onchange = (e) => e.target.files[0] && upload(e.target.files[0]);
+async function upload(file) {
+  drop.textContent = `Uploading ${file.name}…`;
+  const fd = new FormData(); fd.append("file", file);
+  try { const r = await api("/api/datasets/upload", { method: "POST", body: fd }); await addDataset({ name: r.name, path: r.path }, { profile: r.profile }); toast(`Added ${r.name} (${r.profile.n_rows} rows)`); }
+  catch (e) { toast("Upload failed: " + e.message); }
+  drop.innerHTML = `Drop another file here, or click to choose`;
+}
+async function addFromPath() {
+  const path = $("pathInput").value.trim(); if (!path) return;
+  let name = $("pathName").value.trim() || path.split(/[\\/]/).pop().replace(/\.[^.]+$/, "").replace(/^openml:/, "");
+  await addDataset({ name: name.replace(/[^A-Za-z0-9_]+/g, "_"), path });
+  $("pathInput").value = ""; $("pathName").value = "";
+}
+function uniqueName(name) { let n = name || "dataset", i = 1; while (S.datasets.some(d => d.name === n)) n = `${name}_${++i}`; return n; }
+async function addDataset(d, opts = {}) {
+  const ds = { test_size: 0.2, drop_columns: [], ...d, name: opts.silent ? d.name : uniqueName(d.name), _profile: opts.profile || null, _error: null, _open: !opts.silent };
+  S.datasets.push(ds); renderDatasets();
+  await refreshProfile(ds);
+  if (!opts.silent) toast(`Added dataset ${ds.name}`);
+}
+async function refreshProfile(ds) {
+  try {
+    ds._profile = await api("/api/datasets/profile", { method: "POST", body: JSON.stringify({ path: ds.path, target: ds.target || null }) });
+    ds._error = null;
+    if (!ds.target) ds.target = guessTarget(ds._profile);
+    if (ds.target && !ds._profile.target) ds._profile = await api("/api/datasets/profile", { method: "POST", body: JSON.stringify({ path: ds.path, target: ds.target }) });
+  } catch (e) { ds._error = e.message; }
+  renderDatasets(); saveDraft(); scheduleEstimate();
+}
+function guessTarget(p) {
+  const names = p.columns.map(c => c.name); const lower = names.map(n => n.toLowerCase());
+  for (const k of ["target", "label", "class", "y", "outcome", "churn"]) { const i = lower.indexOf(k); if (i >= 0) return names[i]; }
+  return names[names.length - 1];
+}
+function metricOptions(pt, current) { return (S.metrics[pt]?.available || []).map(m => `<option value="${m.name}" ${m.name === current ? "selected" : ""}>${m.name} ${m.maximize ? "↑" : "↓"}</option>`).join(""); }
+function renderDatasets() {
+  const el = $("dsList");
+  if (!S.datasets.length) { el.innerHTML = `<div class="empty">No datasets yet. Add a built-in example, upload a file, or point to a local path.</div>`; return; }
+  el.innerHTML = S.datasets.map((d, i) => {
+    const p = d._profile; const pt = d.problem_type || p?.inferred_problem_type; const metric = d.metric || S.metrics[pt]?.default;
+    const cols = p ? p.columns : [];
+    const warn = cols.filter(c => c.hints.length && c.name !== d.target && !d.drop_columns.includes(c.name));
+    return `<div class="ds">
+      <div class="top"><span class="name">${esc(d.name)}</span><span class="hint" style="word-break:break-all">${esc(d.path)}</span>
+        ${p ? `<span class="tag">${p.n_rows.toLocaleString()} rows × ${p.n_columns} cols</span>` : ""}${pt ? `<span class="tag">${esc(PT_LABEL[pt])}</span>` : ""}
+        <span style="margin-left:auto;display:flex;gap:6px"><button class="btn sm" onclick="saveDs(${i})" title="Remember this dataset configuration">Save</button><button class="btn sm" onclick="toggleDs(${i})">${d._open ? "Collapse" : "Configure"}</button><button class="btn sm danger" onclick="removeDs(${i})">Remove</button></span></div>
+      ${d._error ? `<div class="body"><div class="err">${esc(d._error)}</div></div>` : ""}
+      ${p && d._open ? `<div class="body">
+        <div class="grid">
+          <label class="f">Target column<select onchange="setDs(${i},'target',this.value,true)">${cols.map(c => `<option ${c.name === d.target ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label>
+          <label class="f">Problem type<select onchange="setDs(${i},'problem_type',this.value||null);setDs(${i},'metric',null)"><option value="">auto (${esc(PT_LABEL[p.inferred_problem_type] || "?")})</option>${Object.keys(PT_LABEL).map(k => `<option value="${k}" ${k === d.problem_type ? "selected" : ""}>${PT_LABEL[k]}</option>`).join("")}</select></label>
+          <label class="f">Optimise metric<select onchange="setDs(${i},'metric',this.value)">${metricOptions(pt, metric)}</select></label>
+          <label class="f">Test size<input type="number" min="0.05" max="0.9" step="0.05" value="${d.test_size}" onchange="setDs(${i},'test_size',parseFloat(this.value))"></label>
+          <label class="f">Subsample rows<input type="number" min="100" placeholder="all" value="${d.max_rows || ""}" onchange="setDs(${i},'max_rows',this.value?parseInt(this.value):null)"></label>
+          <label class="f">Split column (optional)<select onchange="setDs(${i},'split_col',this.value||null)"><option value="">random split</option>${cols.filter(c => c.n_unique === 2 && c.name !== d.target).map(c => `<option ${c.name === d.split_col ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label>
+          ${d.split_col ? `<label class="f">Train value<input value="${esc(d.train_value ?? "")}" onchange="setDs(${i},'train_value',this.value)"></label><label class="f">Test value<input value="${esc(d.test_value ?? "")}" onchange="setDs(${i},'test_value',this.value)"></label>` : ""}
+        </div>
+        ${p.class_counts ? `<div class="hint" style="margin-top:8px">Classes: ${Object.entries(p.class_counts).map(([k, v]) => `${esc(k)} (${v})`).join(", ")}</div>` : ""}
+        ${warn.length ? `<div class="warnline">Consider excluding: ${warn.map(c => `<b>${esc(c.name)}</b> (${esc(c.hints.join(", "))})`).join("; ")}</div>` : ""}
+        <details style="margin-top:10px" ${cols.length <= 12 ? "open" : ""}><summary>Columns — untick to exclude from the features (${d.drop_columns.length} excluded)</summary>
+          <div class="tablewrap" style="margin-top:8px;max-height:300px"><table><tr><th>Use</th><th>Column</th><th>Type</th><th class="num">Unique</th><th class="num">Missing %</th><th>Notes</th></tr>
+          ${cols.map(c => c.name === d.target ? `<tr><td>target</td><td><b>${esc(c.name)}</b></td><td>${c.kind}</td><td class="num">${c.n_unique}</td><td class="num">${c.missing_pct}</td><td></td></tr>` : `<tr><td><input type="checkbox" ${d.drop_columns.includes(c.name) ? "" : "checked"} onchange="toggleCol(${i}, ${esc(JSON.stringify(c.name))}, this.checked)"></td><td>${esc(c.name)}</td><td>${c.kind}</td><td class="num">${c.n_unique}</td><td class="num">${c.missing_pct}</td><td class="hint">${esc(c.hints.join(", "))}</td></tr>`).join("")}
+          </table></div></details>
+      </div>` : (p ? "" : (d._error ? "" : `<div class="body hint">Reading dataset…</div>`))}
+    </div>`;
+  }).join("");
+}
+function setDs(i, k, v, reprofile) { const d = S.datasets[i]; d[k] = v; if (k === "target") { d.problem_type = null; d.metric = null; d.drop_columns = d.drop_columns.filter(c => c !== v); } if (reprofile) refreshProfile(d); else { renderDatasets(); saveDraft(); scheduleEstimate(); } }
+function toggleCol(i, name, use) { const d = S.datasets[i]; d.drop_columns = use ? d.drop_columns.filter(c => c !== name) : [...d.drop_columns, name]; renderDatasets(); saveDraft(); scheduleEstimate(); }
+function toggleDs(i) { S.datasets[i]._open = !S.datasets[i]._open; renderDatasets(); }
+function removeDs(i) { S.datasets.splice(i, 1); renderDatasets(); saveDraft(); scheduleEstimate(); }
+async function saveDs(i) { try { const r = await api("/api/datasets/register", { method: "POST", body: JSON.stringify(dsPayload(S.datasets[i])) }); S.saved = r.registered; renderSaved(); toast("Saved " + S.datasets[i].name); } catch (e) { toast(e.message); } }
+function dsPayload(d) { const o = {}; for (const [k, v] of Object.entries(d)) if (!k.startsWith("_") && v !== null && v !== "" && v !== undefined) o[k] = v; return o; }
+
+// ------------------------------------------------------------------ models
+const FAMILY = { gbdt: "Gradient-boosted trees", foundation: "Pretrained foundation models", neural: "Neural networks", deep_tabular: "Deep tabular architectures (PyTorch Tabular)", image: "Tabular-as-image" };
+function renderModels() {
+  $("presets").innerHTML = ["fast", "default", "modern", "deep", "all"].map(p => `<button class="btn sm" onclick="preset('${p}')">${p[0].toUpperCase() + p.slice(1)}</button>`).join("") + `<button class="btn sm" onclick="preset(null)">None</button>`;
+  let html = "";
+  for (const fam of Object.keys(FAMILY)) {
+    const ms = S.models.filter(m => m.family === fam); if (!ms.length) continue;
+    html += `<div class="fam">${FAMILY[fam]}</div><div class="models">` + ms.map(m => `<div class="model ${S.selected.has(m.name) ? "on" : ""}" onclick="toggleModel('${m.name}')" role="checkbox" aria-checked="${S.selected.has(m.name)}" tabindex="0" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();toggleModel('${m.name}')}"><input type="checkbox" tabindex="-1" ${S.selected.has(m.name) ? "checked" : ""}><div><div class="t">${esc(m.display_name)} <span class="tag">${m.speed}</span></div><div class="d">${esc(m.description)}</div></div></div>`).join("") + `</div>`;
+  }
+  $("modelGrid").innerHTML = html;
+  $("modelCount").textContent = `${S.selected.size} selected`;
+}
+function toggleModel(n) { S.selected.has(n) ? S.selected.delete(n) : S.selected.add(n); renderModels(); saveDraft(); scheduleEstimate(); }
+function preset(p) { S.selected = new Set(p ? S.presets[p] : []); renderModels(); saveDraft(); scheduleEstimate(); }
+
+// ------------------------------------------------------------------ estimate & launch
+const SETTINGS = ["maxEvals", "timeout", "maxEpochs", "device", "seed", "saveModels", "runName"];
+SETTINGS.forEach(id => $(id).addEventListener("input", () => { saveDraft(); scheduleEstimate(); }));
+function saveDraft() { store.set("draft", { datasets: S.datasets.map(dsPayload), models: [...S.selected], settings: Object.fromEntries(SETTINGS.map(id => [id, $(id).type === "checkbox" ? $(id).checked : $(id).value])) }); }
+function jobPayload() {
+  const num = (id) => $(id).value === "" ? null : Number($(id).value);
+  return { name: $("runName").value || null, datasets: S.datasets.filter(d => d._profile && !d._error).map(dsPayload), models: [...S.selected],
+    max_evals: num("maxEvals") || 20, timeout_per_model: num("timeout") ? num("timeout") * 60 : null, max_epochs: num("maxEpochs"),
+    device: $("device").value, random_state: num("seed") ?? 42, save_models: $("saveModels").checked };
+}
+let estTimer = null, estSeq = 0;
+function scheduleEstimate() { clearTimeout(estTimer); estTimer = setTimeout(estimate, 400); }
+async function estimate() {
+  const job = jobPayload(); const my = ++estSeq;
+  if (!job.datasets.length || !job.models.length) { $("estTotal").textContent = "–"; $("estRange").textContent = !job.datasets.length ? "add a dataset" : "select at least one model"; $("estTable").innerHTML = ""; $("launchBtn").disabled = true; return; }
+  try {
+    const r = await api("/api/estimate", { method: "POST", body: JSON.stringify(job) }); if (my !== estSeq) return;
+    $("estTotal").textContent = "~" + fmtDur(r.total_seconds);
+    $("estRange").textContent = `likely between ${fmtDur(r.low_seconds)} and ${fmtDur(r.high_seconds)} on ${r.device === "cuda" ? "GPU" : "CPU"}`;
+    const hist = r.jobs.filter(j => j.source !== "prior").length;
+    $("estNote").textContent = hist ? `${hist} of ${r.jobs.length} estimates use timings measured on this machine.` : "Estimates come from built-in cost curves; they get more accurate after your first run on this machine. Neural models use early stopping, so their time varies most.";
+    $("estTable").innerHTML = `<tr><th>Dataset</th><th>Model</th><th class="num">Train rows</th><th class="num">Features</th><th class="num">s / trial</th><th class="num">Total</th><th>Source</th></tr>` +
+      r.jobs.map(j => `<tr><td>${esc(j.dataset)}</td><td>${esc(j.model)}</td><td class="num">${j.n_train.toLocaleString()}</td><td class="num">${j.n_features}</td><td class="num">${j.seconds_per_trial}</td><td class="num">${fmtDur(j.total_seconds)}${j.capped_by_timeout ? " ⏱" : ""}</td><td class="hint">${esc(j.source)}</td></tr>`).join("");
+    const warns = r.jobs.filter(j => j.warning);
+    if (warns.length) $("estNote").innerHTML += `<div class="warnline">${warns.map(j => `${esc(j.model)} on ${esc(j.dataset)}: ${esc(j.warning)}`).join("<br>")}</div>`;
+    $("launchBtn").disabled = false; $("launchErr").classList.add("hidden");
+  } catch (e) { if (my !== estSeq) return; $("estTotal").textContent = "–"; $("estRange").textContent = ""; $("launchErr").textContent = e.message; $("launchErr").classList.remove("hidden"); $("launchBtn").disabled = true; }
+}
+async function launch() {
+  $("launchBtn").disabled = true;
+  try { const r = await api("/api/jobs", { method: "POST", body: JSON.stringify(jobPayload()) }); toast("Experiment started"); show("runs"); openRun(r.id); }
+  catch (e) { $("launchErr").textContent = e.message; $("launchErr").classList.remove("hidden"); }
+  finally { $("launchBtn").disabled = false; }
+}
+
+// ------------------------------------------------------------------ runs
+function statusBadge(state) { const ic = { ok: "✓", finished: "✓", failed: "✕", error: "✕", crashed: "✕", running: "▸", starting: "▸", cancelled: "■", queued: "…" }[state] || "•"; return `<span class="status s-${state}"><span class="ic">${ic}</span>${state}</span>`; }
+async function loadRuns() {
+  const r = await api("/api/jobs");
+  $("runs").innerHTML = r.jobs.length ? r.jobs.map(j => { const s = j.status || {}; return `<div class="run" onclick="openRun('${j.id}')"><div class="t">${esc(j.name || j.id)}</div><div>${statusBadge(s.state)}</div><div class="d">${new Date((j.created_at || 0) * 1000).toLocaleString()} · ${s.jobs_done ?? 0}/${s.jobs_total ?? "?"} models${s.state === "running" ? ` · ETA ${esc(s.eta_human || "?")}` : ""}</div><div class="d">${s.elapsed_seconds ? fmtDur(s.elapsed_seconds) : ""}</div></div>`; }).join("") : `<div class="empty">No runs yet. Configure an experiment and press <b>Start experiment</b>.</div>`;
+}
+function openRun(id) {
+  S.run = id; S.seq = 0; S.feed = []; $("rdFeed").innerHTML = ""; $("rdLog").textContent = "";
+  $("runsList").classList.add("hidden"); $("runDetail").classList.remove("hidden");
+  $("rdCsv").onclick = () => location.href = `/api/jobs/${id}/results.csv`;
+  $("rdCancel").onclick = async () => { await api(`/api/jobs/${id}/cancel`, { method: "POST" }); toast("Stopping after the current trial…"); };
+  $("rdDelete").onclick = async () => { try { await api(`/api/jobs/${id}`, { method: "DELETE" }); toast("Run deleted"); closeRun(); } catch (e) { toast(e.message); } };
+  location.hash = "run=" + id; pollRun(); loadLog();
+}
+function closeRun() { S.run = null; clearTimeout(S.runTimer); $("runDetail").classList.add("hidden"); $("runsList").classList.remove("hidden"); location.hash = "runs"; loadRuns(); }
+async function pollRun() {
+  clearTimeout(S.runTimer); const id = S.run; if (!id) return;
+  let info; try { info = await api(`/api/jobs/${id}?since=${S.seq}`); } catch (e) { $("rdError").textContent = e.message; $("rdError").classList.remove("hidden"); return; }
+  if (id !== S.run) return;
+  const st = info.status || {}; const live = ["running", "starting", "queued"].includes(st.state);
+  $("rdTitle").textContent = info.name || id;
+  $("rdState").innerHTML = statusBadge(st.state || "queued");
+  $("rdElapsed").textContent = fmtDur(st.started_at ? (live ? Date.now() / 1000 : (st.finished_at || Date.now() / 1000)) - st.started_at : null);
+  $("rdEta").textContent = live ? (st.eta_human || "estimating…") : "–";
+  $("rdJobs").textContent = `${st.jobs_done ?? 0} / ${st.jobs_total ?? "?"}`;
+  const pct = live ? Math.round((st.progress || 0) * 100) : (st.state === "finished" ? 100 : Math.round((st.progress || 0) * 100));
+  $("rdMeter").style.width = pct + "%"; $("rdMeterWrap").setAttribute("aria-valuenow", pct); $("rdMeterWrap").title = pct + "% (time based)";
+  const c = st.current || {};
+  $("rdCurrent").textContent = live ? (c.stage === "igtd" ? `${c.model} on ${c.dataset}: ${c.message}` : c.model ? `Now: ${c.model} on ${c.dataset}${c.trial ? ` · trial ${c.trial}/${c.max_evals}` : ""}` : "Starting…") : (st.state === "finished" ? `Finished: ${st.n_ok ?? 0} models OK, ${st.n_failed ?? 0} failed.` : "");
+  $("rdError").classList.toggle("hidden", !st.error); $("rdError").textContent = st.error || "";
+  $("rdCancel").classList.toggle("hidden", !live); $("rdDelete").classList.toggle("hidden", live);
+  for (const e of info.events) { S.seq = e.seq + 1; const line = feedLine(e); if (line) S.feed.push(line); }
+  if (S.feed.length > 400) S.feed = S.feed.slice(-400);
+  const feed = $("rdFeed"); const atBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 30;
+  feed.innerHTML = S.feed.map(l => `<div>${esc(l)}</div>`).join("") || `<div class="hint">waiting for the first events…</div>`;
+  if (atBottom) feed.scrollTop = feed.scrollHeight;
+  renderBoard(info.results);
+  S.polls = (S.polls || 0) + 1;
+  if (live) { if (S.polls % 4 === 0) loadLog(); S.runTimer = setTimeout(pollRun, 1500); } else loadLog();
+}
+function feedLine(e) {
+  const t = new Date(e.time * 1000).toLocaleTimeString();
+  switch (e.event) {
+    case "run_start": return `${t}  run started: ${e.models.length} model(s) × ${e.datasets.length} dataset(s), ${e.max_evals} trial(s) each on ${e.device}`;
+    case "model_start": return `${t}  ▶ ${e.model} on ${e.dataset}`;
+    case "stage": return `${t}    ${e.message}`;
+    case "trial_end": return e.status === "ok" ? `${t}    trial ${String(e.trial).padStart(3)}/${e.max_evals}  ${e.metric}=${fmtNum(e.score)}  best=${fmtNum(e.best_score)}  (${e.duration.toFixed(1)}s)` : `${t}    trial ${e.trial}/${e.max_evals} failed: ${e.error}`;
+    case "model_end": return e.status === "ok" ? `${t}  ✓ ${e.model} on ${e.dataset}: test ${e.result.metric}=${fmtNum(e.result.test_score)} in ${fmtDur(e.result.duration_sec)}` : `${t}  ✕ ${e.model} on ${e.dataset}: ${e.status} ${e.result?.error || ""}`;
+    case "run_end": return `${t}  run ${e.cancelled ? "stopped" : "finished"}`;
+    case "error": return `${t}  ERROR ${e.message}`;
+  }
+  return null;
+}
+function renderBoard(results) {
+  if (!results || !results.length) { $("rdBoard").innerHTML = `<div class="empty">Results appear here as models finish.</div>`; return; }
+  const byDs = {}; for (const r of results) (byDs[r.dataset] ||= []).push(r);
+  $("rdBoard").innerHTML = Object.entries(byDs).map(([ds, rows]) => {
+    const metric = rows[0].metric; const info = (S.metrics[rows[0].problem_type]?.available || []).find(m => m.name === metric) || { maximize: true };
+    const ok = rows.filter(r => r.status === "ok" && r.test_score != null);
+    ok.sort((a, b) => info.maximize ? b.test_score - a.test_score : a.test_score - b.test_score);
+    const others = rows.filter(r => !ok.includes(r));
+    const max = Math.max(...ok.map(r => Math.abs(r.test_score)), 1e-12);
+    const evalKeys = [...new Set(ok.flatMap(r => Object.keys(r.test_metrics || {})))].filter(k => k !== metric);
+    return `<h3 style="margin:4px 0 8px;font-size:14px">${esc(ds)} <span class="hint">· ${esc(PT_LABEL[rows[0].problem_type] || "")} · ranked by test ${esc(metric)} (${info.maximize ? "higher" : "lower"} is better)</span></h3>
+    <div class="tablewrap" style="margin-bottom:16px"><table><tr><th>#</th><th>Model</th><th>Status</th><th>Test ${esc(metric)}</th><th class="num">Val ${esc(metric)}</th>${evalKeys.map(k => `<th class="num">test ${esc(k)}</th>`).join("")}<th class="num">Trials</th><th class="num">Time</th><th>Best parameters</th></tr>
+    ${ok.map((r, i) => `<tr><td>${i + 1}</td><td><b>${esc(r.model)}</b></td><td>${statusBadge("ok")}</td><td><div class="barcell" title="${esc(r.model)}: test ${esc(metric)} = ${fmtNum(r.test_score, 5)}"><div class="bar ${i === 0 ? "best" : ""}" style="width:${Math.max(2, 110 * Math.abs(r.test_score) / max)}px"></div><span>${fmtNum(r.test_score)}</span></div></td><td class="num">${fmtNum(r.best_score)}</td>${evalKeys.map(k => `<td class="num">${fmtNum(r.test_metrics?.[k])}</td>`).join("")}<td class="num">${r.n_trials ?? ""}${r.n_failed_trials ? ` (${r.n_failed_trials} failed)` : ""}</td><td class="num">${fmtDur(r.duration_sec)}</td><td><details><summary>show</summary><pre class="log" style="max-height:200px;white-space:pre">${esc(JSON.stringify(r.best_params, null, 1))}</pre></details></td></tr>`).join("")}
+    ${others.map(r => `<tr><td></td><td>${esc(r.model)}</td><td>${statusBadge(r.status)}</td><td colspan="${4 + evalKeys.length}" class="hint" style="white-space:normal">${esc(r.error || "")}</td><td class="num">${fmtDur(r.duration_sec)}</td></tr>`).join("")}
+    </table></div>`;
+  }).join("");
+}
+async function loadLog() { if (!S.run) return; try { $("rdLog").textContent = await api(`/api/jobs/${S.run}/log?tail=400`); $("rdLog").scrollTop = $("rdLog").scrollHeight; } catch {} }
+window.addEventListener("hashchange", () => {
+  const h = location.hash;
+  if (h.startsWith("#run=") && h.slice(5) !== S.run) { show("runs"); openRun(h.slice(5)); }
+  else if (h === "#runs" && S.run) closeRun();
+  else if ((h === "" || h === "#") && !$("page-runs").classList.contains("hidden")) show("new");
+});
+init().catch(e => { document.querySelector("main").insertAdjacentHTML("afterbegin", `<div class="card"><div class="bd err">Could not reach the AutoDeep server: ${esc(e.message)}</div></div>`); });
+</script>
+</body>
+</html>
