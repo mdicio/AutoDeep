@@ -101,7 +101,15 @@ class BaseTrainer:
     # ------------------------------------------------------------------ helpers
     @property
     def device(self) -> str:
-        return resolve_device()
+        return getattr(self, "_device_override", None) or resolve_device()
+
+    def to_device(self, device: str) -> None:
+        """Run predictions of the trained model on ``device`` (``"cpu"`` or ``"cuda"``), e.g. after loading it elsewhere."""
+        self._device_override = device
+
+    def strip_for_saving(self) -> None:
+        """Drop search bookkeeping that a saved predictor does not need."""
+        self.search_result = None
 
     def _setting(self, name, default=None):
         """Read a value from ``default_params`` honouring global overrides."""
@@ -249,24 +257,16 @@ class SklearnLikeTrainer(BaseTrainer):
 
 
 def _redirect_pt_tmp():
-    """PyTorch Tabular writes ``./.pt_tmp/exp_version_manager.yml`` in the working directory; keep it in AutoDeep's cache."""
+    """PyTorch Tabular writes ``./.pt_tmp/exp_version_manager.yml`` in the working directory; keep it in AutoDeep's cache.
+
+    Only the default argument is changed (no subclass), so trained models stay picklable.
+    """
     import os
 
     import pytorch_tabular.tabular_model as ptm
 
-    if getattr(ptm.ExperimentRunManager, "_autodeep", False):
-        return
     cache = Path(os.environ.get("AUTODEEP_CACHE", Path.home() / ".cache" / "autodeep"))
-    path = str(cache / "pytorch_tabular" / "exp_version_manager.yml")
-    base = ptm.ExperimentRunManager
-
-    class _ExperimentRunManager(base):
-        _autodeep = True
-
-        def __init__(self, exp_version_manager: str = path):
-            super().__init__(exp_version_manager)
-
-    ptm.ExperimentRunManager = _ExperimentRunManager
+    ptm.ExperimentRunManager.__init__.__defaults__ = (str(cache / "pytorch_tabular" / "exp_version_manager.yml"),)
 
 
 class PytorchTabularTrainer(BaseTrainer):
@@ -382,6 +382,7 @@ class PytorchTabularTrainer(BaseTrainer):
         )
         if best.state is not None:
             model.model.load_state_dict(best.state)
+            best.state = None  # free the copy (the callback stays referenced by the model)
         return model
 
     def predict_with(self, model, X):
@@ -395,6 +396,25 @@ class PytorchTabularTrainer(BaseTrainer):
         if self.problem_type == "binary_classification":
             return pred, proba[:, 1]
         return pred, proba
+
+    def to_device(self, device):
+        super().to_device(device)
+        if self.model is not None:
+            self.model.model.to(device)
+
+    def __getstate__(self):
+        """Pickle only what prediction needs (no training data, Lightning trainer or callbacks)."""
+        state = self.__dict__.copy()
+        model = state.get("model")
+        if model is not None and getattr(getattr(model, "datamodule", None), "_fitted", False):
+            light = copy.copy(model)
+            light.datamodule = model.datamodule.inference_only_copy()
+            light.trainer = None  # the Lightning trainer and callbacks are only needed for fitting
+            light.callbacks = []
+            state["model"] = light
+            if state.get("best_model") is model:
+                state["best_model"] = light
+        return state
 
     def save_model(self, path):
         self.model.save_model(str(path))

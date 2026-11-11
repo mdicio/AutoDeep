@@ -103,6 +103,7 @@ class TorchTrainer(BaseTrainer):
         tol = float(self.default_params.get("tol", 0.0))
 
         net = self.build_network(params, X_train.shape[1], self.n_outputs).to(device)
+        net._autodeep_build = (dict(params), int(X_train.shape[1]), int(self.n_outputs))  # to rebuild the net after unpickling
         opt, sched = self._optimizer(params, net)
         loss_fn = self._loss_fn(y_train)
         train_loader = self._loader(self.to_tensor(X_train), self._target_tensor(y_train), batch_size, shuffle=True)
@@ -165,6 +166,42 @@ class TorchTrainer(BaseTrainer):
             return (prob >= 0.5).astype(int), prob
         prob = torch.softmax(out, dim=1).numpy()
         return prob.argmax(axis=1), prob
+
+    # Networks are pickled as (build arguments, weights): some layers (weight_norm parametrizations,
+    # locally defined classes) cannot be pickled as modules.
+    def __getstate__(self):
+        state, packed = self.__dict__.copy(), {}
+        for key in ("model", "best_model"):
+            net = state.get(key)
+            if net is not None and hasattr(net, "_autodeep_build"):
+                if id(net) not in packed:
+                    packed[id(net)] = {
+                        "_autodeep_net": True,
+                        "build": net._autodeep_build,
+                        "weights": {k: v.cpu() for k, v in net.state_dict().items()},
+                    }
+                state[key] = packed[id(net)]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        rebuilt = {}
+        for key in ("model", "best_model"):
+            saved = state.get(key)
+            if isinstance(saved, dict) and saved.get("_autodeep_net"):
+                if id(saved) not in rebuilt:
+                    params, n_features, n_outputs = saved["build"]
+                    params = {**params, "weights": None}  # no pretrained download: the weights come from the file
+                    net = self.build_network(params, n_features, n_outputs)
+                    net.load_state_dict(saved["weights"])
+                    net._autodeep_build = saved["build"]
+                    rebuilt[id(saved)] = net.eval()
+                setattr(self, key, rebuilt[id(saved)])
+
+    def to_device(self, device: str) -> None:
+        super().to_device(device)
+        if self.model is not None:
+            self.model.to(device)
 
     def save_model(self, path):
         import torch

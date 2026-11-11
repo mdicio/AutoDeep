@@ -14,11 +14,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
 from autodeep.logging_utils import get_logger
+from autodeep.preprocessing import MAX_ONEHOT_CATEGORIES, TabularPreprocessor
 
 logger = get_logger("data")
 
 TARGET = "target"
-MAX_ONEHOT_CATEGORIES = 30
 
 DEFAULT_IGTD_CONFIG: Dict[str, Any] = {
     "img_size": "auto",
@@ -242,6 +242,8 @@ class DynamicDataLoader(DataLoader):
         self.dataframe = dataframe
         self.sep = sep
         self.max_rows = max_rows
+        self.preprocessor: Optional[TabularPreprocessor] = None  # fitted by load_data()
+        self.classes = None
         self.extra_info_creator = ExtraInfoCreator(
             dataset_name,
             run_igtd=run_igtd,
@@ -306,7 +308,7 @@ class DynamicDataLoader(DataLoader):
         return X_train, X_test
 
     def load_data(self):
-        from autodeep.datasets import infer_problem_type, sanitize_columns
+        from autodeep.datasets import infer_problem_type
 
         df = self._read()
         if self.target_column not in df.columns:
@@ -321,14 +323,9 @@ class DynamicDataLoader(DataLoader):
         if X.shape[1] == 0:
             raise ValueError(f"Dataset '{self.dataset_name}' has no feature columns left")
 
-        # column types: booleans and low-information types become categorical strings
-        for c in X.columns:
-            if pd.api.types.is_bool_dtype(X[c]) or isinstance(X[c].dtype, pd.CategoricalDtype) or pd.api.types.is_string_dtype(X[c]):
-                X[c] = X[c].astype(object).where(X[c].notna(), None)
-                X[c] = X[c].map(lambda v: v if v is None else str(v))
-            elif pd.api.types.is_datetime64_any_dtype(X[c]):
-                X[c] = X[c].astype("int64") / 1e9
-        X = X.rename(columns=sanitize_columns(X.columns))
+        # column types (booleans and text -> categorical strings, datetimes -> seconds) and clean names
+        prep = TabularPreprocessor(normalize=self.normalize_features, encode_categorical=self.encode_categorical)
+        X = prep.fit_schema(X)
 
         classes = None
         if self.problem_type == "regression":
@@ -339,17 +336,16 @@ class DynamicDataLoader(DataLoader):
         y = y.rename(TARGET)
 
         X_train, X_test, y_train, y_test = self._split(X, y, split_values)
-        X_train, X_test = self._impute(X_train, X_test)
-        if self.encode_categorical:
-            X_train, X_test = self.one_hot(X_train, X_test)
-        if self.normalize_features:
-            X_train, X_test = self.scale_features(X_train, X_test, mode=self.normalize_features)
+        prep.fit(X_train)  # imputation values, categories and scaler come from the training rows only
+        X_train, X_test = prep.transform(X_train), prep.transform(X_test)
+        self.preprocessor = prep
+        self.classes = None if classes is None else [c.item() if hasattr(c, "item") else c for c in classes]
 
         extra_info = None
         if self.return_extra_info or self.run_igtd:
             extra_info = self.extra_info_creator.create_extra_info(X_train, self.dataset_name)
             extra_info["problem_type"] = self.problem_type
             if classes is not None:
-                extra_info["classes"] = [c.item() if hasattr(c, "item") else c for c in classes]
+                extra_info["classes"] = self.classes
                 extra_info["num_classes"] = len(classes)
         return X_train, X_test, y_train, y_test, extra_info

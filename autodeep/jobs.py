@@ -23,7 +23,7 @@ STATUS_FILE = "status.json"
 LOG_FILE = "run.log"
 
 # keys of job.json forwarded to AutoRunner
-RUNNER_KEYS = {"max_evals", "random_state", "timeout_per_model", "max_epochs", "device", "save_models", "model_config"}
+RUNNER_KEYS = {"max_evals", "random_state", "timeout_per_model", "max_epochs", "device", "save_models", "save_best", "model_config"}
 
 
 def _write_json(path: Path, data: Dict[str, Any]) -> None:

@@ -32,6 +32,11 @@ class XGBoostTrainer(SklearnLikeTrainer):
     def predict_with(self, model, X):
         return super().predict_with(model, _categories_to_pandas(X))
 
+    def to_device(self, device):
+        super().to_device(device)
+        if self.model is not None:
+            self.model.set_params(device="cuda" if device == "cuda" else "cpu")
+
     def save_model(self, path):
         self.model.save_model(str(path))
 

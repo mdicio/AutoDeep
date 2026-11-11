@@ -70,6 +70,7 @@ class JobIn(BaseModel):
     device: str = "auto"
     random_state: int = 42
     save_models: bool = False
+    save_best: bool = True
 
 
 class ProfileIn(BaseModel):
@@ -178,6 +179,19 @@ def _read_events(path: Path, since: int = 0, limit: int = 500) -> List[Dict]:
             out.append(evt)
             if len(out) >= limit:
                 break
+    return out
+
+
+def _best_models(job_dir: Path) -> List[Dict]:
+    """Saved best model per dataset (read from info.json; the server never unpickles models)."""
+    out = []
+    for info_file in sorted((job_dir / "output" / "models").glob("*/best/info.json")):
+        try:
+            info = json.loads(info_file.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        keys = ("dataset", "model", "model_display_name", "problem_type", "target", "classes", "metric", "val_score", "test_score", "input_schema")
+        out.append({**{k: info.get(k) for k in keys}, "path": str(info_file.parent.resolve())})
     return out
 
 
@@ -377,6 +391,7 @@ def create_app(workspace: Optional[str] = None) -> FastAPI:
         d = ws.job_dir(job_id)
         info["events"] = _read_events(d / EVENTS_FILE, since=since)
         info["results"] = _results(d)
+        info["best_models"] = _best_models(d)
         return info
 
     @app.post("/api/jobs/{job_id}/cancel")
@@ -437,6 +452,49 @@ def create_app(workspace: Optional[str] = None) -> FastAPI:
         if not path.exists():
             raise HTTPException(404, "no results yet")
         return FileResponse(path, media_type="text/csv", filename=f"autodeep_{job_id}.csv")
+
+    def _model_dir(job_id: str, dataset: str) -> Path:
+        base = (ws.job_dir(job_id) / "output" / "models").resolve()
+        d = (base / dataset / "best").resolve()
+        if base not in d.parents or not (d / "info.json").exists():
+            raise HTTPException(404, f"No saved model for dataset '{dataset}'")
+        return d
+
+    @app.get("/api/jobs/{job_id}/models/{dataset}/download")
+    def download_model(job_id: str, dataset: str):
+        import io
+        import zipfile
+
+        from fastapi.responses import Response
+
+        d = _model_dir(job_id, dataset)
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+            for f in d.rglob("*"):
+                if f.is_file():
+                    z.write(f, Path(f"{dataset}_model") / f.relative_to(d))
+        name = _safe_filename(f"autodeep_{dataset}_model.zip")
+        return Response(buf.getvalue(), media_type="application/zip", headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+    @app.post("/api/jobs/{job_id}/models/{dataset}/predict")
+    async def predict(job_id: str, dataset: str, file: UploadFile = File(...)):
+        d = _model_dir(job_id, dataset)
+        suffix = Path(file.filename or "rows.csv").suffix.lower() or ".csv"
+        if suffix not in SUPPORTED_EXTENSIONS:
+            raise HTTPException(400, f"Unsupported file type '{suffix}'")
+        work = ws.job_dir(job_id) / "predictions"
+        work.mkdir(exist_ok=True)
+        stem = time.strftime("%Y%m%d-%H%M%S-") + uuid.uuid4().hex[:4]
+        src, dst = work / f"{stem}_input{suffix}", work / f"{stem}_{_safe_filename(dataset)}_predictions.csv"
+        src.write_bytes(await file.read())
+        # prediction loads torch: run it in a subprocess so the server stays light
+        proc = subprocess.run(
+            [sys.executable, "-m", "autodeep.cli", "predict", str(d), str(src), "-o", str(dst)], capture_output=True, text=True, timeout=1800
+        )
+        if proc.returncode != 0 or not dst.exists():
+            lines = [ln for ln in (proc.stderr or "").strip().splitlines() if ln.strip()]
+            raise HTTPException(400, lines[-1] if lines else "prediction failed")
+        return FileResponse(dst, media_type="text/csv", filename=f"{_safe_filename(dataset)}_predictions.csv")
 
     return app
 

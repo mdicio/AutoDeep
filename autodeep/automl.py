@@ -107,7 +107,12 @@ class AutoRunner:
         device: ``"auto"`` (GPU if available with enough free memory), ``"cpu"`` or ``"cuda"``.
         on_event: callback receiving progress events (dicts) - used by the CLI and the web UI.
         fail_fast: raise on the first failing model instead of recording the error and continuing.
-        save_models: also store the best model of every run under ``<output_folder>/models``.
+        save_best: save the best model of each dataset (highest validation score) to
+            ``<output_folder>/models/<dataset>/best``, ready for :func:`autodeep.load_model` / ``autodeep predict``.
+        save_models: also save every trained model to ``<output_folder>/models/<dataset>/<model>``.
+
+    After :meth:`run`, :meth:`best_model` returns the best model of a dataset as a
+    :class:`~autodeep.predictor.Predictor` (preprocessing + model): ``runner.best_model("churn").predict(new_rows)``.
     """
 
     def __init__(
@@ -131,6 +136,7 @@ class AutoRunner:
         on_event: Optional[Callable[[Dict], None]] = None,
         fail_fast: bool = False,
         save_models: bool = False,
+        save_best: bool = True,
         log_level: str = "INFO",
     ):
         if execution_mode != "hyperopt":
@@ -155,7 +161,10 @@ class AutoRunner:
         self.device = device
         self.on_event = on_event
         self.fail_fast = fail_fast
-        self.save_models = save_models
+        self.save_models = bool(save_models)
+        self.save_best = bool(save_best)
+        self.best_models: Dict[str, Any] = {}  # dataset -> Predictor (best validation score)
+        self.best_model_paths: Dict[str, Path] = {}
         self.log_level = log_level
         self.results: List[Dict[str, Any]] = []
         self.trained_models: Dict[tuple, Any] = {}
@@ -279,6 +288,8 @@ class AutoRunner:
                         cancelled = True
                         break
                 frames[spec.name] = None
+                cache.clear()
+                self._save_best(spec.name)
                 if cancelled:
                     break
         finally:
@@ -311,7 +322,7 @@ class AutoRunner:
             )
             if run_igtd:
                 progress.emit("stage", stage="igtd", dataset=spec.name, model=model_name, message="Computing IGTD image layout")
-            cache[key] = loader.load_data()
+            cache[key] = (*loader.load_data(), loader.preprocessor)
         return cache[key]
 
     def _run_one(self, spec: DatasetSpec, df, model_name, model_cfg, cache, device):
@@ -334,7 +345,7 @@ class AutoRunner:
             cfg = (model_cfg.get("model_configs", {}) or {}).get(model_name)
             if not cfg:
                 raise ValueError(f"No configuration for model '{model_name}' in the model config file")
-            X_train, X_test, y_train, y_test, extra_info = self._get_data(spec, df, model_name, model_cfg, cache)
+            X_train, X_test, y_train, y_test, extra_info, preprocessor = self._get_data(spec, df, model_name, model_cfg, cache)
             row.update(n_train=len(X_train), n_test=len(X_test), n_features=X_train.shape[1])
             trainer = create_model(model_name, problem_type=spec.problem_type, random_state=self.random_state)
             trainer.output_dir = self.output_folder / "tmp"
@@ -371,8 +382,7 @@ class AutoRunner:
                 n_failed_trials=sr.n_failed,
             )
             self._write_trials(spec.name, model_name, sr.trials)
-            if self.save_models:
-                self._save_model(trainer, spec.name, model_name)
+            self._keep_model(spec, model_name, trainer, preprocessor, extra_info, row)
             self.trained_models[(spec.name, model_name)] = trainer if self.save_models else None
             logger.info(f"{model_name} on {spec.name}: validation {spec.metric}={best_score:.5f}, test {spec.metric}={row['test_score']:.5f}")
         except progress.RunCancelled:
@@ -436,17 +446,83 @@ class AutoRunner:
             df = pd.concat([pd.read_csv(path), df], ignore_index=True)
         df.to_csv(path, index=False)
 
-    def _save_model(self, trainer, dataset, model):
-        folder = self.output_folder / "models" / f"{dataset}__{model}"
-        folder.mkdir(parents=True, exist_ok=True)
+    # ------------------------------------------------------------------ trained models
+    @property
+    def models_folder(self) -> Path:
+        return self.output_folder / "models"
+
+    def _keep_model(self, spec, model_name, trainer, preprocessor, extra_info, row):
+        """Wrap a finished model as a Predictor; keep it if it is the best so far, save it if asked."""
+        from autodeep.evaluation.generalevaluator import is_better
+        from autodeep.predictor import Predictor
+        from autodeep.registry import MODELS
+
+        if not (self.save_best or self.save_models):
+            return
+        info = {
+            "dataset": spec.name,
+            "model": model_name,
+            "model_display_name": MODELS[model_name].display_name if model_name in MODELS else model_name,
+            "problem_type": spec.problem_type,
+            "target": spec.target,
+            "classes": (extra_info or {}).get("classes"),
+            "metric": spec.metric,
+            "eval_metrics": list(spec.eval_metrics or []),
+            "val_score": row.get("best_score"),
+            "test_score": row.get("test_score"),
+            "test_metrics": row.get("test_metrics"),
+            "best_params": row.get("best_params"),
+            "n_train": row.get("n_train"),
+            "trained_on_device": row.get("device"),
+            "run_id": self.run_id,
+        }
+        predictor = Predictor(trainer, preprocessor, info)
+        if self.save_models:
+            try:
+                path = predictor.save(self.models_folder / spec.name / model_name)
+                logger.info(f"Saved {model_name} model to {path}")
+            except Exception as e:  # saving must never lose the results
+                logger.warning(f"Could not save model {model_name}: {e}")
+        current = self.best_models.get(spec.name)
+        score = row.get("best_score")
+        if score is None or not np.isfinite(score):
+            return
+        if current is None or is_better(score, current.info["val_score"], spec.metric):
+            self.best_models[spec.name] = predictor
+
+    def _save_best(self, dataset: str) -> None:
+        predictor = self.best_models.get(dataset)
+        if predictor is None or not self.save_best:
+            return
         try:
-            ext = {"xgb": "model.json", "catboost": "model.cbm", "mlp": "model.joblib", "resnet": "model.pt", "s1dcnn": "model.pt"}.get(
-                model, "model"
+            path = predictor.save(self.models_folder / dataset / "best")
+            self.best_model_paths[dataset] = path
+            logger.info(
+                f"Best model for {dataset}: {predictor.model_name} (validation {predictor.info['metric']}={predictor.info['val_score']:.5f}) -> {path}"
             )
-            trainer.save_model(folder / ext)
-            logger.info(f"Saved best {model} model to {folder}")
-        except Exception as e:  # saving must never lose the results
-            logger.warning(f"Could not save model {model}: {e}")
+            progress.emit("model_saved", dataset=dataset, model=predictor.model_name, path=str(path.resolve()))
+        except Exception as e:
+            logger.warning(f"Could not save the best model for {dataset}: {e}")
+
+    def best_model(self, dataset: Optional[str] = None):
+        """The best model of ``dataset`` (highest validation score) as a :class:`~autodeep.predictor.Predictor`.
+
+        ``dataset`` may be omitted when the run has a single dataset. Falls back to the saved copy on disk.
+        """
+        names = [d.name for d in self.datasets]
+        if dataset is None:
+            if len(names) != 1:
+                raise ValueError(f"Several datasets were run, pass one of {names}")
+            dataset = names[0]
+        if dataset in self.best_models:
+            return self.best_models[dataset]
+        path = self.models_folder / dataset / "best"
+        if path.exists():
+            from autodeep.predictor import Predictor
+
+            self.best_models[dataset] = Predictor.load(path)
+            return self.best_models[dataset]
+        raise ValueError(f"No trained model for dataset '{dataset}' (did run() finish at least one model?)")
 
     def leaderboard(self) -> pd.DataFrame:
         """One row per (dataset, model), best test score first within each dataset."""
@@ -457,7 +533,9 @@ class AutoRunner:
             if c not in df:
                 df[c] = None
         df = df.rename(columns={"best_score": "val_score"})
-        cols = ["dataset", "model", "status", "metric", "val_score", "test_score", "duration_sec", "n_trials", "error"]
+        best = {ds: p.model_name for ds, p in self.best_models.items()}
+        df["selected"] = [best.get(ds) == m for ds, m in zip(df["dataset"], df["model"])]
+        cols = ["dataset", "model", "status", "metric", "val_score", "test_score", "selected", "duration_sec", "n_trials", "error"]
         df = df[cols]
         parts = []
         for _, g in df.groupby("dataset", sort=False):

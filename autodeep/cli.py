@@ -8,6 +8,8 @@ Commands:
     models      list available models
     datasets    list built-in datasets
     profile     summarise a dataset file (columns, types, inferred problem type)
+    predict     predict new rows with a saved model (output/models/<dataset>/best)
+    info        describe a saved model (inputs, scores, parameters)
 """
 
 from __future__ import annotations
@@ -87,7 +89,19 @@ def cmd_run(args):
     print("\nLeaderboard:")
     print(board.drop(columns=["error"]).to_string(index=False))
     print(f"\nResults: {runner.results_path.resolve()}  (took {format_duration(sum(r.get('duration_sec', 0) for r in runner.results))})")
+    _print_best_models(runner)
     return 0
+
+
+def _print_best_models(runner):
+    if not runner.best_model_paths:
+        return
+    print("\nBest model per dataset (chosen on the validation score), ready to use:")
+    for ds, path in runner.best_model_paths.items():
+        p = runner.best_models[ds]
+        print(f"  {ds}: {p.model_name}  ->  {path.resolve()}")
+    ds, path = next(iter(runner.best_model_paths.items()))
+    print(f"\n  autodeep predict {path} new_rows.csv -o predictions.csv")
 
 
 def cmd_estimate(args):
@@ -115,6 +129,7 @@ def cmd_quickstart(args):
     print("\nLeaderboard:")
     print(board.drop(columns=["error"]).to_string(index=False))
     print(f"\nResults written to {runner.results_path.resolve()}")
+    _print_best_models(runner)
     return 0
 
 
@@ -148,6 +163,45 @@ def cmd_profile(args):
         print(f"\nTarget '{args.target}': inferred problem type = {prof.get('inferred_problem_type')}")
         if prof.get("class_counts"):
             print("Class counts:", prof["class_counts"])
+    return 0
+
+
+def cmd_predict(args):
+    import pandas as pd
+
+    from autodeep.datasets import read_table
+    from autodeep.predictor import load_model
+
+    model = load_model(args.model, device=args.device or "auto")
+    df = read_table(args.data)
+    preds = model.predict_frame(df, proba=not args.no_proba)
+    out = preds if args.only_predictions else pd.concat([df, preds], axis=1)
+    if args.output:
+        out.to_csv(args.output, index=False)
+        print(f"{len(out)} predictions from {model.model_name} ({model.info.get('dataset')}) written to {args.output}", file=sys.stderr)
+    else:
+        out.to_csv(sys.stdout, index=False)
+    return 0
+
+
+def cmd_info(args):
+    import json
+    from pathlib import Path
+
+    from autodeep.predictor import INFO_FILE
+
+    path = Path(args.model)
+    info = json.loads((path / INFO_FILE if path.is_dir() else path.parent / INFO_FILE).read_text())
+    print(f"{info.get('model_display_name', info.get('model'))} trained on '{info.get('dataset')}' ({info.get('problem_type')})")
+    print(f"  target: {info.get('target')}" + (f"   classes: {info.get('classes')}" if info.get("classes") else ""))
+    metric = info.get("metric")
+    fmt = lambda v: f"{v:.5f}" if isinstance(v, (int, float)) else "?"  # noqa: E731
+    print(f"  {metric}: validation {fmt(info.get('val_score'))}, test {fmt(info.get('test_score'))}")
+    print(f"  saved {info.get('saved_at')} with AutoDeep {info.get('autodeep_version')}, trained on {info.get('trained_on_device')}")
+    print("\nInput columns:")
+    _print_table(info.get("input_schema", []), ["name", "type"])
+    if info.get("best_params"):
+        print("\nBest hyperparameters:", json.dumps(info["best_params"], default=str))
     return 0
 
 
@@ -200,6 +254,19 @@ def main(argv=None):
     p.add_argument("path")
     p.add_argument("--target")
     p.set_defaults(func=cmd_profile)
+
+    p = sub.add_parser("predict", help="predict new rows with a saved model")
+    p.add_argument("model", help="saved model folder, e.g. output/models/<dataset>/best")
+    p.add_argument("data", help="file with the rows to predict (same columns as the training data)")
+    p.add_argument("-o", "--output", help="CSV to write (default: print to stdout)")
+    p.add_argument("--only-predictions", action="store_true", help="write only the prediction columns, not the input columns")
+    p.add_argument("--no-proba", action="store_true", help="omit the class probability columns")
+    p.add_argument("--device", choices=["auto", "cpu", "cuda"])
+    p.set_defaults(func=cmd_predict)
+
+    p = sub.add_parser("info", help="describe a saved model")
+    p.add_argument("model", help="saved model folder")
+    p.set_defaults(func=cmd_info)
 
     args = parser.parse_args(argv)
     try:

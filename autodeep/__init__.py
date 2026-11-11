@@ -7,6 +7,8 @@ Quick start::
     runner = AutoRunner(datasets={"iris": {"path": "builtin:iris"}}, models="fast", max_evals=10)
     print(runner.estimate())
     print(runner.run())
+    model = runner.best_model("iris")      # saved to output/models/iris/best
+    model.predict(new_rows)                # later: autodeep.load_model("output/models/iris/best")
 """
 
 __version__ = "0.3.0"
@@ -21,6 +23,10 @@ def __getattr__(name):
         from autodeep.automl import AutoRunner
 
         return AutoRunner
+    if name in ("Predictor", "load_model"):
+        from autodeep import predictor
+
+        return getattr(predictor, name)
     if name == "ResultsAnalyzer":
         from autodeep.outputhandler.resultanalyzer import ResultsAnalyzer
 
@@ -28,4 +34,15 @@ def __getattr__(name):
     raise AttributeError(f"module 'autodeep' has no attribute '{name}'")
 
 
-__all__ = ["AutoRunner", "DatasetSpec", "ResultsAnalyzer", "list_models", "list_builtin_datasets", "BUILTIN_DATASETS", "DEFAULT_MODELS", "PRESETS"]
+__all__ = [
+    "AutoRunner",
+    "DatasetSpec",
+    "Predictor",
+    "load_model",
+    "ResultsAnalyzer",
+    "list_models",
+    "list_builtin_datasets",
+    "BUILTIN_DATASETS",
+    "DEFAULT_MODELS",
+    "PRESETS",
+]
