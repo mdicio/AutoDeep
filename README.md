@@ -1,6 +1,6 @@
 # AutoDeep
 
-[![CI](https://github.com/mdicio/WTabRun/actions/workflows/ci.yml/badge.svg)](https://github.com/mdicio/WTabRun/actions/workflows/ci.yml)
+[![CI](https://github.com/mdicio/AutoDeep/actions/workflows/ci.yml/badge.svg)](https://github.com/mdicio/AutoDeep/actions/workflows/ci.yml)
 ![Python 3.10–3.13](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
@@ -15,8 +15,8 @@ AutoDeep trains and tunes up to 17 models (XGBoost, CatBoost, the TabICLv2 found
 You need Python 3.10 – 3.13. A GPU is optional.
 
 ```bash
-git clone https://github.com/mdicio/WTabRun.git autodeep
-cd autodeep
+git clone https://github.com/mdicio/AutoDeep.git
+cd AutoDeep
 ```
 
 **With [uv](https://docs.astral.sh/uv/) (recommended, uses the exact tested versions from `uv.lock`):**

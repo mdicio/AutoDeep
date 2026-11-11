@@ -52,7 +52,7 @@ dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.5", "pre-commit>=3"]
 autodeep = "autodeep.cli:main"
 
 [project.urls]
-Repository = "https://github.com/mdicio/WTabRun"
+Repository = "https://github.com/mdicio/AutoDeep"
 
 [tool.setuptools.packages.find]
 include = ["autodeep*"]
