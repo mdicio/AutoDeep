@@ -9,7 +9,7 @@ Quick start::
     print(runner.run())
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 from autodeep.datasets import BUILTIN_DATASETS, DatasetSpec, list_builtin_datasets  # noqa: E402
 from autodeep.registry import DEFAULT_MODELS, PRESETS, list_models  # noqa: E402

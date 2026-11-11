@@ -171,7 +171,7 @@ def main(argv=None):
 
     def add_run_options(p):
         p.add_argument("config", help="experiment YAML file (see examples/experiment.yaml)")
-        p.add_argument("--models", help="comma separated model names or a preset (fast, default, deep, all)")
+        p.add_argument("--models", help="comma separated model names or a preset (fast, default, modern, deep, all)")
         p.add_argument("--max-evals", type=int)
         p.add_argument("--max-epochs", type=int)
         p.add_argument("--timeout-per-model", type=float, help="seconds")

@@ -90,7 +90,7 @@ class AutoRunner:
 
         runner = AutoRunner(
             datasets={"iris": {"path": "builtin:iris"}, "mine": {"path": "data.csv", "target": "label"}},
-            models=["xgb", "catboost", "fttransformer"],   # or a preset: "fast", "default", "deep", "all"
+            models=["xgb", "catboost", "fttransformer"],   # or a preset: "fast", "default", "modern", "deep", "all"
             max_evals=20,
         )
         print(runner.estimate())   # how long will it take?

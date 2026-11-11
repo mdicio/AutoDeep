@@ -37,22 +37,21 @@ from autodeep.modelutils.trainingutilities import (
 MAX_ROWS_FOR_TRAIN_METRICS = 50_000
 
 
-def _set_torch_threads(n_rows: int):
-    """Use few intra-op threads for small tabular nets on CPU (much faster, especially on a busy machine)."""
+def _set_torch_threads(n_threads: int):
+    """Set torch intra-op threads for CPU training; returns the previous value to restore."""
     import sys
 
     if "torch" not in sys.modules:
         return None
     import torch
 
-    from autodeep.device import torch_threads
-
     previous = torch.get_num_threads()
-    torch.set_num_threads(torch_threads(n_rows))
+    torch.set_num_threads(int(n_threads))
     return previous
 
 
 TARGET = "target"
+_NO_PARAMS = "_defaults_only"
 
 
 class BaseTrainer:
@@ -60,6 +59,12 @@ class BaseTrainer:
 
     model_name = "base"
     space_fn = staticmethod(infer_hyperopt_space)
+    #: upper bound on the number of search trials (1 for models with nothing to tune, e.g. TabICL)
+    max_trials: Optional[int] = None
+    #: allow running with an empty ``param_grid`` (defaults only)
+    allow_empty_grid = False
+    #: train metrics are computed on a subsample of at most this many rows
+    max_rows_for_train_metrics = MAX_ROWS_FOR_TRAIN_METRICS
 
     def __init__(self, problem_type: str = "binary_classification", random_state: int = 42, num_workers: Optional[int] = None):
         self.problem_type = problem_type
@@ -102,6 +107,12 @@ class BaseTrainer:
             return min(int(self.max_epochs), int(self.default_params.get("max_epochs", self.max_epochs)))
         return self.default_params.get(name, default)
 
+    def cpu_torch_threads(self, n_rows: int) -> int:
+        """Torch intra-op threads on CPU. Few threads suit small tabular nets; large models override this."""
+        from autodeep.device import torch_threads
+
+        return torch_threads(n_rows)
+
     def class_weights(self, y: pd.Series) -> Optional[np.ndarray]:
         if self.problem_type == "regression":
             return None
@@ -116,8 +127,8 @@ class BaseTrainer:
         return train_test_split(X, y, test_size=val_size, random_state=self.random_state, stratify=stratify)
 
     def _metrics(self, evaluator: Evaluator, model, X, y) -> Dict[str, float]:
-        if len(X) > MAX_ROWS_FOR_TRAIN_METRICS:
-            idx = np.random.default_rng(0).choice(len(X), MAX_ROWS_FOR_TRAIN_METRICS, replace=False)
+        if len(X) > self.max_rows_for_train_metrics:
+            idx = np.random.default_rng(0).choice(len(X), self.max_rows_for_train_metrics, replace=False)
             X, y = X.iloc[idx], y.iloc[idx]
         pred, prob = self.predict_with(model, X)
         evaluator.y_true, evaluator.y_pred, evaluator.y_prob = np.asarray(y), pred, prob
@@ -131,9 +142,12 @@ class BaseTrainer:
         model_config = copy.deepcopy(model_config or {})
         self.default_params = model_config.get("default_params", {}) or {}
         param_grid = model_config.get("param_grid", {}) or {}
-        if not param_grid:
+        if not param_grid and not self.allow_empty_grid:
             raise ValueError(f"No param_grid configured for model '{self.model_name}'")
-        space = self.space_fn(param_grid)
+        # hyperopt cannot sample an empty space: use a constant placeholder that fit_trial never sees
+        space = self.space_fn(param_grid) if param_grid else {_NO_PARAMS: True}
+        if self.max_trials:
+            max_evals = min(int(max_evals), int(self.max_trials))
 
         X = X if isinstance(X, pd.DataFrame) else pd.DataFrame(X)
         y = (y if isinstance(y, pd.Series) else pd.Series(np.asarray(y).reshape(-1), index=X.index)).rename(TARGET)
@@ -148,6 +162,7 @@ class BaseTrainer:
         evaluator = Evaluator(problem_type=self.problem_type, run_metrics=eval_metrics, metric=metric)
 
         def objective(params):
+            params = {k: v for k, v in params.items() if k != _NO_PARAMS}
             model = self.fit_trial(params, X_tr, y_tr, X_val, y_val)
             return TrialOutcome(
                 validation_metrics=self._metrics(evaluator, model, X_val, y_val),
@@ -159,7 +174,7 @@ class BaseTrainer:
             f"{self.model_name}: searching {max_evals} trial(s) on {len(X_tr)} train / {len(X_val)} validation rows, "
             f"{X.shape[1]} features, optimising {metric} [device={self.device}]"
         )
-        previous_threads = _set_torch_threads(len(X_tr)) if self.device == "cpu" else None
+        previous_threads = _set_torch_threads(self.cpu_torch_threads(len(X_tr))) if self.device == "cpu" else None
         try:
             result = run_hyperopt(
                 objective,
@@ -179,7 +194,7 @@ class BaseTrainer:
         self.model = result.best_model
         self.best_model = self.model
         self.on_search_end()
-        best_params = dict(result.best_params)
+        best_params = {k: v for k, v in result.best_params.items() if k != _NO_PARAMS}
         best_params["default_params"] = self.default_params
         return best_params, result.best_score, result.train_metrics, result.validation_metrics
 

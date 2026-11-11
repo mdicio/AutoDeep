@@ -10,7 +10,7 @@ runner = AutoRunner(
         "diabetes": {"path": "builtin:diabetes"},  # regression
         # "my_data": {"path": "data/my_data.csv", "target": "label", "drop_columns": ["id"]},
     },
-    models=["xgb", "catboost", "mlp", "gandalf"],  # or "fast" / "default" / "deep" / "all"
+    models=["xgb", "catboost", "mlp", "gandalf"],  # or "fast" / "default" / "modern" / "deep" / "all"
     max_evals=5,
     max_epochs=30,
     output_folder="autodeep_results",

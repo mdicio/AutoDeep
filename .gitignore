@@ -89,3 +89,6 @@ node_modules/
 bower_components/
 jspm_packages/
 
+
+# benchmark outputs (summarised in benchmarks/README.md)
+benchmarks/results/

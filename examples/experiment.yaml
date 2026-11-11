@@ -28,7 +28,7 @@ datasets:
   #   path: openml:adult
   #   target: class
 
-# Model names or a preset: fast | default | deep | all  (see `autodeep models`)
+# Model names or a preset: fast | default | modern | deep | all  (see `autodeep models`)
 models: [xgb, catboost, mlp, categoryembedding, gandalf]
 
 max_evals: 10            # hyperparameter-search trials per (dataset, model)

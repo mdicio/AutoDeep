@@ -7,19 +7,20 @@ from __future__ import annotations
 
 import importlib
 from dataclasses import asdict, dataclass, field
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 
 @dataclass(frozen=True)
 class ModelInfo:
     name: str
     display_name: str
-    family: str  # "gbdt" | "neural" | "deep_tabular" | "image"
+    family: str  # "gbdt" | "neural" | "deep_tabular" | "foundation" | "image"
     target: str  # "module:Class"
     description: str
     uses_gpu: bool = False
     aliases: Tuple[str, ...] = field(default_factory=tuple)
     speed: str = "medium"  # "fast" | "medium" | "slow"  (rough guide for the UI)
+    max_trials: Optional[int] = None  # e.g. 1 for models without hyperparameters
 
     def load(self):
         module, cls = self.target.split(":")
@@ -34,6 +35,7 @@ class ModelInfo:
 
 _P = "autodeep.modelsdefinition"
 _PT = f"{_P}.pytorch_tabular_models"
+_FM = f"{_P}.foundation_models"
 
 MODELS: Dict[str, ModelInfo] = {
     m.name: m
@@ -124,6 +126,37 @@ MODELS: Dict[str, ModelInfo] = {
             True,
         ),
         ModelInfo(
+            "tabicl",
+            "TabICLv2",
+            "foundation",
+            f"{_FM}:TabICLTrainer",
+            "Pretrained tabular foundation model: predicts in one forward pass, no training or tuning (Qu et al., 2026).",
+            True,
+            ("tabiclv2",),
+            "fast",
+            max_trials=1,
+        ),
+        ModelInfo(
+            "realmlp",
+            "RealMLP",
+            "neural",
+            f"{_FM}:RealMLPTrainer",
+            "MLP with tuned defaults, robust scaling and numerical embeddings (Holzmüller et al., 2024).",
+            True,
+            (),
+            "medium",
+        ),
+        ModelInfo(
+            "tabm",
+            "TabM",
+            "neural",
+            f"{_FM}:TabMTrainer",
+            "Parameter-efficient ensemble of MLPs (Gorishniy et al., 2025).",
+            True,
+            (),
+            "medium",
+        ),
+        ModelInfo(
             "resnet",
             "ResNet on IGTD images",
             "image",
@@ -139,11 +172,12 @@ MODELS: Dict[str, ModelInfo] = {
 _ALIASES = {alias: m.name for m in MODELS.values() for alias in m.aliases}
 
 #: A sensible default selection: fast, robust models first.
-DEFAULT_MODELS = ["xgb", "catboost", "mlp", "categoryembedding", "fttransformer", "gandalf"]
+DEFAULT_MODELS = ["xgb", "catboost", "mlp", "tabicl", "realmlp", "categoryembedding", "fttransformer", "gandalf"]
 PRESETS = {
     "fast": ["xgb", "catboost", "mlp"],
     "default": DEFAULT_MODELS,
-    "deep": ["categoryembedding", "fttransformer", "tabtransformer", "tabnet", "gandalf", "autoint", "node", "gate", "danet"],
+    "modern": ["tabicl", "realmlp", "tabm"],
+    "deep": ["realmlp", "tabm", "categoryembedding", "fttransformer", "tabtransformer", "tabnet", "gandalf", "autoint", "node", "gate", "danet"],
     "all": list(MODELS),
 }
 
@@ -157,7 +191,7 @@ def canonical_name(name: str) -> str:
 
 
 def resolve_models(models) -> List[str]:
-    """Accept a list of names, a preset name (``"fast"``, ``"default"``, ``"deep"``, ``"all"``) or ``None``."""
+    """Accept a list of names, a preset name (``"fast"``, ``"default"``, ``"modern"``, ``"deep"``, ``"all"``) or ``None``."""
     if models is None:
         return list(DEFAULT_MODELS)
     if isinstance(models, str):

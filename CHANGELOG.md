@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0: modern tabular models
+
+### New
+- **TabICLv2** (`tabicl`): a pretrained tabular foundation model (BSD-3). It predicts in one forward pass with the training rows as context, so its search runs a single trial. The weights are downloaded from Hugging Face on first use.
+- **RealMLP** (`realmlp`) and **TabM** (`tabm`) from `pytabkit` (Apache-2.0). Their search spaces are centred on the published tuned defaults.
+- New `modern` preset (`tabicl`, `realmlp`, `tabm`). `default` now includes `tabicl` and `realmlp`, and `deep` includes `realmlp` and `tabm`.
+- Models can declare `max_trials` (a cap on search trials) and run with an empty `param_grid`. The runtime estimate and progress bar follow that cap.
+- Models can also set their own CPU thread count and a cap on the rows used for train metrics.
+- GitHub Actions CI runs lint and tests on Python 3.10 and 3.12. The README has CI, Python and licence badges.
+- `examples/walkthrough.ipynb` replaces the old example notebook, which used the pre-0.2 API and did not run.
+
 ## 0.2.0: plug-and-play release
 
 ### New

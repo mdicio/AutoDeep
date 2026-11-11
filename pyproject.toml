@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autodeep"
-version = "0.2.0"
+version = "0.3.0"
 description = "Benchmark gradient-boosted trees and deep learning models on tabular data with hyperparameter search, runtime estimates and a local web UI."
 readme = "README.md"
 license = { text = "MIT" }
@@ -35,6 +35,8 @@ dependencies = [
     "pytorch-tabnet>=4.1,<4.2",     # pytorch-tabular's TabNet needs it (optional there, required here)
     "xgboost>=2.0",
     "catboost>=1.2.5",
+    "tabicl>=2.2,<3",               # TabICLv2 foundation model (BSD-3; weights downloaded on first use)
+    "pytabkit>=1.8,<2",             # RealMLP and TabM (Apache-2.0)
     "hyperopt>=0.2.7,<0.4",
     "setuptools<81",                # hyperopt imports pkg_resources, removed in setuptools 81
     "fastapi>=0.110",

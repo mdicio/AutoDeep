@@ -213,6 +213,15 @@ class Plan:
         }
 
 
+def _trials_for(model: str, max_evals: int) -> int:
+    """Number of trials a search will run (models without hyperparameters run one)."""
+    from autodeep.registry import MODELS
+
+    info = MODELS.get(model)
+    cap = info.max_trials if info is not None else None
+    return min(int(max_evals), int(cap)) if cap else int(max_evals)
+
+
 def estimate_plan(
     shapes: List[DatasetShape],
     models: List[str],
@@ -237,7 +246,8 @@ def estimate_plan(
                 lo_f, hi_f = (0.35, 2.5)
                 source = "prior"
             setup = igtd_seconds(n_feat) if model == "resnet" else 0.0
-            total = per_trial * max_evals + setup
+            trials = _trials_for(model, max_evals)
+            total = per_trial * trials + setup
             capped, warning = False, None
             if timeout_per_model and total > timeout_per_model + setup:
                 # the budget is checked between trials: the running trial always completes
@@ -251,7 +261,7 @@ def estimate_plan(
                     n_train=shape.n_train,
                     n_features=n_feat,
                     seconds_per_trial=round(per_trial, 2),
-                    trials=max_evals,
+                    trials=trials,
                     setup_seconds=round(setup, 1),
                     total_seconds=round(total, 1),
                     low_seconds=round(min(total, total * lo_f), 1),

@@ -360,9 +360,9 @@ async function saveDs(i) { try { const r = await api("/api/datasets/register", {
 function dsPayload(d) { const o = {}; for (const [k, v] of Object.entries(d)) if (!k.startsWith("_") && v !== null && v !== "" && v !== undefined) o[k] = v; return o; }
 
 // ------------------------------------------------------------------ models
-const FAMILY = { gbdt: "Gradient-boosted trees", neural: "Neural networks", deep_tabular: "Deep tabular architectures (PyTorch Tabular)", image: "Tabular-as-image" };
+const FAMILY = { gbdt: "Gradient-boosted trees", foundation: "Pretrained foundation models", neural: "Neural networks", deep_tabular: "Deep tabular architectures (PyTorch Tabular)", image: "Tabular-as-image" };
 function renderModels() {
-  $("presets").innerHTML = ["fast", "default", "deep", "all"].map(p => `<button class="btn sm" onclick="preset('${p}')">${p[0].toUpperCase() + p.slice(1)}</button>`).join("") + `<button class="btn sm" onclick="preset(null)">None</button>`;
+  $("presets").innerHTML = ["fast", "default", "modern", "deep", "all"].map(p => `<button class="btn sm" onclick="preset('${p}')">${p[0].toUpperCase() + p.slice(1)}</button>`).join("") + `<button class="btn sm" onclick="preset(null)">None</button>`;
   let html = "";
   for (const fam of Object.keys(FAMILY)) {
     const ms = S.models.filter(m => m.family === fam); if (!ms.length) continue;

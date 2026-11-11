@@ -1,8 +1,12 @@
 # AutoDeep
 
+[![CI](https://github.com/mdicio/WTabRun/actions/workflows/ci.yml/badge.svg)](https://github.com/mdicio/WTabRun/actions/workflows/ci.yml)
+![Python 3.10–3.13](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+
 **Benchmark gradient-boosted trees and deep learning models on your tabular data, with hyperparameter search, runtime estimates and a local web app.**
 
-AutoDeep trains and tunes up to 14 models (XGBoost, CatBoost, an MLP, nine PyTorch Tabular architectures, a Soft-Ordering 1D-CNN and a ResNet on IGTD images) on one or more datasets, evaluates them on a held-out test set and gives you a leaderboard. You can drive it from a browser, from the command line, or from Python.
+AutoDeep trains and tunes up to 17 models (XGBoost, CatBoost, the TabICLv2 foundation model, RealMLP, TabM, an MLP, nine PyTorch Tabular architectures, a Soft-Ordering 1D-CNN and a ResNet on IGTD images) on one or more datasets, evaluates them on a held-out test set and gives you a leaderboard. You can drive it from a browser, from the command line, or from Python.
 
 ---
 
@@ -74,7 +78,7 @@ datasets:
     path: data/churn.csv
     target: churned
     drop_columns: [customer_id]
-models: [xgb, catboost, fttransformer]   # or: fast | default | deep | all
+models: [xgb, catboost, fttransformer]   # or: fast | default | modern | deep | all
 max_evals: 20
 timeout_per_model: 600                   # seconds, optional
 output_folder: results
@@ -102,7 +106,7 @@ analyzer.view_performance(dataset_name="churn")
 analyzer.view_parameters(model_name="xgb")
 ```
 
-See [`examples/quickstart.py`](examples/quickstart.py). The original constructor arguments (`data_config=`, `default_models=`, `dataset_path`/`target_col` keys) still work.
+See [`examples/quickstart.py`](examples/quickstart.py) and the notebook [`examples/walkthrough.ipynb`](examples/walkthrough.ipynb). The original constructor arguments (`data_config=`, `default_models=`, `dataset_path`/`target_col` keys) still work.
 
 ---
 
@@ -142,6 +146,9 @@ Only `path` and `target` are required; everything else is inferred or has a defa
 |---|---|---|
 | `xgb` | XGBoost | gradient-boosted trees |
 | `catboost` | CatBoost | gradient-boosted trees |
+| `tabicl` | [TabICLv2](https://github.com/soda-inria/tabicl), a pretrained in-context learner: no training, no tuning | foundation model |
+| `realmlp` | [RealMLP](https://github.com/dholzmueller/pytabkit) (tuned-default MLP with numerical embeddings) | neural network |
+| `tabm` | [TabM](https://github.com/yandex-research/tabm) (parameter-efficient MLP ensemble) | neural network |
 | `mlp` | scikit-learn MLP | neural network |
 | `s1dcnn` | Soft-Ordering 1D-CNN | neural network |
 | `categoryembedding` | Category-embedding MLP | PyTorch Tabular |
@@ -155,7 +162,15 @@ Only `path` and `target` are required; everything else is inferred or has a defa
 | `danet` | DANet | PyTorch Tabular |
 | `resnet` | ResNet-18/34/50 on [IGTD](https://doi.org/10.1038/s41598-021-90923-y) images | tabular-as-image |
 
-**Presets:** `fast` = xgb, catboost, mlp · `default` = fast + categoryembedding, fttransformer, gandalf · `deep` = all PyTorch Tabular models · `all`.
+**Presets:** `fast` = xgb, catboost, mlp · `default` = fast + tabicl, realmlp, categoryembedding, fttransformer, gandalf · `modern` = tabicl, realmlp, tabm · `deep` = realmlp, tabm and all PyTorch Tabular models · `all`.
+
+**Which deep models to try first?** On the [TabArena](https://huggingface.co/spaces/TabArena/leaderboard) benchmark, TabICLv2, RealMLP and TabM are among the strongest tabular models, ahead of the PyTorch Tabular architectures (which TabArena does not include).
+
+- **TabICLv2** makes predictions in one forward pass with the training rows as context, so a search always runs a single trial whatever `max_evals` is. Its weights (~110 MB, one checkpoint for classification and one for regression) are downloaded from Hugging Face on first use. It is quick on a GPU but slow on CPU, because prediction cost grows with rows × context. Training sets above 50,000 rows are subsampled to that size for the context (`max_context_rows`).
+- **RealMLP** and **TabM** come from [pytabkit](https://github.com/dholzmueller/pytabkit). Their search spaces are centred on the published tuned defaults.
+- All three handle categorical columns and feature scaling themselves.
+
+Recent foundation models with non-commercial or gated weights (TabPFN v2.5+, LimiX and others) are deliberately not included.
 
 Search spaces live in [`autodeep/configuration/model_config.yml`](autodeep/configuration/model_config.yml). Datasets with 5,000 training rows or fewer use [`model_config_XS.yml`](autodeep/configuration/model_config_XS.yml), which has smaller batches and more patience. To use your own file for every dataset, pass `model_config="my_config.yml"` (or `model_config:` in the YAML). In a `param_grid`:
 
@@ -205,6 +220,7 @@ A model that fails is recorded with its error, and the run continues with the ne
 | `autodeep: command not found` | Activate the venv, or use `uv run autodeep …` |
 | Port already in use | `autodeep ui` picks the next free port automatically; `--port` forces one |
 | Very slow deep models on CPU | Set `max_epochs` (e.g. 30), fewer `max_evals`, or `max_rows` on the dataset |
+| TabICL fails to download its weights | It needs internet access once (Hugging Face Hub). Afterwards the weights are cached in `~/.cache/huggingface` |
 | `ModuleNotFoundError: pkg_resources` | Your environment has setuptools ≥ 81: `pip install "setuptools<81"` (hyperopt needs it) |
 | Parquet / Excel files fail to load | `pip install -e ".[files]"` |
 
@@ -214,7 +230,7 @@ A model that fails is recorded with its error, and the run continues with the ne
 
 ```bash
 uv sync --extra dev
-uv run pytest              # fast suite (~1 min)
+uv run pytest              # fast suite (~1 min); CI runs it on Python 3.10 and 3.12
 uv run pytest -m slow      # trains every model on each problem type (a few minutes on CPU)
 ```
 
@@ -228,4 +244,4 @@ MIT. See [LICENCE](LICENCE).
 
 ## Acknowledgements
 
-Built on [PyTorch Tabular](https://github.com/manujosephv/pytorch_tabular), [Hyperopt](https://github.com/hyperopt/hyperopt), [XGBoost](https://xgboost.ai), [CatBoost](https://catboost.ai), [PyTorch](https://pytorch.org) and the [IGTD](https://github.com/zhuyitan/IGTD) algorithm. Special thanks to PyTorch Tabular for its intuitive API for deep learning on tabular data.
+Built on [PyTorch Tabular](https://github.com/manujosephv/pytorch_tabular), [TabICL](https://github.com/soda-inria/tabicl), [pytabkit](https://github.com/dholzmueller/pytabkit), [Hyperopt](https://github.com/hyperopt/hyperopt), [XGBoost](https://xgboost.ai), [CatBoost](https://catboost.ai), [PyTorch](https://pytorch.org) and the [IGTD](https://github.com/zhuyitan/IGTD) algorithm. Special thanks to PyTorch Tabular for its intuitive API for deep learning on tabular data.
