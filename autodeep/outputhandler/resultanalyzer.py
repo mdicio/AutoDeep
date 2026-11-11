@@ -1,165 +1,92 @@
+"""Explore the ``experiments.csv`` written by :class:`~autodeep.automl.AutoRunner`."""
+
+from __future__ import annotations
+
 import ast
+import json
 import re
 
 import pandas as pd
 
+DICT_COLUMNS = {"train_metrics": "train", "validation_metrics": "validation", "test_metrics": "test", "best_params": "param"}
+
+
+def _parse(value):
+    if isinstance(value, dict):
+        return value
+    if value is None or (isinstance(value, float) and pd.isna(value)) or value == "":
+        return {}
+    s = str(value)
+    try:
+        return json.loads(s)
+    except (json.JSONDecodeError, TypeError):
+        pass
+    s = re.sub(r"<class '[^']*\.([^'.]+)'>", r"'\1'", s)  # files written by AutoDeep <= 0.1
+    s = re.sub(r"<[^>]+>", "''", s)
+    try:
+        return ast.literal_eval(s)
+    except (ValueError, SyntaxError):
+        return {}
+
 
 class ResultsAnalyzer:
-
     def __init__(self, results_file):
-        """__init__
-
-        Args:
-        self : type
-            Description
-        results_file : type
-            Description
-
-        Returns:
-            type: Description
-        """
         self.results_df = pd.read_csv(results_file)
-        self.key_cols = ["run_id", "dataset", "model", "best_score"]
+        self.key_cols = [c for c in ["run_id", "dataset", "model", "status", "metric", "best_score", "test_score"] if c in self.results_df.columns]
         self.normalize_experiments()
 
-    def clean_dict_string(self, dict_string):
-        """clean_dict_string
-
-        Args:
-        self : type
-            Description
-        dict_string : type
-            Description
-
-        Returns:
-            type: Description
-        """
-        cleaned_string = re.sub("<class '.*'>", '""', dict_string)
-        return cleaned_string
-
     def normalize_dict_column(self, df, col_name, prefix):
-        """normalize_dict_column
-
-        Args:
-        self : type
-            Description
-        df : type
-            Description
-        col_name : type
-            Description
-        prefix : type
-            Description
-
-        Returns:
-            type: Description
-        """
-        df[col_name] = df[col_name].apply(self.clean_dict_string)
-        expanded = df[col_name].apply(lambda x: pd.Series(ast.literal_eval(x)))
-        expanded.columns = [f"{prefix}_{col}" for col in expanded.columns]
-        return pd.concat([df, expanded], axis=1).drop(columns=[col_name])
+        if col_name not in df.columns:
+            return df
+        expanded = pd.json_normalize(df[col_name].map(_parse).tolist(), max_level=0)
+        expanded.index = df.index
+        expanded.columns = [f"{prefix}_{c}" for c in expanded.columns]
+        return pd.concat([df.drop(columns=[col_name]), expanded], axis=1)
 
     def normalize_experiments(self):
-        """normalize_experiments
-
-        Args:
-        self : type
-            Description
-
-        Returns:
-            type: Description
-        """
-        self.results_df = self.normalize_dict_column(self.results_df, "train_metrics", "train")
-        self.results_df = self.normalize_dict_column(self.results_df, "validation_metrics", "validation")
-        self.results_df = self.normalize_dict_column(self.results_df, "test_metrics", "test")
-        self.results_df = self.normalize_dict_column(self.results_df, "best_params", "param")
+        for col, prefix in DICT_COLUMNS.items():
+            self.results_df = self.normalize_dict_column(self.results_df, col, prefix)
 
     def get_dynamic_columns(self, column_prefix):
-        """get_dynamic_columns
-
-        Args:
-        self : type
-            Description
-        column_prefix : type
-            Description
-
-        Returns:
-            type: Description
-        """
-        return [col for col in self.results_df.columns if col.startswith(column_prefix)]
+        return [c for c in self.results_df.columns if c.startswith(column_prefix)]
 
     def filter_by_params(self, dataset_name=None, model_name=None):
-        """filter_by_params
-
-        Args:
-        self : type
-            Description
-        dataset_name : type
-            Description
-        model_name : type
-            Description
-
-        Returns:
-            type: Description
-        """
-        df_filtered = self.results_df
+        df = self.results_df
         if dataset_name:
-            df_filtered = df_filtered[df_filtered["dataset"] == dataset_name]
+            df = df[df["dataset"] == dataset_name]
         if model_name:
-            df_filtered = df_filtered[df_filtered["model"] == model_name]
-        return df_filtered
+            df = df[df["model"] == model_name]
+        return df
+
+    def _perf_cols(self):
+        return self.get_dynamic_columns("train_") + self.get_dynamic_columns("validation_") + self.get_dynamic_columns("test_")
 
     def view_results(self, dataset_name=None, model_name=None):
-        """view_results
-
-        Args:
-        self : type
-            Description
-        dataset_name : type
-            Description
-        model_name : type
-            Description
-
-        Returns:
-            type: Description
-        """
-        performance_cols = self.get_dynamic_columns("train_") + self.get_dynamic_columns("validation_") + self.get_dynamic_columns("test_")
-        param_cols = self.get_dynamic_columns("param_")
-        df_filtered = self.filter_by_params(dataset_name=dataset_name, model_name=model_name)
-        all_columns = self.key_cols + performance_cols + param_cols
-        return df_filtered[all_columns]
+        return self.filter_by_params(dataset_name, model_name)[self.key_cols + self._perf_cols() + self.get_dynamic_columns("param_")]
 
     def view_performance(self, dataset_name=None, model_name=None):
-        """view_performance
-
-        Args:
-        self : type
-            Description
-        dataset_name : type
-            Description
-        model_name : type
-            Description
-
-        Returns:
-            type: Description
-        """
-        performance_cols = self.get_dynamic_columns("train_") + self.get_dynamic_columns("validation_") + self.get_dynamic_columns("test_")
-        df_filtered = self.filter_by_params(dataset_name=dataset_name, model_name=model_name)
-        return df_filtered[self.key_cols + performance_cols]
+        return self.filter_by_params(dataset_name, model_name)[self.key_cols + self._perf_cols()]
 
     def view_parameters(self, dataset_name=None, model_name=None):
-        """view_parameters
+        return self.filter_by_params(dataset_name, model_name)[self.key_cols + self.get_dynamic_columns("param_")]
 
-        Args:
-        self : type
-            Description
-        dataset_name : type
-            Description
-        model_name : type
-            Description
+    def leaderboard(self, split="test"):
+        """Best run per (dataset, model), ranked by the dataset's optimisation metric."""
+        from autodeep.evaluation.generalevaluator import METRICS
 
-        Returns:
-            type: Description
-        """
-        param_cols = self.get_dynamic_columns("param_")
-        df_filtered = self.filter_by_params(dataset_name=dataset_name, model_name=model_name)
-        return df_filtered[self.key_cols + param_cols]
+        df = self.results_df
+        if "status" in df:
+            df = df[df["status"] == "ok"]
+        rows = []
+        for (dataset, model), g in df.groupby(["dataset", "model"]):
+            metric = g["metric"].iloc[0] if "metric" in g else None
+            col = f"{split}_{metric}"
+            if metric not in METRICS or col not in g:
+                continue
+            best = g.loc[g[col].idxmax() if METRICS[metric].maximize else g[col].idxmin()]
+            rows.append({"dataset": dataset, "model": model, "metric": metric, f"{split}_score": best[col], "run_id": best.get("run_id")})
+        out = pd.DataFrame(rows)
+        if out.empty:
+            return out
+        out["_rank_key"] = [(-s if METRICS[m].maximize else s) for s, m in zip(out[f"{split}_score"], out["metric"])]
+        return out.sort_values(["dataset", "_rank_key"]).drop(columns="_rank_key").reset_index(drop=True)

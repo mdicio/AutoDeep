@@ -4,7 +4,10 @@ import shutil
 import time
 from typing import List
 
-import matplotlib.pyplot as plt
+import matplotlib
+
+matplotlib.use("Agg")  # headless: IGTD only writes PNG files
+import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np
 import pandas as pd
 from scipy import stats

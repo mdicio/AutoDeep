@@ -1,173 +1,231 @@
 # AutoDeep
 
-## Description
+**Benchmark gradient-boosted trees and deep learning models on your tabular data, with hyperparameter search, runtime estimates and a local web app.**
 
-AutoDeep is a flexible and easy-to-use API for automating machine learning experiments (AutoML) on tabular datasets. It facilitates testing various deep learning models as well as tree based models to compare their performance on multiple datasets with hyperparameter optimization and evaluation. By using the AutoRunner class, you can quickly train and evaluate models like XGBoost, CatBoost, MLP, ResNet, and more on tabular data.
+AutoDeep trains and tunes up to 14 models (XGBoost, CatBoost, an MLP, nine PyTorch Tabular architectures, a Soft-Ordering 1D-CNN and a ResNet on IGTD images) on one or more datasets, evaluates them on a held-out test set and gives you a leaderboard. You can drive it from a browser, from the command line, or from Python.
 
-The goal of this project is to provide an easy interface for training, hyperparameter tuning, and evaluating models, so researchers and developers can quickly benchmark different models on their datasets.
+---
 
-## Features
+## Install
 
-- **Supports multiple machine learning models**: Includes models like XGBoost, CatBoost, MLP, ResNet, and more.
-- **Hyperparameter optimization**: Automatically tunes hyperparameters using Bayesian Optimizatoin.
-- **Data configuration**: Allows custom dataset configurations for easy experimentation.
-- **Output handling**: Saves the results of experiments, including evaluation metrics, in CSV format.
-- **Easy integration**: Simple to configure and extend with additional models or datasets.
-
-## Installation
-
-1. Clone the repository:
+You need Python 3.10 – 3.13. A GPU is optional.
 
 ```bash
-git clone https://github.com/yourusername/AutoRunner.git
-cd AutoRunner
+git clone https://github.com/mdicio/WTabRun.git autodeep
+cd autodeep
 ```
 
-Install the dependencies:
+**With [uv](https://docs.astral.sh/uv/) (recommended, uses the exact tested versions from `uv.lock`):**
 
-pip install -r requirements.txt
-
-Configure your experiment by editing the data_config dictionary in the code or create your own configuration.
-
-## How to Use
-To run an experiment, follow these steps:
-
-### 1. Prepare Data Configuration
-Define the datasets you want to run experiments on in the data_config dictionary. Each dataset should include:
-
-dataset_path: Path to the dataset file (CSV).
-target_col: Column name of the target variable.
-problem_type: Type of machine learning problem (e.g., binary_classification, multiclass_classification, regression).
-test_size: Proportion of data to use for testing.
-split_col: Alternatively, provide a column where you have already split the data.
-metric: Metric to evaluate the model's performance for optimization(e.g., accuracy, rmse, roc_auc).
-eval_metrics: List of evaluation metrics to keep track of(e.g., accuracy, f1_score).
-
-#### Example configuration:
-
-```python
-DATA_CONFIG = {
-"regression_3": {
-    "dataset_path": "/path/to/dataset.csv",
-    "target_col": "target",
-    "problem_type": "regression",
-    "test_size": 0.2,
-    "metric": "rmse",
-    "eval_metrics": ["mse", "rmse"],
-},
-}
-```
-### 2. Define Models to Use
-
-You can specify which models to include in your experiments by setting default_models. Supported models are:
-
-"xgb"
-"catboost"
-"mlp"
-"resnet"
-"s1dcnn"
-"tabnet"
-"autoint"
-"categoryembedding"
-"fttransformer"
-"tabtransformer"
-"gandalf"
-"node"
-"gate"
-
-Example:
-
-```python
-DEFAULT_MODELS = ["xgb", "catboost", "mlp"]
+```bash
+uv sync
+uv run autodeep quickstart        # 30-second smoke test on built-in datasets
 ```
 
-### 3. Initialize AutoRunner
+**With pip:**
 
-Create an instance of AutoRunner with the necessary configurations. You can set the execution_mode (e.g., "hyperopt") for hyperparameter optimization and specify the number of evaluations for tuning.
+```bash
+python -m venv .venv && source .venv/bin/activate     # Windows: .venv\Scripts\activate
+pip install -e .                                       # or: pip install -r requirements.txt
+autodeep quickstart
+```
 
-Example initialization:
+Optional extras: `pip install -e ".[files]"` adds Parquet/Feather/Excel input, `".[dev]"` adds the test tools.
+
+> With uv, prefix the commands below with `uv run` (e.g. `uv run autodeep ui`), or activate `.venv` first.
+
+---
+
+## Three ways to use it
+
+### 1. Web app
+
+```bash
+autodeep ui
+```
+
+This opens `http://127.0.0.1:8765` (or the next free port). Then:
+
+1. **Datasets.** Add a built-in example, upload a CSV/TSV/Parquet/Excel/JSON file, or point to a local path or `openml:<name>`. The target, problem type and metric are detected; you can change them, set a split column, subsample, and untick columns to exclude (IDs and free text are flagged for you).
+2. **Models.** Pick models one by one or use a preset (Fast, Default, Deep, All).
+3. **Settings and estimate.** Set trials per model, an optional time budget, a max-epochs cap and the device. The estimated runtime updates as you change things.
+4. **Run.** Each experiment runs in its own background process. You get a live progress bar with an ETA, an activity feed, the log, and a leaderboard that fills in as models finish. You can stop a run at any time, close the browser and come back later, and download the results as CSV.
+
+Uploaded files and runs are stored in `./autodeep_workspace` (change it with `--workspace`). Everything stays on your machine.
+
+### 2. Command line
+
+```bash
+autodeep models                                  # what can I train?
+autodeep datasets                                # built-in datasets
+autodeep profile data/churn.csv --target churned # column types, missing values, inferred problem type
+autodeep estimate examples/experiment.yaml       # how long will it take?
+autodeep run examples/experiment.yaml            # shows the estimate, asks to confirm, then runs with live progress
+autodeep run examples/experiment.yaml --models fast --max-evals 5 --max-epochs 20 -y
+```
+
+An experiment file looks like this (full commented version: [`examples/experiment.yaml`](examples/experiment.yaml)):
+
+```yaml
+datasets:
+  iris:
+    path: builtin:iris
+  churn:
+    path: data/churn.csv
+    target: churned
+    drop_columns: [customer_id]
+models: [xgb, catboost, fttransformer]   # or: fast | default | deep | all
+max_evals: 20
+timeout_per_model: 600                   # seconds, optional
+output_folder: results
+```
+
+### 3. Python
 
 ```python
+from autodeep import AutoRunner, ResultsAnalyzer
+
 runner = AutoRunner(
-    data_config=DATA_CONFIG,
-    output_folder="/path/to/output/folder", #where you want experiment outputs and logs to be saved
-    output_filename = "experiments", # the name of the file with the summary of experiment results
-    default_models=DEFAULT_MODELS,
-    random_state=42,
-    execution_mode="hyperopt",  # Hyperparameter optimization mode
-    max_evals=50,  # Max number of evaluations for hyperparameter search
+    datasets={
+        "iris": {"path": "builtin:iris"},
+        "churn": {"path": "data/churn.csv", "target": "churned", "drop_columns": ["customer_id"]},
+    },
+    models=["xgb", "catboost", "fttransformer"],
+    max_evals=20,
+    output_folder="results",
 )
+print(runner.estimate())        # runtime estimate per (dataset, model)
+leaderboard = runner.run()      # pandas DataFrame, best test score first
+
+analyzer = ResultsAnalyzer(runner.results_path)
+analyzer.view_performance(dataset_name="churn")
+analyzer.view_parameters(model_name="xgb")
 ```
 
-### 4. Run the Experiment
+See [`examples/quickstart.py`](examples/quickstart.py). The original constructor arguments (`data_config=`, `default_models=`, `dataset_path`/`target_col` keys) still work.
 
-Run the experiment by calling runner.run().
+---
 
-```python
-runner.run()
+## Defining datasets
+
+Only `path` and `target` are required; everything else is inferred or has a default.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `path` | – | A file (`.csv .tsv .txt .parquet .feather .json .jsonl .xlsx`), `builtin:<name>` or `openml:<name or id>` |
+| `target` | – | Target column (not needed for `builtin:`) |
+| `problem_type` | inferred | `binary_classification`, `multiclass_classification` or `regression` |
+| `metric` | `roc_auc` / `accuracy` / `rmse` | Metric optimised by the search |
+| `eval_metrics` | sensible set | Extra metrics reported for train, validation and test |
+| `test_size` | `0.2` | Held-out fraction (stratified for classification) |
+| `split_col`, `train_value`, `test_value` | – | Use your own train/test split column instead (it is excluded from the features) |
+| `drop_columns` | `[]` | Columns to ignore |
+| `max_rows` | all | Random subsample, handy for a first look |
+| `sep` | auto-detected | CSV separator |
+
+**Metrics:** `accuracy`, `balanced_accuracy`, `f1`, `precision`, `recall`, `roc_auc` (one-vs-rest for multiclass), `area_under_pr`, `log_loss`, `lift1/5/10/20`, `rmse`, `mse`, `mae`, `r2_score`. Aliases such as `f1_score`, `auc` or `r2` are accepted.
+
+**Preprocessing (automatic):**
+- Missing values are imputed using statistics from the training split only (median or mode).
+- Classification targets are label-encoded. The original labels are kept.
+- Column names are sanitised.
+- Categorical columns are passed natively to CatBoost and the PyTorch Tabular models, and one-hot encoded for XGBoost, the MLP and the CNNs. Rare levels are grouped beyond the 30 most frequent.
+- Numeric features are standardised.
+
+**Built-in datasets:** `iris`, `wine`, `breast_cancer`, `diabetes`, `digits`, `synthetic_mixed` (numeric, categorical and boolean columns with missing values) and `california_housing` (downloaded once).
+
+---
+
+## Models
+
+| Name | Model | Family |
+|---|---|---|
+| `xgb` | XGBoost | gradient-boosted trees |
+| `catboost` | CatBoost | gradient-boosted trees |
+| `mlp` | scikit-learn MLP | neural network |
+| `s1dcnn` | Soft-Ordering 1D-CNN | neural network |
+| `categoryembedding` | Category-embedding MLP | PyTorch Tabular |
+| `fttransformer` | FT-Transformer | PyTorch Tabular |
+| `tabtransformer` | TabTransformer | PyTorch Tabular |
+| `tabnet` | TabNet | PyTorch Tabular |
+| `autoint` | AutoInt | PyTorch Tabular |
+| `gandalf` | GANDALF | PyTorch Tabular |
+| `gate` | GATE | PyTorch Tabular |
+| `node` | NODE | PyTorch Tabular |
+| `danet` | DANet | PyTorch Tabular |
+| `resnet` | ResNet-18/34/50 on [IGTD](https://doi.org/10.1038/s41598-021-90923-y) images | tabular-as-image |
+
+**Presets:** `fast` = xgb, catboost, mlp · `default` = fast + categoryembedding, fttransformer, gandalf · `deep` = all PyTorch Tabular models · `all`.
+
+Search spaces live in [`autodeep/configuration/model_config.yml`](autodeep/configuration/model_config.yml). Datasets with 5,000 training rows or fewer use [`model_config_XS.yml`](autodeep/configuration/model_config_XS.yml), which has smaller batches and more patience. To use your own file for every dataset, pass `model_config="my_config.yml"` (or `model_config:` in the YAML). In a `param_grid`:
+
+- a list of numbers means a range;
+- a list of strings, booleans or lists means a choice;
+- a single value means a constant.
+
+---
+
+## Runtime estimates
+
+Before anything is trained, AutoDeep estimates how long each (dataset, model) search will take:
+
+1. **Built-in cost curves** per model, measured on a 12-thread CPU. They scale with rows, features, epochs and the device.
+2. **Your machine's history.** Every finished trial is recorded in `~/.cache/autodeep/timings.jsonl`, and later estimates are rescaled to how fast your hardware actually was. The estimate table shows `history (n trials)` when this applies.
+3. **A live ETA** during the run, recomputed after every trial from the observed trial times.
+
+Neural models use early stopping, so their time varies the most. Estimates therefore come with a low–high range. Use `timeout_per_model` to put a hard budget on each search (the running trial always finishes) and `max_epochs` to cap training length.
+
+---
+
+## Outputs
+
+Everything is written to `output_folder` (default `./output`):
+
+| File | Content |
+|---|---|
+| `experiments.csv` | One row per (dataset, model): status, validation and test score, all metrics (JSON), best hyperparameters, duration, error if any |
+| `trials/<dataset>__<model>.csv` | Every hyperparameter trial with its train/validation metrics and duration |
+| `autodeep.log` | Full log |
+| `models/` | Best model per run, if `save_models=True` |
+
+A model that fails is recorded with its error, and the run continues with the next one. Use `fail_fast=True` to stop at the first failure instead.
+
+---
+
+## GPU
+
+`device="auto"` (the default) uses the GPU only if it has at least 2 GB free (change this with `AUTODEEP_MIN_FREE_GPU_MB`). Otherwise it trains on CPU. CPU training also works when another program has filled the GPU: recent PyTorch versions create a CUDA context inside `optimizer.step()` even for CPU parameters and crash with "out of memory", and AutoDeep disables that check for CPU-only optimizers. CatBoost always runs on CPU unless you pass `device="cuda"`, because a CatBoost GPU out-of-memory error kills the whole process. To force a device, use `device="cpu"` or `device="cuda"`, `--device`, or `AUTODEEP_DEVICE`.
+
+---
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `autodeep: command not found` | Activate the venv, or use `uv run autodeep …` |
+| Port already in use | `autodeep ui` picks the next free port automatically; `--port` forces one |
+| Very slow deep models on CPU | Set `max_epochs` (e.g. 30), fewer `max_evals`, or `max_rows` on the dataset |
+| `ModuleNotFoundError: pkg_resources` | Your environment has setuptools ≥ 81: `pip install "setuptools<81"` (hyperopt needs it) |
+| Parquet / Excel files fail to load | `pip install -e ".[files]"` |
+
+---
+
+## Development
+
+```bash
+uv sync --extra dev
+uv run pytest              # fast suite (~1 min)
+uv run pytest -m slow      # trains every model on each problem type (a few minutes on CPU)
 ```
 
-This will start the training and evaluation of models on the specified datasets. The results will be saved in the output folder.
+Code map: `autodeep/automl.py` (AutoRunner), `datasets.py` (dataset specs and inference), `dataloaders/` (preprocessing and IGTD), `modelsdefinition/` (one trainer per model on a shared search loop), `modelutils/search.py` (hyperopt driver), `estimation.py`, `registry.py`, `cli.py`, `jobs.py`, `web/` (FastAPI server and single-page UI).
 
-### 5. View Results
-
-After the experiment finishes, the results are saved in a CSV format in the `output_folder`, including performance metrics (train, validation, test) and hyperparameters.
-
-#### Available Functions:
-
-1. 
-**`view_results(dataset_name=None, model_name=None)`**:
-- Displays all key columns (e.g., `run_id`, `dataset`, `best_score`), performance metrics, and hyperparameters.
-- Filters by `dataset_name` and `model_name`.
-
-**Example**:
-
-```python
-results = analyzer.view_results(dataset_name="multiclass_dataset", model_name="node")
-```
-
-2. 
-
-**`view_performance(dataset_name=None, model_name=None)`**:
-- Displays performance columns (e.g., accuracy, best score).
-- Filters by dataset_name and model_name.
-**Example**:
-```python
-results = analyzer.view_performance(dataset_name="housing", model_name="resnet")
-```
-
-3. 
-
-**`view_parameters(dataset_name=None, model_name=None)`**:
-- Displays hyperparameter columns (e.g., batch_size, learning_rate).
-- Filters by dataset_name and model_name.
-**Example**:
-```python
-results = analyzer.view_performance(dataset_name="housing", model_name="resnet")
-```
-
-#### Example Result Table
-
-![Example Table](images/results_example_table.png)
-
-## Repository Structure
-The repository is organized as follows:
-
-autodeep/ – Core library containing models, data loaders, and evaluation code.
-autodeep/examples/ – Example scripts for running experiments.
-autodeep/configuration/ – Configuration files for model and dataset settings.
+See [CHANGELOG.md](CHANGELOG.md) for what changed in 0.2.0.
 
 ## License
-This project is licensed under the MIT License. See the LICENSE file for details.
 
-## Acknowledgments
+MIT. See [LICENCE](LICENCE).
 
-This library builds on top of several popular open-source projects, including:
+## Acknowledgements
 
-PyTorch Tabular
-Hyperopt
-Torch (Obviously)
-
-Special thanks to PyTorch tabular which provided a very intuitive API for deep learning models on tabular data. If the owner ever sees this I would be honoured to try and integrate some of the AutoDeep functionalities in the project.
-
-Contributions and suggestions for improvements are welcome. If you find this project useful, feel free to give it a star!
+Built on [PyTorch Tabular](https://github.com/manujosephv/pytorch_tabular), [Hyperopt](https://github.com/hyperopt/hyperopt), [XGBoost](https://xgboost.ai), [CatBoost](https://catboost.ai), [PyTorch](https://pytorch.org) and the [IGTD](https://github.com/zhuyitan/IGTD) algorithm. Special thanks to PyTorch Tabular for its intuitive API for deep learning on tabular data.

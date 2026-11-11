@@ -1,666 +1,180 @@
-import random
+"""Search-space construction and optimizer/scheduler helpers.
+
+Grammar of a ``param_grid`` entry in ``model_config.yml``:
+
+* list of strings / booleans / lists / None  -> categorical choice
+* list of ints                               -> integer range [min, max]
+* list of floats                             -> float range [min, max] (log-uniform if min > 0)
+* single-element list                        -> constant
+* ``optimizer_fn`` / ``scheduler_fn`` dicts  -> conditional choice of optimizer / scheduler
+  with their own sub-ranges
+"""
+
+from __future__ import annotations
+
 from typing import Dict
 
 import numpy as np
 import pandas as pd
 from hyperopt import hp
 from hyperopt.pyll import scope
-from scipy.stats import randint, uniform
 from torch.optim import SGD, Adam, AdamW
 from torch.optim.lr_scheduler import ExponentialLR, ReduceLROnPlateau, StepLR
 
+OPTIMIZERS = {"Adam": Adam, "AdamW": AdamW, "SGD": SGD}
+SCHEDULERS = {"StepLR": StepLR, "ExponentialLR": ExponentialLR, "ReduceLROnPlateau": ReduceLROnPlateau}
 
-def remainder_equal_one(batch_size, virtual_batch_size_ratio):
-    """remainder_equal_one
+# parameters that must always be treated as categorical even if numeric
+CATEGORICAL_NUMERIC_PARAMS = {"virtual_batch_size_ratio", "hidden_size", "batch_size_choice"}
 
-    Args:
-    batch_size : type
-        Description
-    virtual_batch_size_ratio : type
-        Description
 
-    Returns:
-        type: Description
-    """
-    virtual_batch_size = batch_size * virtual_batch_size_ratio
-    remainder = batch_size % virtual_batch_size
-    return remainder == 1
+def map_optimizer_str_to_class(optimizer_str):
+    return OPTIMIZERS[optimizer_str]
+
+
+def map_scheduler_str_to_class(scheduler_str):
+    return SCHEDULERS[scheduler_str]
+
+
+def _ensure_min_max(values):
+    if isinstance(values[0], (float, int)) and not isinstance(values[0], bool):
+        return min(values), max(values)
+    return values
+
+
+def _numeric_space(name, values, int_step=1):
+    lo, hi = _ensure_min_max(values)
+    if lo == hi:
+        return lo
+    if all(isinstance(v, int) and not isinstance(v, bool) for v in values):
+        return scope.int(hp.quniform(name, lo, hi, int_step))
+    lo, hi = float(lo), float(hi)
+    if lo > 0.0:
+        return hp.loguniform(name, np.log(lo), np.log(hi))
+    return hp.uniform(name, lo, hi)
+
+
+def _is_categorical(name, values):
+    return (
+        name in CATEGORICAL_NUMERIC_PARAMS
+        or any(v is None for v in values)
+        or isinstance(values[0], (str, bool, list, tuple))
+        or not all(isinstance(v, (int, float)) for v in values)
+    )
+
+
+def _param_space(name, values, int_step=1):
+    if not isinstance(values, (list, tuple)):
+        return values  # constant
+    if len(values) == 0:
+        raise ValueError(f"Empty value list for hyperparameter '{name}'")
+    if _is_categorical(name, values):
+        return values[0] if len(values) == 1 else hp.choice(name, list(values))
+    return _numeric_space(name, values, int_step=int_step)
+
+
+def infer_hyperopt_space(param_grid: Dict):
+    """Search space for plain (non-torch) models such as XGBoost, CatBoost and scikit-learn MLP."""
+    param_grid = dict(param_grid)
+    param_grid.pop("default_params", None)
+    return {name: _param_space(name, values) for name, values in param_grid.items()}
+
+
+def _conditional_choice(param_name, options: Dict, key, mapping):
+    branches = []
+    for option_name, sub_params in options.items():
+        branch = {key: mapping[option_name]}
+        for sub_name, sub_range in (sub_params or {}).items():
+            branch[f"{option_name}_{sub_name}"] = _param_space(f"{option_name}_{sub_name}", sub_range)
+        branches.append(branch)
+    return hp.choice(param_name, branches)
+
+
+def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
+    """Search space for torch models: also understands ``optimizer_fn`` / ``scheduler_fn`` blocks."""
+    param_grid = dict(param_grid)
+    param_grid.pop("default_params", None)
+    space = {}
+    for name, values in param_grid.items():
+        if isinstance(values, dict):
+            if name == "optimizer_fn":
+                space[name] = _conditional_choice(name, values, "optimizer_fn", OPTIMIZERS)
+            elif name == "scheduler_fn":
+                space[name] = _conditional_choice(name, values, "scheduler_fn", SCHEDULERS)
+            else:
+                for sub_name, sub_values in values.items():
+                    for subsub_name, subsub_values in sub_values.items():
+                        new_name = f"{sub_name}_{subsub_name.lower()}"
+                        space[new_name] = _param_space(new_name, subsub_values)
+        else:
+            step = 1
+            if name == "batch_size" and isinstance(values, (list, tuple)) and not _is_categorical(name, values):
+                step = max(1, min(32, int(min(values))))  # quniform may round down to 0 if step > lower bound
+            space[name] = _param_space(name, values, int_step=step)
+    return space
+
+
+# kept for backwards compatibility
+infer_hyperopt_space_pytorch_custom = infer_hyperopt_space_pytorch_tabular
+
+
+def prepare_optimizer(optimizer_fn):
+    """Return ``(optimizer_name, optimizer_kwargs, learning_rate)`` from a sampled ``optimizer_fn`` branch."""
+    if not isinstance(optimizer_fn, dict):
+        return "Adam", {}, 1e-3
+    cls = optimizer_fn["optimizer_fn"]
+    name = cls if isinstance(cls, str) else cls.__name__
+    lr = float(optimizer_fn.get(f"{name}_learning_rate", 1e-3))
+    kwargs = {"weight_decay": float(optimizer_fn.get(f"{name}_weight_decay", 0.01 if name == "AdamW" else 0.0))}
+    if name == "SGD":
+        kwargs["momentum"] = float(optimizer_fn.get("SGD_momentum", 0.9))
+    return name, kwargs, lr
+
+
+def prepare_scheduler(scheduler_fn):
+    """Return ``(scheduler_name, scheduler_kwargs)`` from a sampled ``scheduler_fn`` branch (or ``(None, {})``)."""
+    if not isinstance(scheduler_fn, dict):
+        return None, {}
+    cls = scheduler_fn["scheduler_fn"]
+    name = cls if isinstance(cls, str) else cls.__name__
+    if name == "StepLR":
+        return name, {"step_size": int(scheduler_fn.get("StepLR_step_size", 10)), "gamma": float(scheduler_fn.get("StepLR_gamma", 0.1))}
+    if name == "ExponentialLR":
+        return name, {"gamma": float(scheduler_fn.get("ExponentialLR_gamma", 0.9))}
+    if name == "ReduceLROnPlateau":
+        return name, {
+            "factor": float(scheduler_fn.get("ReduceLROnPlateau_factor", 0.1)),
+            "patience": int(scheduler_fn.get("ReduceLROnPlateau_patience", 5)),
+            "min_lr": 1e-7,
+            "mode": "min",
+        }
+    return None, {}
+
+
+def prepare_shared_optimizer_configs(params):
+    optimizer_name, optimizer_params, learning_rate = prepare_optimizer(params.get("optimizer_fn"))
+    optimizer_params["learning_rate"] = learning_rate
+    scheduler_name, scheduler_params = prepare_scheduler(params.get("scheduler_fn"))
+    return optimizer_name, optimizer_params, scheduler_name, scheduler_params
 
 
 def handle_rogue_batch_size(X_train, y_train, X_val, y_val, batch_size):
-    """handle_rogue_batch_size
-
-    Args:
-    X_train : type
-        Description
-    y_train : type
-        Description
-    X_val : type
-        Description
-    y_val : type
-        Description
-    batch_size : type
-        Description
-
-    Returns:
-        type: Description
-    """
-    if len(X_train) % batch_size != 1 and len(X_val) % batch_size != 1:
-        return X_train, y_train, X_val, y_val
-    print("⚠️ ATTEENTIOON WE HANDLING SOME ROGUES ⚠️")
-    num_rows_to_adjust = 0
-    for _ in range(100):
-        if len(X_train) % batch_size == 1:
-            num_rows_to_adjust += 1
-            X_moved, y_moved = (
-                X_train.iloc[-num_rows_to_adjust:],
-                y_train.iloc[-num_rows_to_adjust:],
-            )
-            X_train, y_train = (
-                X_train.iloc[:-num_rows_to_adjust],
-                y_train.iloc[:-num_rows_to_adjust],
-            )
-            X_val = pd.concat([X_val, X_moved], axis=0)
-            y_val = pd.concat([y_val, y_moved], axis=0)
-            print(
-                f"Moved {num_rows_to_adjust} rows from train to val | New shapes: train={X_train.shape}, val={X_val.shape}"
-            )
-        if len(X_val) % batch_size == 1:
-            num_rows_to_adjust += 1
-            X_moved, y_moved = (
-                X_val.iloc[-num_rows_to_adjust:],
-                y_val.iloc[-num_rows_to_adjust:],
-            )
-            X_val, y_val = (
-                X_val.iloc[:-num_rows_to_adjust],
-                y_val.iloc[:-num_rows_to_adjust],
-            )
-            X_train = pd.concat([X_train, X_moved], axis=0)
-            y_train = pd.concat([y_train, y_moved], axis=0)
-            print(
-                f"Moved {num_rows_to_adjust} rows from val to train | New shapes: train={X_train.shape}, val={X_val.shape}"
-            )
-        if len(X_train) % batch_size != 1 and len(X_val) % batch_size != 1:
+    """Avoid a final batch of size 1 (BatchNorm fails on it) by moving one row between train and validation."""
+    batch_size = int(batch_size)
+    for _ in range(4):
+        moved = False
+        if len(X_train) % batch_size == 1 and len(X_train) > 1:
+            X_val, y_val = pd.concat([X_val, X_train.iloc[-1:]]), pd.concat([y_val, y_train.iloc[-1:]])
+            X_train, y_train = X_train.iloc[:-1], y_train.iloc[:-1]
+            moved = True
+        if len(X_val) % batch_size == 1 and len(X_val) > 2:
+            X_train, y_train = pd.concat([X_train, X_val.iloc[-1:]]), pd.concat([y_train, y_val.iloc[-1:]])
+            X_val, y_val = X_val.iloc[:-1], y_val.iloc[:-1]
+            moved = True
+        if not moved:
             break
     return X_train, y_train, X_val, y_val
 
 
-def     stop_on_perfect_lossCondition(x, threshold, *kwargs):
-    """stop_on_perfect_lossCondition
-
-    Args:
-    x : type
-        Description
-    threshold : type
-        Description
-
-    Returns:
-        type: Description
-    """
-    best_loss = x.best_trial["result"]["loss"]
-    stop = best_loss <= threshold
-    if stop:
-        print("EARLY STOPPING", best_loss, threshold)
-    return x.best_trial["result"]["loss"] <= threshold, kwargs
-
-
-def map_optimizer_str_to_class(optimizer_str):
-    """map_optimizer_str_to_class
-
-    Args:
-    optimizer_str : type
-        Description
-
-    Returns:
-        type: Description
-    """
-    optimizer_mapping = {"Adam": Adam, "AdamW": AdamW, "SGD": SGD}
-    return optimizer_mapping[optimizer_str]
-
-
-def map_scheduler_str_to_class(scheduler_str):
-    """map_scheduler_str_to_class
-
-    Args:
-    scheduler_str : type
-        Description
-
-    Returns:
-        type: Description
-    """
-    scheduler_mapping = {
-        "StepLR": StepLR,
-        "ExponentialLR": ExponentialLR,
-        "ReduceLROnPlateau": ReduceLROnPlateau,
-    }
-    return scheduler_mapping[scheduler_str]
-
-
-def prepare_shared_optimizer_configs(params):
-    """prepare_shared_optimizer_configs
-
-    Args:
-    params : type
-        Description
-
-    Returns:
-        type: Description
-    """
-    optimizer_fn_name, optimizer_params, learning_rate = prepare_optimizer(
-        params["optimizer_fn"]
-    )
-    optimizer_params["learning_rate"] = learning_rate
-    scheduler_fn_name, scheduler_params = prepare_scheduler(params["scheduler_fn"])
-    return (optimizer_fn_name, optimizer_params, scheduler_fn_name, scheduler_params)
-
-
-def prepare_optimizer(optimizer_fn):
-    """prepare_optimizer
-
-    Args:
-    optimizer_fn : type
-        Description
-
-    Returns:
-        type: Description
-    """
-    if isinstance(optimizer_fn, dict):
-        optimizer_details = optimizer_fn
-        optimizer_fn = optimizer_details["optimizer_fn"]
-        if optimizer_fn == Adam:
-            return (
-                "Adam",
-                {"weight_decay": optimizer_details.get("Adam_weight_decay", 0.0)},
-                optimizer_details.get("Adam_learning_rate", 0.001),
-            )
-        elif optimizer_fn == SGD:
-            return (
-                "SGD",
-                {
-                    "weight_decay": optimizer_details.get("SGD_weight_decay", 0.0),
-                    "momentum": optimizer_details.get("SGD_momentum", 0.0),
-                },
-                optimizer_details.get("SGD_learning_rate", 0.001),
-            )
-        elif optimizer_fn == AdamW:
-            return (
-                "AdamW",
-                {"weight_decay": optimizer_details.get("AdamW_weight_decay", 0.01)},
-                optimizer_details.get("AdamW_learning_rate", 0.001),
-            )
-    return None, {}
-
-
-def prepare_scheduler(scheduler_fn):
-    """prepare_scheduler
-
-    Args:
-    scheduler_fn : type
-        Description
-
-    Returns:
-        type: Description
-    """
-    if isinstance(scheduler_fn, dict):
-        scheduler_details = scheduler_fn
-        scheduler_fn = scheduler_details["scheduler_fn"]
-        if scheduler_fn == StepLR:
-            return "StepLR", {
-                "step_size": scheduler_details.get("StepLR_step_size", 10),
-                "gamma": scheduler_details.get("StepLR_gamma", 0.1),
-            }
-        elif scheduler_fn == ExponentialLR:
-            return "ExponentialLR", {
-                "gamma": scheduler_details.get("ExponentialLR_gamma", 0.9)
-            }
-        elif scheduler_fn == ReduceLROnPlateau:
-            return "ReduceLROnPlateau", {
-                "factor": scheduler_details.get("ReduceLROnPlateau_factor", 0.1),
-                "patience": scheduler_details.get("ReduceLROnPlateau_patience", 5),
-                "min_lr": 1e-08,
-                "mode": "min",
-            }
-    return None, {}
-
-
-def calculate_possible_fold_sizes(n_samples, k):
-    """calculate_possible_fold_sizes
-
-    Args:
-    n_samples : type
-        Description
-    k : type
-        Description
-
-    Returns:
-        type: Description
-    """
-    base_fold_size = n_samples // k
-    extra_samples = n_samples % k
-    fold_sizes = [base_fold_size] * k
-    for i in range(extra_samples):
-        fold_sizes[i] += 1
-    possible_train_sizes = set([(n_samples - f) for f in fold_sizes])
-    return list(possible_train_sizes)
-
-
-def infer_cv_space_lightgbm(param_grid):
-    """infer_cv_space_lightgbm
-
-    Args:
-    param_grid : type
-        Description
-
-    Returns:
-        type: Description
-    """
-    param_dist = {}
-    for param_name, param_values in param_grid.items():
-        if isinstance(param_values, list):
-            if all(isinstance(val, int) for val in param_values):
-                param_dist[param_name] = randint(min(param_values), max(param_values))
-            elif all(isinstance(val, float) for val in param_values):
-                param_dist[param_name] = uniform(min(param_values), max(param_values))
-            elif all(isinstance(val, str) for val in param_values):
-                param_dist[param_name] = random.choice(param_values)
-            else:
-                raise ValueError(f"Unsupported type for parameter {param_name}")
-        else:
-            param_dist[param_name] = param_values
-    return param_dist
-
-
-def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
-    """infer_hyperopt_space_pytorch_tabular
-
-    Args:
-    param_grid : type
-        Description
-
-    Returns:
-        type: Description
-    """
-    space = {}
-    param_grid.pop("default_params", None)
-
-    def ensure_min_max(param_range):
-        """Ensure (min, max) ordering for numerical parameter ranges."""
-        if isinstance(param_range[0], (float, int)):
-            return min(param_range), max(param_range)
-        return param_range
-
-    for param_name, param_values in param_grid.items():
-        if isinstance(param_values, dict):
-            if param_name == "optimizer_fn":
-                space[param_name] = hp.choice(
-                    param_name,
-                    [
-                        {
-                            "optimizer_fn": map_optimizer_str_to_class(opt_name),
-                            **{
-                                f"{opt_name}_{sub_param}": (
-                                    hp.uniform(
-                                        f"{opt_name}_{sub_param}",
-                                        *ensure_min_max(param_range),
-                                    )
-                                    if isinstance(param_range[0], float)
-                                    else scope.int(
-                                        hp.quniform(
-                                            f"{opt_name}_{sub_param}",
-                                            *ensure_min_max(param_range),
-                                            1,
-                                        )
-                                    )
-                                )
-                                for sub_param, param_range in opt_params.items()
-                            },
-                        }
-                        for opt_name, opt_params in param_values.items()
-                    ],
-                )
-            elif param_name == "scheduler_fn":
-                space[param_name] = hp.choice(
-                    param_name,
-                    [
-                        {
-                            "scheduler_fn": map_scheduler_str_to_class(sched_name),
-                            **{
-                                f"{sched_name}_{sub_param}": (
-                                    hp.uniform(
-                                        f"{sched_name}_{sub_param}",
-                                        *ensure_min_max(param_range),
-                                    )
-                                    if isinstance(param_range[0], float)
-                                    else scope.int(
-                                        hp.quniform(
-                                            f"{sched_name}_{sub_param}",
-                                            *ensure_min_max(param_range),
-                                            1,
-                                        )
-                                    )
-                                )
-                                for sub_param, param_range in sched_params.items()
-                            },
-                        }
-                        for sched_name, sched_params in param_values.items()
-                    ],
-                )
-            else:
-                for sparam, svalue in param_values.items():
-                    for subsparam, subvalue in svalue.items():
-                        subvalue = ensure_min_max(subvalue)
-                        min_value, max_value = subvalue
-                        newname = f"{sparam}_{subsparam.lower()}"
-                        if isinstance(subvalue[0], (str, bool)):
-                            space[newname] = hp.choice(newname, subvalue)
-                        elif isinstance(subvalue[0], int):
-                            space[newname] = (
-                                min_value
-                                if min_value == max_value
-                                else scope.int(
-                                    hp.quniform(newname, min_value, max_value, 1)
-                                )
-                            )
-                        else:
-                            space[newname] = (
-                                min_value
-                                if min_value == max_value
-                                else scope.float(
-                                    hp.loguniform(
-                                        newname, np.log(min_value), np.log(max_value)
-                                    )
-                                    if min_value > 0.0
-                                    else hp.uniform(newname, min_value, max_value)
-                                )
-                            )
-        elif (
-            isinstance(param_values[0], (str, bool, list))
-            or param_name in ["virtual_batch_size_ratio", "hidden_size"]
-            or any(value is None for value in param_values)
-        ):
-            space[param_name] = hp.choice(param_name, param_values)
-        elif isinstance(param_values[0], int):
-            min_value, max_value = ensure_min_max(param_values)
-            if param_name in ["batch_size"]:
-                spacing = 32
-            else:
-                spacing = 1
-            space[param_name] = (
-                min_value
-                if min_value == max_value
-                else scope.int(hp.quniform(param_name, min_value, max_value, spacing))
-            )
-        else:
-            min_value, max_value = ensure_min_max(param_values)
-            space[param_name] = (
-                min_value
-                if min_value == max_value
-                else scope.float(
-                    hp.loguniform(param_name, np.log(min_value), np.log(max_value))
-                    if min_value > 0.0
-                    else hp.uniform(param_name, min_value, max_value)
-                )
-            )
-    print("SPACE ######################################################")
-    print(space)
-    return space
-
-
-def infer_hyperopt_space_pytorch_tabular_old1(param_grid: Dict):
-    """infer_hyperopt_space_pytorch_tabular_old1
-
-    Args:
-    param_grid : type
-        Description
-
-    Returns:
-        type: Description
-    """
-    space = {}
-    param_grid.pop("default_params", None)
-    for param_name, param_values in param_grid.items():
-        print(param_name, param_values)
-        if isinstance(param_values, dict):
-            print(param_values.keys())
-            if param_name == "optimizer_fn":
-                space[param_name] = hp.choice(
-                    param_name,
-                    [map_optimizer_str_to_class(i) for i in param_values.keys()],
-                )
-            if param_name == "scheduler_fn":
-                space[param_name] = hp.choice(
-                    param_name,
-                    [map_scheduler_str_to_class(i) for i in param_values.keys()],
-                )
-            for sparam, svalue in param_values.items():
-                print(sparam, svalue)
-                for subsparam, subvalue in svalue.items():
-                    print(subsparam, subvalue)
-                    min_value = min(subvalue)
-                    max_value = max(subvalue)
-                    newname = f"{sparam}_{subsparam.lower()}"
-                    if isinstance(subvalue[0], (str, bool)):
-                        space[newname] = hp.choice(newname, subvalue)
-                    elif isinstance(subvalue[0], int):
-                        if min_value == max_value:
-                            space[newname] = min_value
-                        else:
-                            space[newname] = scope.int(
-                                hp.quniform(newname, min_value, max_value, 1)
-                            )
-                    elif min_value == max_value:
-                        space[newname] = min_value
-                    elif min_value == 0.0:
-                        space[newname] = scope.float(
-                            hp.uniform(newname, min_value, max_value)
-                        )
-                    else:
-                        space[newname] = scope.float(
-                            hp.loguniform(newname, np.log(min_value), np.log(max_value))
-                        )
-        elif (
-            isinstance(param_values[0], (str, bool, list))
-            or param_name
-            in [
-                "virtual_batch_size_ratio",
-                "weights",
-                "input_embed_dim_multiplier",
-                "hidden_size",
-            ]
-            or any(value is None for value in param_values)
-        ):
-            print("yo", param_name)
-            if param_name in ["weights"]:
-                space[param_name] = scope.int(hp.choice(param_name, param_values))
-            else:
-                space[param_name] = hp.choice(param_name, param_values)
-        elif isinstance(param_values[0], int):
-            min_value = min(param_values)
-            max_value = max(param_values)
-            if min_value == max_value:
-                space[param_name] = min_value
-            else:
-                space[param_name] = scope.int(
-                    hp.quniform(param_name, min_value, max_value, 1)
-                )
-        else:
-            min_value = min(param_values)
-            max_value = max(param_values)
-            if min_value == max_value:
-                space[param_name] = min_value
-            elif min_value == 0.0:
-                space[param_name] = scope.float(
-                    hp.uniform(param_name, min_value, max_value)
-                )
-            else:
-                space[param_name] = scope.float(
-                    hp.loguniform(param_name, np.log(min_value), np.log(max_value))
-                )
-    print("SPACE ######################################################")
-    print(space)
-    return space
-
-
-def infer_hyperopt_space_pytorch_custom(param_grid: Dict):
-    """infer_hyperopt_space_pytorch_custom
-
-    Args:
-    param_grid : type
-        Description
-
-    Returns:
-        type: Description
-    """
-    space = {}
-    param_grid.pop("default_params", None)
-    for param_name, param_values in param_grid.items():
-        print(param_name, param_values)
-        if isinstance(param_values, dict):
-            print(param_values.keys())
-            if param_name == "optimizer_fn":
-                space[param_name] = hp.choice(
-                    param_name,
-                    [map_optimizer_str_to_class(i) for i in param_values.keys()],
-                )
-            if param_name == "scheduler_fn":
-                space[param_name] = hp.choice(
-                    param_name,
-                    [map_scheduler_str_to_class(i) for i in param_values.keys()],
-                )
-            for sparam, svalue in param_values.items():
-                print(sparam, svalue)
-                for subsparam, subvalue in svalue.items():
-                    print(subsparam, subvalue)
-                    min_value = min(subvalue)
-                    max_value = max(subvalue)
-                    newname = f"{sparam}_{subsparam.lower()}"
-                    if isinstance(subvalue[0], (str, bool)):
-                        space[newname] = hp.choice(newname, subvalue)
-                    elif isinstance(subvalue[0], int):
-                        if min_value == max_value:
-                            space[newname] = min_value
-                        else:
-                            space[newname] = scope.int(
-                                hp.quniform(newname, min_value, max_value, 1)
-                            )
-                    elif min_value == max_value:
-                        space[newname] = min_value
-                    elif min_value == 0.0:
-                        space[newname] = scope.float(
-                            hp.uniform(newname, min_value, max_value)
-                        )
-                    else:
-                        space[newname] = scope.float(
-                            hp.loguniform(newname, np.log(min_value), np.log(max_value))
-                        )
-        elif (
-            isinstance(param_values[0], (str, bool, list))
-            or param_name in ["hidden_size"]
-            or any(value is None for value in param_values)
-        ):
-            if param_name in ["weights"]:
-                space[param_name] = scope.int(hp.choice(param_name, param_values))
-            else:
-                space[param_name] = hp.choice(param_name, param_values)
-        elif isinstance(param_values[0], int):
-            min_value = min(param_values)
-            max_value = max(param_values)
-            if min_value == max_value:
-                space[param_name] = min_value
-            else:
-                space[param_name] = scope.int(
-                    hp.quniform(param_name, min_value, max_value, 1)
-                )
-        else:
-            min_value = min(param_values)
-            max_value = max(param_values)
-            if min_value == max_value:
-                space[param_name] = min_value
-            elif min_value == 0.0:
-                space[param_name] = scope.float(
-                    hp.uniform(param_name, min_value, max_value)
-                )
-            else:
-                space[param_name] = scope.float(
-                    hp.loguniform(param_name, np.log(min_value), np.log(max_value))
-                )
-    return space
-
-
-def infer_hyperopt_space_pytorch_custom_old(param_grid: Dict):
-    """infer_hyperopt_space_pytorch_custom_old
-
-    Args:
-    param_grid : type
-        Description
-
-    Returns:
-        type: Description
-    """
-    space = {}
-    param_grid.pop("default_params", None)
-    for param_name, param_values in param_grid.items():
-        min_value = min(param_values)
-        max_value = max(param_values)
-        if isinstance(param_values[0], (str, bool)) or param_name == "hidden_size":
-            space[param_name] = hp.choice(param_name, param_values)
-        elif isinstance(param_values[0], int):
-            if min_value == max_value:
-                space[param_name] = min_value
-            else:
-                space[param_name] = scope.int(
-                    hp.quniform(param_name, min_value, max_value, 1)
-                )
-        elif min_value == max_value:
-            space[param_name] = min_value
-        elif min_value == 0.0:
-            space[param_name] = scope.float(
-                hp.uniform(param_name, min_value, max_value)
-            )
-        else:
-            space[param_name] = scope.float(
-                hp.loguniform(param_name, np.log(min_value), np.log(max_value))
-            )
-    return space
-
-
-def infer_hyperopt_space(param_grid: Dict):
-    """infer_hyperopt_space
-
-    Args:
-    param_grid : type
-        Description
-
-    Returns:
-        type: Description
-    """
-    space = {}
-    param_grid.pop("default_params", None)
-    for param_name, param_values in param_grid.items():
-        min_value = min(param_values)
-        max_value = max(param_values)
-        if isinstance(param_values[0], (str, bool, list)):
-            space[param_name] = hp.choice(param_name, param_values)
-        elif isinstance(param_values[0], int):
-            if min_value == max_value:
-                space[param_name] = min_value
-            else:
-                space[param_name] = scope.int(
-                    hp.quniform(param_name, min_value, max_value, 1)
-                )
-        elif isinstance(param_values[0], float):
-            if min_value == max_value:
-                space[param_name] = min_value
-            elif min_value == 0.0:
-                space[param_name] = scope.float(
-                    hp.uniform(param_name, min_value, max_value)
-                )
-            else:
-                space[param_name] = scope.float(
-                    hp.loguniform(param_name, np.log(min_value), np.log(max_value))
-                )
-        else:
-            raise ValueError(
-                f"Param grid uses not supported type, {type(param_values[0])}"
-            )
-    return space
+def stop_on_perfect_lossCondition(x, threshold, *args):
+    return x.best_trial["result"]["loss"] <= threshold, args

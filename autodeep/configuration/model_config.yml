@@ -310,7 +310,7 @@ model_configs:
       activation:
         - ReLU
         - LeakyReLU
-        - TanH
+        - Tanh
       dropout:
         - 0.0
         - 0.2
@@ -1111,3 +1111,60 @@ model_configs:
         - 1024
         - 512
         - 256
+
+  danet:
+    data_params:
+      normalize_features: mean_std
+      encode_categorical: False
+      return_extra_info: True
+
+    default_params:
+      auto_lr_find: False
+      max_epochs: 1000
+      val_size: 0.2
+      early_stopping_patience: 5
+
+    param_grid:
+      batch_size:
+        - 1024
+        - 512
+        - 256
+      n_layers:
+        - 4
+        - 12
+      abstlay_dim_1:
+        - 16
+        - 64
+      k:
+        - 3
+        - 7
+      dropout_rate:
+        - 0.0
+        - 0.3
+      optimizer_fn:
+        Adam:
+          weight_decay:
+            - 0.00001
+            - 0.000000001
+          learning_rate:
+            - 0.01
+            - 0.0001
+        AdamW:
+          weight_decay:
+            - 0.00001
+            - 0.000000001
+          learning_rate:
+            - 0.01
+            - 0.0001
+      scheduler_fn:
+        ReduceLROnPlateau:
+          factor:
+            - 0.1
+            - 0.5
+          patience:
+            - 3
+            - 10
+        ExponentialLR:
+          gamma:
+            - 0.9
+            - 0.99

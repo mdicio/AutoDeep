@@ -1,0 +1,39 @@
+# Example experiment for `autodeep run examples/experiment.yaml`
+# (or `autodeep estimate examples/experiment.yaml` to only see how long it would take).
+# Relative paths are resolved from this file's folder.
+
+datasets:
+  # Built-in datasets work offline - see `autodeep datasets`
+  iris:
+    path: builtin:iris                # target, problem type and metrics are known / inferred
+
+  breast_cancer:
+    path: builtin:breast_cancer
+    metric: roc_auc                   # optional: metric optimised by the hyperparameter search
+    eval_metrics: [accuracy, f1, area_under_pr]
+
+  # Your own file: only `path` and `target` are required.
+  # churn:
+  #   path: ../data/churn.csv          # .csv .tsv .parquet .feather .json .xlsx
+  #   target: churned
+  #   drop_columns: [customer_id]      # IDs, leakage, free text...
+  #   test_size: 0.2                   # or a fixed split:
+  #   # split_col: fold
+  #   # train_value: train
+  #   # test_value: test
+  #   max_rows: 50000                  # optional random subsample for quick experiments
+
+  # Any OpenML dataset (downloaded once and cached):
+  # adult:
+  #   path: openml:adult
+  #   target: class
+
+# Model names or a preset: fast | default | deep | all  (see `autodeep models`)
+models: [xgb, catboost, mlp, categoryembedding, gandalf]
+
+max_evals: 10            # hyperparameter-search trials per (dataset, model)
+max_epochs: 50           # cap for neural models (remove for the configured default)
+timeout_per_model: 300   # seconds; the search stops starting new trials after this
+device: auto             # auto | cpu | cuda
+random_state: 42
+output_folder: ../autodeep_results

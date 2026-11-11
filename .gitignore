@@ -1,15 +1,15 @@
- # Custom
-*IGTD/
-*catboost_info/
-
-#TODO REMOVE TXT LATER
-*.txt 
-*.tsv
-
-*/catboost_info/
-*.csv
-tracked_files.txt
-current_req.txt
+# AutoDeep outputs
+IGTD/
+catboost_info/
+lightning_logs/
+saved_models/
+output/
+autodeep_workspace/
+autodeep_quickstart/
+autodeep_results/
+logfile.log
+cuda_error_log.txt
+hyperopt_results_*.csv
 
 # Compiled Python files
 __pycache__/
@@ -21,13 +21,13 @@ __init__.pyc
 .pt_tmp/
 
 # Python environment
+.venv/
 venv/
 env/
 *.egg-info/
 .Python
 pip-log.txt
 pip-delete-this-directory.txt
-.python-version
 # Jupyter Notebook
 .ipynb_checkpoints/
 
@@ -56,11 +56,7 @@ var/
 sdist/
 develop-eggs/
 .installed.cfg
-lib/
-lib64/
 __pycache__/
-bin/
-include/
 .pip_cache/
 .installed.cfg
 
