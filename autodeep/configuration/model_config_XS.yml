@@ -1204,30 +1204,15 @@ model_configs:
       val_size: 0.2
       n_epochs: 256
 
-    param_grid:   # around the RealMLP-TD defaults (Holzmüller et al., 2024, HPO space)
-      lr:
-        - 0.005
-        - 0.2
-      p_drop:
-        - 0.0
-        - 0.3
-      wd:
-        - 0.0
-        - 0.02
-      plr_sigma:
-        - 0.05
-        - 0.5
-      hidden_sizes:
-        - [256, 256, 256]
-        - [64, 64, 64, 64, 64]
-        - [512]
-      act:
-        - selu
-        - mish
-        - relu
-      use_ls:
-        - true
-        - false
+    # null = pytabkit's tuned default (differs between classification and regression). The first trial
+    # uses all defaults (RealMLP-TD); later trials search around them (Holzmüller et al., 2024, HPO space).
+    param_grid:
+      lr: [null, 0.01, 0.02, 0.04, 0.08, 0.15, 0.3]
+      p_drop: [null, 0.0, 0.15, 0.3]
+      wd: [null, 0.0, 0.02]
+      plr_sigma: [null, 0.05, 0.1, 0.2, 0.5]
+      hidden_sizes: [null, [256, 256, 256], [64, 64, 64, 64, 64], [512]]
+      act: [null, selu, mish, relu]
 
   tabm:
     data_params:
@@ -1241,16 +1226,10 @@ model_configs:
       patience: 16
       batch_size: 64
 
-    param_grid:   # around the TabM-D defaults (Gorishniy et al., 2025)
-      lr:
-        - 0.0005
-        - 0.005
-      dropout:
-        - 0.0
-        - 0.4
-      d_block:      # TabM trains k=32 MLPs at once: wide blocks are slow on CPU
-        - 128
-        - 512
-      n_blocks:
-        - 1
-        - 3
+    # null = pytabkit's tuned default; the first trial uses all defaults (TabM-D), later trials search around them.
+    # TabM trains k=32 MLPs at once: wide blocks are slow on CPU.
+    param_grid:
+      lr: [null, 0.0005, 0.001, 0.002, 0.004]
+      dropout: [null, 0.0, 0.1, 0.25, 0.4]
+      d_block: [null, 128, 256, 512]
+      n_blocks: [null, 1, 2, 3]

@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict, List, Optional
 import numpy as np
 from hyperopt import STATUS_FAIL, STATUS_OK, Trials, fmin, tpe
 from hyperopt.exceptions import AllTrialsFailed
+from hyperopt.fmin import generate_trials_to_calculate
 
 from autodeep.evaluation.generalevaluator import METRICS, normalize_metric_name
 from autodeep.logging_utils import get_logger
@@ -72,8 +73,11 @@ def run_hyperopt(
     timeout: Optional[float] = None,
     model_name: str = "model",
     stop_on_perfect_score: bool = True,
+    points_to_evaluate: Optional[List[Dict[str, Any]]] = None,
 ) -> SearchResult:
     """Run a TPE search, keeping only the best model in memory.
+
+    ``points_to_evaluate`` are tried first (hyperopt labels -> values; the index for ``hp.choice``).
 
     Failing trials (bad hyperparameter combination, NaN loss, OOM...) are recorded and
     skipped; the search only fails if *every* trial fails.
@@ -153,13 +157,16 @@ def run_hyperopt(
         return {"status": STATUS_OK, "loss": float(loss)}
 
     def early_stop(trials, *args):
+        if state["n_done"] >= max_evals:  # seeded points make fmin run one trial too many
+            return True, args
         if stop_on_perfect_score and np.isfinite(info.best) and state["best"] is not None:
             if state["best"]["score"] == info.best:
                 logger.info(f"[{model_name}] perfect validation {metric} reached, stopping search early")
                 return True, args
         return False, args
 
-    trials = Trials()
+    # fmin ignores points_to_evaluate when given a Trials object: seed it explicitly
+    trials = generate_trials_to_calculate(points_to_evaluate) if points_to_evaluate else Trials()
     try:
         fmin(
             wrapped,

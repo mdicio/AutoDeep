@@ -47,3 +47,17 @@ def test_pytabkit_regression(tmp_path):
     )
     row = runner.run().iloc[0]
     assert row["status"] == "ok", row["error"]
+
+
+def test_pytabkit_first_trial_uses_tuned_defaults(tmp_path):
+    from autodeep.factory import create_model
+
+    cfg = {"default_params": {"n_epochs": 2}, "param_grid": {"lr": [None, 0.01, 0.1], "p_drop": [None, 0.0, 0.3]}}
+    from sklearn.datasets import load_breast_cancer
+
+    X, y = load_breast_cancer(return_X_y=True, as_frame=True)
+    trainer = create_model("realmlp", "binary_classification", 0)
+    trainer.hyperopt_search(X, y, cfg, "roc_auc", ["roc_auc"], max_evals=3, extra_info={"num_classes": 2})
+    params = [t["params"] for t in trainer.search_result.trials]
+    assert params[0] == {"lr": None, "p_drop": None}
+    assert len(params) == 3

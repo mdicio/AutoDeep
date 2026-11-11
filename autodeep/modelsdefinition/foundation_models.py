@@ -103,6 +103,7 @@ class TabICLTrainer(_RawFeaturesTrainer):
 
 
 class _PytabkitTrainer(_RawFeaturesTrainer):
+    first_trial_defaults = True  # trial 1 = the published tuned defaults (TD / D), then search around them
     classifier = ""
     regressor = ""
 
@@ -115,7 +116,7 @@ class _PytabkitTrainer(_RawFeaturesTrainer):
         cls = getattr(pytabkit, self.regressor if self.problem_type == "regression" else self.classifier)
         merged = {k: v for k, v in self.default_params.items() if k not in self.own_settings}
         merged.update(params)  # sampled values override the defaults
-        params = merged
+        params = {k: v for k, v in merged.items() if v is not None}  # None = keep pytabkit's tuned default
         for k in ("n_epochs", "batch_size", "n_blocks", "d_block", "tabm_k", "hidden_width", "n_hidden_layers", "patience"):
             if k in params and params[k] is not None:
                 params[k] = int(params[k])

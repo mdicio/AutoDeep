@@ -63,6 +63,8 @@ class BaseTrainer:
     max_trials: Optional[int] = None
     #: allow running with an empty ``param_grid`` (defaults only)
     allow_empty_grid = False
+    #: first trial uses the first option of every ``param_grid`` choice (``null`` = the library's tuned default)
+    first_trial_defaults = False
     #: train metrics are computed on a subsample of at most this many rows
     max_rows_for_train_metrics = MAX_ROWS_FOR_TRAIN_METRICS
 
@@ -148,6 +150,7 @@ class BaseTrainer:
         space = self.space_fn(param_grid) if param_grid else {_NO_PARAMS: True}
         if self.max_trials:
             max_evals = min(int(max_evals), int(self.max_trials))
+        start = self._default_start_point(param_grid)
 
         X = X if isinstance(X, pd.DataFrame) else pd.DataFrame(X)
         y = (y if isinstance(y, pd.Series) else pd.Series(np.asarray(y).reshape(-1), index=X.index)).rename(TARGET)
@@ -184,6 +187,7 @@ class BaseTrainer:
                 random_state=self.random_state,
                 timeout=timeout if timeout is not None else self.timeout,
                 model_name=self.model_name,
+                points_to_evaluate=start,
             )
         finally:
             if previous_threads:
@@ -197,6 +201,15 @@ class BaseTrainer:
         best_params = {k: v for k, v in result.best_params.items() if k != _NO_PARAMS}
         best_params["default_params"] = self.default_params
         return best_params, result.best_score, result.train_metrics, result.validation_metrics
+
+    def _default_start_point(self, param_grid):
+        """Hyperopt point selecting option 0 of every choice, if every parameter is a choice starting with ``None``."""
+        if not (self.first_trial_defaults and param_grid):
+            return None
+        if all(isinstance(v, (list, tuple)) and len(v) > 1 and v[0] is None for v in param_grid.values()):
+            return [{name: 0 for name in param_grid}]
+        self.logger.debug(f"{self.model_name}: param_grid is not all null-first choices, first trial is random")
+        return None
 
     def on_search_end(self) -> None:
         """Clean-up hook (temporary checkpoints...)."""

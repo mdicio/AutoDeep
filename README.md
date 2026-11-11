@@ -167,7 +167,7 @@ Only `path` and `target` are required; everything else is inferred or has a defa
 **Which deep models to try first?** On the [TabArena](https://huggingface.co/spaces/TabArena/leaderboard) benchmark, TabICLv2, RealMLP and TabM are among the strongest tabular models, ahead of the PyTorch Tabular architectures (which TabArena does not include).
 
 - **TabICLv2** makes predictions in one forward pass with the training rows as context, so a search always runs a single trial whatever `max_evals` is. Its weights (~110 MB, one checkpoint for classification and one for regression) are downloaded from Hugging Face on first use. It is quick on a GPU but slow on CPU, because prediction cost grows with rows × context. Training sets above 50,000 rows are subsampled to that size for the context (`max_context_rows`).
-- **RealMLP** and **TabM** come from [pytabkit](https://github.com/dholzmueller/pytabkit). Their search spaces are centred on the published tuned defaults.
+- **RealMLP** and **TabM** come from [pytabkit](https://github.com/dholzmueller/pytabkit). The first trial always uses the published tuned defaults (RealMLP-TD, TabM-D), and later trials search around them. In a `param_grid`, `null` means "the library's default".
 - All three handle categorical columns and feature scaling themselves.
 
 Recent foundation models with non-commercial or gated weights (TabPFN v2.5+, LimiX and others) are deliberately not included.

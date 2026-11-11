@@ -4,8 +4,9 @@
 
 ### New
 - **TabICLv2** (`tabicl`): a pretrained tabular foundation model (BSD-3). It predicts in one forward pass with the training rows as context, so its search runs a single trial. The weights are downloaded from Hugging Face on first use.
-- **RealMLP** (`realmlp`) and **TabM** (`tabm`) from `pytabkit` (Apache-2.0). Their search spaces are centred on the published tuned defaults.
+- **RealMLP** (`realmlp`) and **TabM** (`tabm`) from `pytabkit` (Apache-2.0). The first trial uses the published tuned defaults, and later trials search around them.
 - New `modern` preset (`tabicl`, `realmlp`, `tabm`). `default` now includes `tabicl` and `realmlp`, and `deep` includes `realmlp` and `tabm`.
+- A search can start from a fixed point: `first_trial_defaults` runs the first option of every choice first, with `null` meaning the library default (`run_hyperopt(points_to_evaluate=...)`).
 - Models can declare `max_trials` (a cap on search trials) and run with an empty `param_grid`. The runtime estimate and progress bar follow that cap.
 - Models can also set their own CPU thread count and a cap on the rows used for train metrics.
 - GitHub Actions CI runs lint and tests on Python 3.10 and 3.12. The README has CI, Python and licence badges.
