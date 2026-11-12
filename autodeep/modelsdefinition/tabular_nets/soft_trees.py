@@ -103,7 +103,7 @@ class ODST(ModuleWithInit):
     def forward(self, input):
         assert len(input.shape) >= 2
         if len(input.shape) > 2:
-            return self.forward(input.view(-1, input.shape[-1])).view(*input.shape[:-1], -1)
+            return self.forward(input.reshape(-1, input.shape[-1])).reshape(*input.shape[:-1], -1)
         # new input shape: [batch_size, in_features]
 
         feature_logits = self.feature_selection_logits

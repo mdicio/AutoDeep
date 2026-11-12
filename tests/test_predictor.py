@@ -55,7 +55,10 @@ def test_best_model_save_load_predict(tmp_path, mixed_csv):
         assert (path / "info.json").exists() and runner.best_model_paths[name] == path
         disk = load_model(path, device="cpu")
         assert disk.model_name == mem.model_name
-        np.testing.assert_array_equal(np.asarray(disk.predict(data), dtype=str), np.asarray(mem.predict(data), dtype=str))
+        if disk.problem_type == "regression":  # a model trained on a GPU predicts on CPU up to float32 rounding
+            np.testing.assert_allclose(np.asarray(disk.predict(data), dtype=float), np.asarray(mem.predict(data), dtype=float), rtol=1e-5)
+        else:
+            np.testing.assert_array_equal(np.asarray(disk.predict(data), dtype=str), np.asarray(mem.predict(data), dtype=str))
         if disk.problem_type != "regression":
             proba = disk.predict_proba(data)
             assert list(proba.columns) == disk.classes and np.allclose(proba.sum(axis=1), 1.0)

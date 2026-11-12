@@ -203,8 +203,16 @@ class TorchTrainer(BaseTrainer):
                     net = self.build_network(params, n_features, n_outputs)
                     net.load_state_dict(saved["weights"])
                     net._autodeep_build = saved["build"]
-                    rebuilt[id(saved)] = net.eval()
+                    rebuilt[id(saved)] = self._to_own_device(net).eval()
                 setattr(self, key, rebuilt[id(saved)])
+
+    def _to_own_device(self, net):
+        """Put an unpickled network where :attr:`device` will send the inputs (CPU if that fails)."""
+        try:
+            return net.to(self.device)
+        except Exception:  # e.g. no usable GPU after all
+            self._device_override = "cpu"
+            return net.to("cpu")
 
     def to_device(self, device: str) -> None:
         super().to_device(device)

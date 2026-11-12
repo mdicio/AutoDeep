@@ -60,5 +60,5 @@ class DenseODSTBlock(nn.Sequential):
 
         outputs = x[..., initial_features:]
         if not self.flatten_output:
-            outputs = outputs.view(*outputs.shape[:-1], self.num_layers * self.layer_dim, self.tree_dim)
+            outputs = outputs.reshape(*outputs.shape[:-1], self.num_layers * self.layer_dim, self.tree_dim)
         return outputs
