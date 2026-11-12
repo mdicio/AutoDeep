@@ -275,6 +275,9 @@ model_configs:
       shared_embedding_fraction:
         - 0.01
         - 0.4
+      deep_layers:  # the layers / activation / dropout below only apply when this is true
+        - True
+        - False
       layers:
         - "64-32"
         - "128-64-32"
