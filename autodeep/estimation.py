@@ -42,6 +42,7 @@ PRIORS: dict[str, dict[str, float]] = {
     # xgb/catboost re-fitted 2026-11-12 for the 0.4.0 grids (up to 2000 trees + early stopping) on CPU at 16k-40k
     # rows (medians of 5 trials on california_housing, adult, covertype_50k; multiclass costs ~3x more for xgb)
     "xgb": dict(base=0.1, per_krow=0.11, a=1.0, b=0.8, gpu=1.0, epochs=False),
+    "lgbm": dict(base=0.1, per_krow=0.11, a=1.0, b=0.8, gpu=1.0, epochs=False),  # assumed ~xgb until timed
     "catboost": dict(base=1.0, per_krow=0.28, a=1.0, b=0.7, gpu=1.0, epochs=False),
     # mlp re-measured 2026-11-12 at 16k rows (default search space, sgd trials ~30 s): steeper than linear
     "mlp": dict(base=0.1, per_krow=0.55, a=1.5, b=0.4, gpu=1.0, epochs=False),

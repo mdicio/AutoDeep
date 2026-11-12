@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0 (unreleased): competition tools
+
+### New
+- **LightGBM** (`lgbm`, CPU, native categorical columns) with a default search space; it is part of the `fast` preset.
+- **Offset columns (GLM-boost).** XGBoost and LightGBM accept `default_params: {offset_column: <name>}`: that column holds log-odds from another model (e.g. an out-of-fold logistic regression), boosting starts from it (`base_margin` / `init_score`) and predictions add it back. The column is not used as a feature. Binary classification only.
+- **`autodeep.ensemble.Stacker`**: stacks out-of-fold predictions (from AutoDeep or anywhere else) with Caruana hill climbing or an L2 logistic regression on logit-ranks, scored by nested cross-validation (`nested_score_`, `weights_`, `predict()`).
+
 ## 0.4.0 (unreleased): use the models, sensible defaults
 
 ### New

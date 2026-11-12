@@ -50,6 +50,16 @@ MODELS: dict[str, ModelInfo] = {
             "fast",
         ),
         ModelInfo(
+            "lgbm",
+            "LightGBM",
+            "gbdt",
+            f"{_P}.LightGBMTrainer:LightGBMTrainer",
+            "Leaf-wise gradient boosting (CPU) with native categorical handling.",
+            False,
+            ("lightgbm", "lgb"),
+            "fast",
+        ),
+        ModelInfo(
             "catboost",
             "CatBoost",
             "gbdt",
@@ -173,7 +183,7 @@ _ALIASES = {alias: m.name for m in MODELS.values() for alias in m.aliases}
 #: A sensible default selection: fast, robust models first.
 DEFAULT_MODELS = ["xgb", "catboost", "mlp", "tabicl", "realmlp", "categoryembedding", "fttransformer", "gandalf"]
 PRESETS = {
-    "fast": ["xgb", "catboost", "mlp"],
+    "fast": ["xgb", "lgbm", "catboost", "mlp"],
     "default": DEFAULT_MODELS,
     "modern": ["tabicl", "realmlp", "tabm"],
     "deep": ["realmlp", "tabm", "categoryembedding", "fttransformer", "tabtransformer", "tabnet", "gandalf", "autoint", "node", "gate", "danet"],

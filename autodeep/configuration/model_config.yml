@@ -40,6 +40,26 @@ model_configs:
       reg_lambda: [0.001, 10.0]
       gamma: [0.0, 0.5]
 
+  lgbm:
+    data_params:
+      normalize_features: false
+      encode_categorical: False
+      return_extra_info: True
+
+    default_params:
+      val_size: 0.2
+      early_stopping_rounds: 100  # on the validation split; n_estimators is only the cap
+
+    param_grid:
+      n_estimators: [2000]  # constant: early stopping picks the number of trees
+      learning_rate: [0.01, 0.3]
+      num_leaves: [4, 128]
+      min_child_samples: [5, 200]
+      subsample: [0.5, 1.0]
+      subsample_freq: 1
+      colsample_bytree: [0.4, 1.0]
+      reg_lambda: [0.001, 10.0]
+
   catboost:
     data_params:
       normalize_features: mean_std

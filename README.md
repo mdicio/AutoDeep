@@ -6,7 +6,7 @@
 
 **Benchmark gradient-boosted trees and deep learning models on your tabular data, with hyperparameter search, runtime estimates and a local web app.**
 
-AutoDeep trains and tunes up to 17 models (XGBoost, CatBoost, the TabICLv2 foundation model, RealMLP, TabM, an MLP, nine deep tabular architectures (CategoryEmbedding, TabNet, FT-Transformer, TabTransformer, AutoInt, GANDALF, GATE, NODE, DANet), a Soft-Ordering 1D-CNN and a ResNet on IGTD images) on one or more datasets, evaluates them on a held-out test set and gives you a leaderboard. By default it picks the models that fit your time budget on your machine, and it saves the best model of each dataset, ready to predict new rows. You can drive it from a browser, from the command line, or from Python.
+AutoDeep trains and tunes up to 18 models (XGBoost, LightGBM, CatBoost, the TabICLv2 foundation model, RealMLP, TabM, an MLP, nine deep tabular architectures (CategoryEmbedding, TabNet, FT-Transformer, TabTransformer, AutoInt, GANDALF, GATE, NODE, DANet), a Soft-Ordering 1D-CNN and a ResNet on IGTD images) on one or more datasets, evaluates them on a held-out test set and gives you a leaderboard. By default it picks the models that fit your time budget on your machine, and it saves the best model of each dataset, ready to predict new rows. You can drive it from a browser, from the command line, or from Python.
 
 ```bash
 autodeep run data/churn.csv --target churned --budget 10m      # plan, train, compare, save the best model
@@ -188,6 +188,7 @@ Only `path` and `target` are required; everything else is inferred or has a defa
 | Name | Model | Family |
 |---|---|---|
 | `xgb` | XGBoost | gradient-boosted trees |
+| `lgbm` | LightGBM | gradient-boosted trees |
 | `catboost` | CatBoost | gradient-boosted trees |
 | `tabicl` | [TabICLv2](https://github.com/soda-inria/tabicl), a pretrained in-context learner: no training, no tuning | foundation model |
 | `realmlp` | [RealMLP](https://github.com/dholzmueller/pytabkit) (tuned-default MLP with numerical embeddings) | neural network |
@@ -207,7 +208,7 @@ Only `path` and `target` are required; everything else is inferred or has a defa
 
 **Auto (default):** AutoDeep picks models in order of expected value for the device (on CPU: xgb, catboost, tabicl, realmlp, gandalf, categoryembedding, tabm, fttransformer, mlp; on a GPU the deep models move up) and keeps each one whose minimum search (1 TabICL pass, 10 trials for boosted trees, 3 for neural networks) fits in its share of `time_budget` (default 15 minutes), with no model taking more than half of it. Every model then gets up to 30 trials and the same time limit, chosen so fast models finish all their trials and slow ones use the remaining time. `autodeep estimate` (or `runner.plan()`) shows the plan and why each skipped model was skipped. Explicit `max_evals` / `timeout_per_model` override the plan.
 
-**Presets:** `fast` = xgb, catboost, mlp · `default` = fast + tabicl, realmlp, categoryembedding, fttransformer, gandalf · `modern` = tabicl, realmlp, tabm · `deep` = realmlp, tabm and the nine deep tabular models · `all`.
+**Presets:** `fast` = xgb, lgbm, catboost, mlp · `default` = fast + tabicl, realmlp, categoryembedding, fttransformer, gandalf · `modern` = tabicl, realmlp, tabm · `deep` = realmlp, tabm and the nine deep tabular models · `all`.
 
 **Which deep models to try first?** On the [TabArena](https://huggingface.co/spaces/TabArena/leaderboard) benchmark, TabICLv2, RealMLP and TabM are among the strongest tabular models, ahead of the older deep tabular architectures (which TabArena does not include). In AutoDeep's own [benchmark](benchmarks/README.md) on three datasets of 20,000-50,000 rows, TabICLv2 was the best model on two of them without any tuning, and tuned CatBoost/XGBoost won on the third (adult, mostly categorical).
 

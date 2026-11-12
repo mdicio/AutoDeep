@@ -67,7 +67,7 @@ def test_legacy_constructor_and_yaml(tmp_path):
     cfg = tmp_path / "exp.yaml"
     cfg.write_text("datasets:\n  iris:\n    path: builtin:iris\nmodels: fast\nmax_evals: 1\noutput_folder: results\n")
     r = AutoRunner.from_yaml(cfg)
-    assert r.models == ["xgb", "catboost", "mlp"] and r.output_folder == (tmp_path / "results")
+    assert r.models == ["xgb", "lgbm", "catboost", "mlp"] and r.output_folder == (tmp_path / "results")
 
 
 def test_registry_has_config_for_every_model():
