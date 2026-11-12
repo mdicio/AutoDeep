@@ -50,3 +50,15 @@ def test_tracker_eta_uses_observed_durations(tmp_path):
 
 def test_format_duration():
     assert format_duration(5) == "5s" and format_duration(125) == "2m 05s" and format_duration(7300) == "2h 01m"
+
+
+def test_gpu_hungry_models_warn_when_slow_on_cpu(tmp_path):
+    from autodeep.estimation import DatasetShape, TimingHistory, estimate_plan
+
+    big = DatasetShape("big", 20000, 16000, 20, 0, 20, "binary_classification", 2)
+    hist = TimingHistory(tmp_path / "t.jsonl")
+    warned = {j.model: j.warning for j in estimate_plan([big], ["xgb", "tabicl", "tabm"], max_evals=10, history=hist).jobs}
+    assert warned["xgb"] is None
+    assert "faster on a GPU" in warned["tabicl"] and "faster on a GPU" in warned["tabm"]
+    on_gpu = estimate_plan([big], ["tabicl"], max_evals=10, device="cuda", history=hist).jobs[0]
+    assert on_gpu.warning is None

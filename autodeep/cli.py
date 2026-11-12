@@ -99,6 +99,9 @@ def _print_plan(runner, plan):
         print(runner.auto_plan.describe())
         print()
     print(plan.to_dataframe().to_string(index=False))
+    for job in plan.jobs:
+        if job.warning:
+            print(f"! {job.model} on {job.dataset}: {job.warning}")
     print(f"\nEstimated total: {plan.human_total()} on {plan.device}")
 
 

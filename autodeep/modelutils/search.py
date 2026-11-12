@@ -40,6 +40,7 @@ class SearchResult:
     trials: List[Dict[str, Any]]
     n_failed: int
     duration: float
+    best_raw_params: Optional[Dict[str, Any]] = None  # as passed to the objective (before JSON cleaning)
 
 
 def short_error(e: BaseException, limit: int = 300) -> str:
@@ -194,4 +195,5 @@ def run_hyperopt(
         trials=records,
         n_failed=state["n_failed"],
         duration=time.perf_counter() - t_start,
+        best_raw_params=best["raw_params"],
     )

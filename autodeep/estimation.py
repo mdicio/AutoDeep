@@ -62,6 +62,9 @@ PRIORS: Dict[str, Dict[str, float]] = {
     "tabm": dict(base=1.0, per_krow=60.0, a=0.85, b=0.5, gpu=10.0, epochs=True, typical_epochs=100),
 }
 DEFAULT_PRIOR = dict(base=5.0, per_krow=5.0, a=1.0, b=0.5, gpu=3.0, epochs=True)
+# models with a GPU factor of at least GPU_HUNGRY get a warning when their CPU estimate exceeds SLOW_ON_CPU_SECONDS
+GPU_HUNGRY = 10.0
+SLOW_ON_CPU_SECONDS = 300
 
 
 @dataclass
@@ -280,6 +283,9 @@ def estimate_plan(
                 total, capped = setup + max(per_trial, float(timeout_per_model) + per_trial / 2), True
                 if per_trial > timeout_per_model:
                     warning = f"one trial (~{format_duration(per_trial)}) is longer than the time budget: only 1 trial will run"
+            gpu_factor = PRIORS.get(model, DEFAULT_PRIOR)["gpu"]
+            if warning is None and device == "cpu" and gpu_factor >= GPU_HUNGRY and total > SLOW_ON_CPU_SECONDS:
+                warning = f"~{format_duration(total)} on CPU; this model is much faster on a GPU (or use models: auto to fit a time budget)"
             plan.jobs.append(
                 JobEstimate(
                     dataset=shape.name,

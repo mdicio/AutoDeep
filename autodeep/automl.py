@@ -329,6 +329,9 @@ class AutoRunner:
             f"Run {self.run_id}: {len(self.datasets)} dataset(s) x {len(self.models)} model(s), {self.max_evals} trial(s) each, "
             f"device={device}. Estimated time: {plan.human_total()}. Outputs -> {self.output_folder.resolve()}"
         )
+        for job in plan.jobs:
+            if job.warning:
+                logger.warning(f"{job.model} on {job.dataset}: {job.warning}")
         progress.emit(
             "run_start",
             run_id=self.run_id,

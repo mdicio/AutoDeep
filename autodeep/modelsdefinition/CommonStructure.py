@@ -61,6 +61,11 @@ class BaseTrainer:
     first_trial_defaults = False
     #: train metrics are computed on a subsample of at most this many rows
     max_rows_for_train_metrics = MAX_ROWS_FOR_TRAIN_METRICS
+    #: False for models whose train metrics mean nothing (TabICL scores its own context rows)
+    compute_train_metrics = True
+    #: after the search, refit the best configuration on all training rows (train + validation split).
+    #: Only for models where that is cheap and needs no early stopping, e.g. in-context learners.
+    refit_on_full_train = False
 
     def __init__(self, problem_type: str = "binary_classification", random_state: int = 42, num_workers: Optional[int] = None):
         self.problem_type = problem_type
@@ -171,7 +176,7 @@ class BaseTrainer:
             model = self.fit_trial(params, X_tr, y_tr, X_val, y_val)
             return TrialOutcome(
                 validation_metrics=self._metrics(evaluator, model, X_val, y_val),
-                train_metrics=self._metrics(evaluator, model, X_tr, y_tr),
+                train_metrics=self._metrics(evaluator, model, X_tr, y_tr) if self.compute_train_metrics else {},
                 model=model,
             )
 
@@ -198,6 +203,10 @@ class BaseTrainer:
                 torch.set_num_threads(previous_threads)
         self.search_result = result
         self.model = result.best_model
+        if self.refit_on_full_train:
+            raw = {k: v for k, v in (result.best_raw_params or {}).items() if k != _NO_PARAMS}
+            self.logger.info(f"{self.model_name}: refitting the best configuration on all {len(X)} training rows")
+            self.model = self.fit_trial(raw, X, y, X_val, y_val)
         self.best_model = self.model
         self.on_search_end()
         best_params = {k: v for k, v in result.best_params.items() if k != _NO_PARAMS}

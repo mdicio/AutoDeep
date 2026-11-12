@@ -89,8 +89,11 @@ class TabICLTrainer(_RawFeaturesTrainer):
     model_name = "tabicl"
     max_trials = 1
     allow_empty_grid = True
-    # predicting costs O(rows x context): don't spend minutes scoring the context rows on themselves
-    max_rows_for_train_metrics = 1000
+    # scoring the context rows against themselves says nothing (and costs O(rows x context))
+    compute_train_metrics = False
+    # "fitting" only stores the context: validation scores come from the 80% split, test predictions
+    # use every training row as context
+    refit_on_full_train = True
 
     def cpu_torch_threads(self, n_rows: int) -> int:
         return _physical_cores()
