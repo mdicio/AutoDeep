@@ -28,12 +28,16 @@ datasets:
   #   path: openml:adult
   #   target: class
 
-# Model names or a preset: fast | default | modern | deep | all  (see `autodeep models`)
-models: [xgb, catboost, mlp, categoryembedding, gandalf]
+# auto (default): pick the models, trials and time limits that fit time_budget on this machine
+# (`autodeep estimate` shows the plan and why models were skipped).
+# Or choose: model names, or a preset: fast | default | modern | deep | all  (see `autodeep models`)
+models: auto
+time_budget: 10m         # whole run: 90s, 10m, 1h30m...
 
-max_evals: 10            # hyperparameter-search trials per (dataset, model)
-max_epochs: 50           # cap for neural models (remove for the configured default)
-timeout_per_model: 300   # seconds; the search stops starting new trials after this
+# Settings below override the automatic plan (uncomment to fix them yourself):
+# max_evals: 10          # hyperparameter-search trials per (dataset, model)
+# timeout_per_model: 300 # seconds; the search stops starting new trials after this
+# max_epochs: 50         # cap for neural models
 device: auto             # auto | cpu | cuda
 random_state: 42
-output_folder: ../autodeep_results
+output_folder: ../autodeep_results   # the best model per dataset is saved to <output_folder>/models/<dataset>/best

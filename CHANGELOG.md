@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0 (unreleased): use the models, sensible defaults
+
+### New
+- **Saved, ready-to-use models.** Every run keeps the best model of each dataset (chosen on the validation score, never the test score) and saves it with its preprocessing to `<output>/models/<dataset>/best`. `runner.best_model("churn").predict(new_rows)`, `autodeep.load_model(path)`, `autodeep predict <model> new.csv -o predictions.csv` and `autodeep info <model>`. New rows need the original columns: missing values, unseen categories and numbers stored as text are handled like during training, and predictions use the original class labels. `predict_proba` returns one column per class; `evaluate` scores labelled rows. In the web app, each run has a "Use the best models" card to download a model or predict an uploaded file.
+- `save_models=True` now saves every model in the same loadable format (`models/<dataset>/<model>`); `save_best=False` turns saving off. The leaderboard has a `selected` column.
+- All 17 models can be saved and loaded. Models trained on a GPU load on machines without one (checked for XGBoost, PyTorch Tabular, RealMLP, TabM, the 1D-CNN and TabICL).
+- **`models: auto` (the new default) with a time budget.** AutoDeep measures the machine (cores, RAM, GPU, a ~0.5 s CPU benchmark) and picks the models, trials and per-model time limit that fit `time_budget` (default 15 minutes), explaining what it skipped and why. `AutoRunner(time_budget="20m")`, `autodeep run data.csv --target y --budget 20m`, `time_budget:` in YAML, and an Auto mode in the web app. With explicit models, a budget sets `timeout_per_model`.
+- `autodeep run` / `estimate` accept a data file and `--target` directly, no YAML needed. `autodeep system` shows what AutoDeep sees on the machine.
+- Runtime estimates scale the built-in cost curves by the measured CPU speed until timings from the machine itself are available.
+
+### Changed
+- `AutoRunner(models=None)` means `"auto"` instead of the fixed `default` preset; pass `models="default"` for the old behaviour. `max_evals` defaults to the plan's value (25 with explicit models).
+- Preprocessing is a fitted `TabularPreprocessor` object (identical output to 0.3.0 on four built-in datasets × all normalisation/encoding options). Mixed-type text columns are now always treated as categorical strings, and datetime columns with missing values no longer produce huge negative numbers.
+- Saved PyTorch Tabular models no longer carry the training data or the Lightning trainer; the 1D-CNN and ResNet are saved as weights plus build arguments.
+- The scikit-learn MLP's runtime prior was re-measured (it was ~15x too optimistic above 10,000 rows).
+
 ## 0.3.0: modern tabular models
 
 ### New

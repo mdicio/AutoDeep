@@ -73,6 +73,13 @@ class JobIn(BaseModel):
     save_best: bool = True
 
 
+class PlanIn(BaseModel):
+    datasets: List[DatasetIn]
+    time_budget: float = 15 * 60  # seconds, whole run
+    device: str = "auto"
+    max_epochs: Optional[int] = None
+
+
 class ProfileIn(BaseModel):
     path: str
     target: Optional[str] = None
@@ -337,10 +344,38 @@ def create_app(workspace: Optional[str] = None) -> FastAPI:
         except Exception as e:
             raise HTTPException(400, str(e))
         set_device(job.device)
+        from autodeep.machine import current_speed_factor
+
         plan = estimate_plan(
-            shapes, models, job.max_evals, timeout_per_model=job.timeout_per_model, max_epochs=job.max_epochs, device=resolve_device()
+            shapes,
+            models,
+            job.max_evals,
+            timeout_per_model=job.timeout_per_model,
+            max_epochs=job.max_epochs,
+            device=resolve_device(),
+            speed_factor=current_speed_factor(),
         )
         return {**plan.summary(), "datasets": [s.to_dict() for s in specs]}
+
+    @app.post("/api/plan")
+    def auto_plan(req: PlanIn):
+        """Recommended models / trials / time limit for these datasets on this machine (models: auto)."""
+        from autodeep.autoplan import recommend
+        from autodeep.device import resolve_device, set_device
+        from autodeep.machine import machine_profile
+
+        if not req.datasets:
+            raise HTTPException(400, "Add at least one dataset")
+        try:
+            _, shapes = _specs(JobIn(datasets=req.datasets, models=["xgb"]))
+        except Exception as e:
+            raise HTTPException(400, str(e))
+        set_device(req.device)
+        machine = machine_profile()
+        plan = recommend(
+            shapes, req.time_budget, device=resolve_device(), speed_factor=machine.speed_factor, max_epochs=req.max_epochs, machine=machine
+        )
+        return plan.to_dict()
 
     @app.post("/api/jobs")
     def create_job(job: JobIn):

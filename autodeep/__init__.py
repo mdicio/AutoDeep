@@ -11,7 +11,7 @@ Quick start::
     model.predict(new_rows)                # later: autodeep.load_model("output/models/iris/best")
 """
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 from autodeep.datasets import BUILTIN_DATASETS, DatasetSpec, list_builtin_datasets  # noqa: E402
 from autodeep.registry import DEFAULT_MODELS, PRESETS, list_models  # noqa: E402

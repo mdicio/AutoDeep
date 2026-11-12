@@ -2,8 +2,9 @@
 
 Commands:
     ui          start the local web app
-    run         run an experiment YAML file
-    estimate    estimate how long an experiment YAML file will take
+    run         run an experiment: a YAML file, or a data file with --target
+    estimate    show the plan and how long it will take
+    system      what AutoDeep sees on this machine (cores, RAM, GPU, speed)
     quickstart  30-second demo on built-in datasets
     models      list available models
     datasets    list built-in datasets
@@ -61,6 +62,8 @@ def _confirm(prompt: str) -> bool:
 
 
 def _runner_from_args(args, **extra):
+    from pathlib import Path
+
     from autodeep.automl import AutoRunner
 
     overrides = {}
@@ -70,10 +73,33 @@ def _runner_from_args(args, **extra):
             overrides[key] = value
     if getattr(args, "models", None):
         overrides["models"] = args.models
+    if getattr(args, "budget", None):
+        overrides["time_budget"] = args.budget
     if getattr(args, "output", None):
         overrides["output_folder"] = args.output
     overrides.update(extra)
-    return AutoRunner.from_yaml(args.config, **overrides)
+    source = args.config
+    if str(source).lower().endswith((".yml", ".yaml")):
+        if getattr(args, "target", None):
+            raise ValueError("--target is for data files; set the target in the YAML file")
+        return AutoRunner.from_yaml(source, **overrides)
+    # a data file (or builtin:/openml:) instead of an experiment file
+    if not getattr(args, "target", None) and not str(source).startswith("builtin:"):
+        raise ValueError(f"'{source}' is not a YAML experiment file: pass the target column with --target")
+    name = Path(str(source).split(":", 1)[-1]).stem or "dataset"
+    dataset = {"path": str(source)}
+    if getattr(args, "target", None):
+        dataset["target"] = args.target
+    return AutoRunner(datasets={name: dataset}, **overrides)
+
+
+def _print_plan(runner, plan):
+    if runner.auto_plan is not None:
+        print("Automatic plan (models: auto):")
+        print(runner.auto_plan.describe())
+        print()
+    print(plan.to_dataframe().to_string(index=False))
+    print(f"\nEstimated total: {plan.human_total()} on {plan.device}")
 
 
 def cmd_run(args):
@@ -81,8 +107,7 @@ def cmd_run(args):
 
     runner = _runner_from_args(args, on_event=_ConsoleProgress(), log_level="WARNING")
     plan = runner.estimate(as_dataframe=False)
-    print(plan.to_dataframe().to_string(index=False))
-    print(f"\nEstimated total: {plan.human_total()} on {plan.device}")
+    _print_plan(runner, plan)
     if not args.yes and not _confirm("Start?"):
         return 1
     board = runner.run()
@@ -107,8 +132,21 @@ def _print_best_models(runner):
 def cmd_estimate(args):
     runner = _runner_from_args(args, log_level="WARNING")
     plan = runner.estimate(as_dataframe=False)
-    print(plan.to_dataframe().to_string(index=False))
-    print(f"\nEstimated total: {plan.human_total()} on {plan.device}")
+    _print_plan(runner, plan)
+    return 0
+
+
+def cmd_system(args):
+    from autodeep.machine import machine_profile, measure_speed
+
+    if args.benchmark:
+        m = machine_profile(benchmark=False)
+        measure_speed(m.cpu_name, m.logical_cores, refresh=True)
+    m = machine_profile()
+    print(m.describe())
+    print(f"  OS: {m.os}")
+    print(f"  device='auto' trains on: {m.device}")
+    print(f"  speed factor: {m.speed_factor:.2f} ({m.speed_source}; >1 = slower than the reference machine, used until timings are recorded)")
     return 0
 
 
@@ -138,6 +176,7 @@ def cmd_models(args):
 
     _print_table(list_models(), ["name", "display_name", "family", "speed", "description"])
     print("\nPresets: " + "; ".join(f"{k} = {', '.join(v)}" for k, v in PRESETS.items() if k != "all") + "; all = every model")
+    print("Default: auto = the models that fit your time budget on this machine (autodeep estimate shows the plan)")
     return 0
 
 
@@ -224,8 +263,10 @@ def main(argv=None):
     p.set_defaults(func=cmd_ui)
 
     def add_run_options(p):
-        p.add_argument("config", help="experiment YAML file (see examples/experiment.yaml)")
-        p.add_argument("--models", help="comma separated model names or a preset (fast, default, modern, deep, all)")
+        p.add_argument("config", help="experiment YAML file (see examples/experiment.yaml), or a data file / builtin: / openml: with --target")
+        p.add_argument("--target", help="target column, when the first argument is a data file")
+        p.add_argument("--budget", help="total time budget, e.g. 10m, 1h (with models: auto it decides models and trials; default 15m)")
+        p.add_argument("--models", help="auto (default), comma separated model names, or a preset (fast, default, modern, deep, all)")
         p.add_argument("--max-evals", type=int)
         p.add_argument("--max-epochs", type=int)
         p.add_argument("--timeout-per-model", type=float, help="seconds")
@@ -237,7 +278,7 @@ def main(argv=None):
     p.add_argument("-y", "--yes", action="store_true", help="do not ask for confirmation after the estimate")
     p.set_defaults(func=cmd_run)
 
-    p = sub.add_parser("estimate", help="estimate the runtime of an experiment YAML file")
+    p = sub.add_parser("estimate", help="show the plan and estimated runtime of an experiment")
     add_run_options(p)
     p.set_defaults(func=cmd_estimate)
 
@@ -247,6 +288,10 @@ def main(argv=None):
     p.add_argument("--device", choices=["auto", "cpu", "cuda"])
     p.add_argument("--output")
     p.set_defaults(func=cmd_quickstart)
+
+    p = sub.add_parser("system", help="what AutoDeep sees on this machine")
+    p.add_argument("--benchmark", action="store_true", help="re-run the CPU speed benchmark")
+    p.set_defaults(func=cmd_system)
 
     sub.add_parser("models", help="list available models").set_defaults(func=cmd_models)
     sub.add_parser("datasets", help="list built-in datasets").set_defaults(func=cmd_datasets)

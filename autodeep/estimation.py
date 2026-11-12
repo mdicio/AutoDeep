@@ -4,6 +4,8 @@ Three layers, from coarse to precise:
 
 1. **Priors**: per-model cost curves ``seconds_per_trial = base + per_krow * (n_train/1000)^a * (n_features/20)^b``
    measured on a 12-thread CPU. They capture how cost scales with data size.
+   Before there is any history, they are scaled by this machine's measured CPU speed
+   (:func:`autodeep.machine.measure_speed`, a ~0.5 s benchmark cached for 30 days).
 2. **History**: every finished trial is appended to ``~/.cache/autodeep/timings.jsonl``. When a model has
    history on the current device, the prior is rescaled by the median ``actual / prior`` ratio, so
    estimates adapt to *your* machine after the first run.
@@ -40,7 +42,8 @@ TYPICAL_EPOCHS = 40
 PRIORS: Dict[str, Dict[str, float]] = {
     "xgb": dict(base=0.1, per_krow=0.012, a=1.0, b=0.8, gpu=1.0, epochs=False),
     "catboost": dict(base=1.0, per_krow=0.06, a=1.0, b=0.7, gpu=1.0, epochs=False),
-    "mlp": dict(base=0.1, per_krow=0.11, a=1.0, b=0.4, gpu=1.0, epochs=False),
+    # mlp re-measured 2026-11-12 at 16k rows (default search space, sgd trials ~30 s): steeper than linear
+    "mlp": dict(base=0.1, per_krow=0.55, a=1.5, b=0.4, gpu=1.0, epochs=False),
     "categoryembedding": dict(base=0.6, per_krow=0.75, a=1.0, b=0.2, gpu=2.0, epochs=True),
     "tabnet": dict(base=0.3, per_krow=4.7, a=1.0, b=0.4, gpu=2.5, epochs=True),
     "fttransformer": dict(base=0.6, per_krow=63.0, a=1.0, b=1.0, gpu=6.0, epochs=True),
@@ -218,6 +221,30 @@ class Plan:
         }
 
 
+def seconds_per_trial(
+    model: str,
+    shape: DatasetShape,
+    device: str = "cpu",
+    max_epochs: Optional[int] = None,
+    history: Optional[TimingHistory] = None,
+    speed_factor: Optional[float] = None,
+):
+    """``(seconds, low_factor, high_factor, source)`` for one search trial of ``model`` on ``shape``."""
+    history = history or TimingHistory()
+    per_trial = prior_seconds_per_trial(model, shape.n_train, _effective_features(model, shape), device, max_epochs)
+    ratio, n_hist = history.calibration(model, device)
+    if ratio is not None:
+        lo_f, hi_f = (0.6, 1.6) if n_hist >= 5 else (0.4, 2.0)
+        return per_trial * ratio, lo_f, hi_f, f"history ({n_hist} trials)"
+    if device == "cpu" and speed_factor and abs(speed_factor - 1.0) > 0.05:  # the benchmark measures the CPU only
+        return per_trial * speed_factor, 0.35, 2.5, f"prior x{speed_factor:.2f} (CPU benchmark)"
+    return per_trial, 0.35, 2.5, "prior"
+
+
+def setup_seconds(model: str, shape: DatasetShape) -> float:
+    return igtd_seconds(_effective_features(model, shape)) if model == "resnet" else 0.0
+
+
 def _trials_for(model: str, max_evals: int) -> int:
     """Number of trials a search will run (models without hyperparameters run one)."""
     from autodeep.registry import MODELS
@@ -235,22 +262,16 @@ def estimate_plan(
     max_epochs: Optional[int] = None,
     device: str = "cpu",
     history: Optional[TimingHistory] = None,
+    speed_factor: Optional[float] = None,
 ) -> Plan:
+    """Estimate every (dataset, model) search. ``speed_factor`` scales the built-in priors (see :mod:`autodeep.machine`)."""
     history = history or TimingHistory()
     plan = Plan(device=device)
     for shape in shapes:
         for model in models:
             n_feat = _effective_features(model, shape)
-            per_trial = prior_seconds_per_trial(model, shape.n_train, n_feat, device, max_epochs)
-            ratio, n_hist = history.calibration(model, device)
-            if ratio is not None:
-                per_trial *= ratio
-                lo_f, hi_f = (0.6, 1.6) if n_hist >= 5 else (0.4, 2.0)
-                source = f"history ({n_hist} trials)"
-            else:
-                lo_f, hi_f = (0.35, 2.5)
-                source = "prior"
-            setup = igtd_seconds(n_feat) if model == "resnet" else 0.0
+            per_trial, lo_f, hi_f, source = seconds_per_trial(model, shape, device, max_epochs, history, speed_factor)
+            setup = setup_seconds(model, shape)
             trials = _trials_for(model, max_evals)
             total = per_trial * trials + setup
             capped, warning = False, None

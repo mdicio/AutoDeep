@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autodeep"
-version = "0.3.0"
+version = "0.4.0"
 description = "Benchmark gradient-boosted trees and deep learning models on tabular data with hyperparameter search, runtime estimates and a local web UI."
 readme = "README.md"
 license = { text = "MIT" }

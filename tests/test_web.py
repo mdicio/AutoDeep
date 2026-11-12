@@ -29,6 +29,8 @@ def test_upload_profile_estimate(client, mixed_csv):
     job = {"datasets": [{"name": "m", "path": up["path"], "target": "label", "drop_columns": ["id"]}], "models": ["xgb", "gandalf"], "max_evals": 3}
     est = client.post("/api/estimate", json=job).json()
     assert len(est["jobs"]) == 2 and est["total_seconds"] > 0
+    plan = client.post("/api/plan", json={"datasets": job["datasets"], "time_budget": 300}).json()
+    assert "xgb" in plan["models"] and plan["max_evals"] >= 1 and plan["reasons"]
     bad = client.post("/api/estimate", json={**job, "datasets": [{**job["datasets"][0], "target": "nope"}]})
     assert bad.status_code == 400 and "not found" in bad.json()["detail"]
     assert client.post("/api/datasets/upload", files={"file": ("x.exe", b"MZ", "application/octet-stream")}).status_code == 400

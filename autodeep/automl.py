@@ -21,7 +21,7 @@ from autodeep.datasets import DatasetSpec, parse_datasets
 from autodeep.device import apply_device_policy, resolve_device, set_device
 from autodeep.evaluation.generalevaluator import METRICS, Evaluator
 from autodeep.logging_utils import get_logger, setup_logging
-from autodeep.registry import DEFAULT_MODELS, resolve_models
+from autodeep.registry import resolve_models
 
 CONFIG_DIR = Path(__file__).parent / "configuration"
 DEFAULT_MODEL_CONFIG_FILE = CONFIG_DIR / "model_config.yml"
@@ -90,16 +90,24 @@ class AutoRunner:
 
         runner = AutoRunner(
             datasets={"iris": {"path": "builtin:iris"}, "mine": {"path": "data.csv", "target": "label"}},
-            models=["xgb", "catboost", "fttransformer"],   # or a preset: "fast", "default", "modern", "deep", "all"
-            max_evals=20,
+            time_budget="20m",          # models="auto" (default): pick what fits this machine in 20 minutes
         )
-        print(runner.estimate())   # how long will it take?
+        print(runner.plan().describe())   # which models and why
+        print(runner.estimate())          # how long will it take?
         leaderboard = runner.run()
+        runner.best_model("mine").predict(new_rows)
+
+        # or choose yourself: models=["xgb", "catboost", "fttransformer"] or a preset
+        # ("fast", "default", "modern", "deep", "all"), max_evals=20
 
     Args:
         datasets / data_config: ``{name: {...}}`` dict, list of dicts or :class:`DatasetSpec` objects.
-        models / default_models: model names or a preset name.
-        max_evals: hyperparameter-search trials per (dataset, model).
+        models / default_models: ``"auto"`` (default: pick models that fit ``time_budget`` on this machine,
+            see :mod:`autodeep.autoplan`), model names or a preset name.
+        time_budget: total time for the run, in seconds or as text (``"20m"``, ``"1h"``). With ``models="auto"``
+            it decides the models, trials and time limits (default 15 minutes); with explicit models it sets
+            ``timeout_per_model`` (budget / number of searches) unless that is given.
+        max_evals: hyperparameter-search trials per (dataset, model) (default: from the auto plan, else 25).
         timeout_per_model: optional time budget in seconds for each (dataset, model) search.
         max_epochs: optional cap on training epochs of every neural model (great for quick runs).
         model_config: path or dict overriding the bundled search spaces for every dataset. By default
@@ -123,7 +131,7 @@ class AutoRunner:
         datasets=None,
         models=None,
         execution_mode: str = "hyperopt",
-        max_evals: int = 25,
+        max_evals: Optional[int] = None,
         random_state: int = 42,
         model_config: Union[str, Path, Dict, None] = None,
         output_folder: Union[str, Path] = DEFAULT_OUTPUT_FOLDER,
@@ -137,6 +145,7 @@ class AutoRunner:
         fail_fast: bool = False,
         save_models: bool = False,
         save_best: bool = True,
+        time_budget: Union[None, float, str] = None,
         log_level: str = "INFO",
     ):
         if execution_mode != "hyperopt":
@@ -145,11 +154,19 @@ class AutoRunner:
         names = [d.name for d in self.datasets]
         if len(set(names)) != len(names):
             raise ValueError(f"Dataset names must be unique, got {names}")
-        self.models: List[str] = resolve_models(models if models is not None else (default_models if default_models is not None else DEFAULT_MODELS))
+        from autodeep.autoplan import parse_duration
+
+        requested = models if models is not None else default_models
+        self.auto = requested is None or (isinstance(requested, str) and requested.strip().lower() == "auto")
+        self.models: List[str] = [] if self.auto else resolve_models(requested)  # auto: filled in by plan()
         self.execution_mode = execution_mode
-        self.max_evals = int(max_evals)
+        self.time_budget = parse_duration(time_budget)
+        self._user_max_evals = None if max_evals is None else int(max_evals)
+        self._user_timeout = timeout_per_model
+        self.max_evals = self._user_max_evals or 25
         if self.max_evals < 1:
             raise ValueError("max_evals must be >= 1")
+        self.auto_plan = None
         self.random_state = random_state
         self.user_model_config = self._load_model_config(model_config) if model_config is not None else None
         self.output_folder = Path(output_folder)
@@ -222,10 +239,44 @@ class AutoRunner:
             df = spec.read()
             spec.resolve(df)
             shapes.append(shape_from_spec(spec, df))
+        device = self._device()
+        self._plan_settings(shapes, device)
         plan = estimate_plan(
-            shapes, self.models, self.max_evals, timeout_per_model=self.timeout_per_model, max_epochs=self.max_epochs, device=self._device()
+            shapes,
+            self.models,
+            self.max_evals,
+            timeout_per_model=self.timeout_per_model,
+            max_epochs=self.max_epochs,
+            device=device,
+            speed_factor=self._speed_factor(),
         )
         return plan.to_dataframe() if as_dataframe else plan
+
+    @staticmethod
+    def _speed_factor() -> float:
+        from autodeep.machine import current_speed_factor
+
+        return current_speed_factor()
+
+    def _plan_settings(self, shapes, device) -> None:
+        """Resolve ``models="auto"`` and ``time_budget`` into models, max_evals and timeout_per_model."""
+        if self.auto:
+            from autodeep.autoplan import recommend
+            from autodeep.machine import machine_profile
+
+            self.auto_plan = recommend(
+                shapes, self.time_budget, device=device, speed_factor=self._speed_factor(), max_epochs=self.max_epochs, machine=machine_profile()
+            )
+            self.models = self.auto_plan.models
+            self.max_evals = self._user_max_evals or self.auto_plan.max_evals
+            self.timeout_per_model = self._user_timeout if self._user_timeout is not None else self.auto_plan.timeout_per_model
+        elif self.time_budget and self._user_timeout is None:
+            self.timeout_per_model = round(self.time_budget / max(len(shapes) * len(self.models), 1), 1)
+
+    def plan(self):
+        """The automatic plan (models, trials, time limit and the reasons), for ``models="auto"``."""
+        self.estimate(as_dataframe=False)
+        return self.auto_plan
 
     def _device(self):
         set_device(self.device)
@@ -252,7 +303,18 @@ class AutoRunner:
             spec.resolve(df)
             frames[spec.name] = df
         shapes = [shape_from_spec(s, frames[s.name]) for s in self.datasets]
-        plan = estimate_plan(shapes, self.models, self.max_evals, timeout_per_model=self.timeout_per_model, max_epochs=self.max_epochs, device=device)
+        self._plan_settings(shapes, device)
+        if self.auto_plan is not None:
+            logger.info("Automatic plan:\n" + self.auto_plan.describe())
+        plan = estimate_plan(
+            shapes,
+            self.models,
+            self.max_evals,
+            timeout_per_model=self.timeout_per_model,
+            max_epochs=self.max_epochs,
+            device=device,
+            speed_factor=self._speed_factor(),
+        )
         tracker = RunTracker(plan, device=device, max_epochs=self.max_epochs)
 
         def reporter(evt):
@@ -275,6 +337,7 @@ class AutoRunner:
             max_evals=self.max_evals,
             device=device,
             plan=plan.to_records(),
+            auto_plan=self.auto_plan.reasons if self.auto_plan is not None else None,
         )
         cancelled = False
         try:

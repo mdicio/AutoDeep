@@ -6,7 +6,12 @@
 
 **Benchmark gradient-boosted trees and deep learning models on your tabular data, with hyperparameter search, runtime estimates and a local web app.**
 
-AutoDeep trains and tunes up to 17 models (XGBoost, CatBoost, the TabICLv2 foundation model, RealMLP, TabM, an MLP, nine PyTorch Tabular architectures, a Soft-Ordering 1D-CNN and a ResNet on IGTD images) on one or more datasets, evaluates them on a held-out test set and gives you a leaderboard. You can drive it from a browser, from the command line, or from Python.
+AutoDeep trains and tunes up to 17 models (XGBoost, CatBoost, the TabICLv2 foundation model, RealMLP, TabM, an MLP, nine PyTorch Tabular architectures, a Soft-Ordering 1D-CNN and a ResNet on IGTD images) on one or more datasets, evaluates them on a held-out test set and gives you a leaderboard. By default it picks the models that fit your time budget on your machine, and it saves the best model of each dataset, ready to predict new rows. You can drive it from a browser, from the command line, or from Python.
+
+```bash
+autodeep run data/churn.csv --target churned --budget 10m      # plan, train, compare, save the best model
+autodeep predict output/models/churn/best new_customers.csv -o predictions.csv
+```
 
 ---
 
@@ -51,9 +56,10 @@ autodeep ui
 This opens `http://127.0.0.1:8765` (or the next free port). Then:
 
 1. **Datasets.** Add a built-in example, upload a CSV/TSV/Parquet/Excel/JSON file, or point to a local path or `openml:<name>`. The target, problem type and metric are detected; you can change them, set a split column, subsample, and untick columns to exclude (IDs and free text are flagged for you).
-2. **Models.** Pick models one by one or use a preset (Fast, Default, Deep, All).
-3. **Settings and estimate.** Set trials per model, an optional time budget, a max-epochs cap and the device. The estimated runtime updates as you change things.
+2. **Models.** **Auto** (the default) picks the models, trials and time limits that fit your time budget on this machine and tells you why it skipped the others. Or pick models one by one, or use a preset (Fast, Default, Modern, Deep, All).
+3. **Settings and estimate.** Set trials per model, a time limit per model, a max-epochs cap and the device (Auto fills these in). The estimated runtime updates as you change things.
 4. **Run.** Each experiment runs in its own background process. You get a live progress bar with an ETA, an activity feed, the log, and a leaderboard that fills in as models finish. You can stop a run at any time, close the browser and come back later, and download the results as CSV.
+5. **Use the model.** The best model of each dataset is saved. Download it, or upload a file and get its predictions back as CSV.
 
 Uploaded files and runs are stored in `./autodeep_workspace` (change it with `--workspace`). Everything stays on your machine.
 
@@ -63,9 +69,13 @@ Uploaded files and runs are stored in `./autodeep_workspace` (change it with `--
 autodeep models                                  # what can I train?
 autodeep datasets                                # built-in datasets
 autodeep profile data/churn.csv --target churned # column types, missing values, inferred problem type
-autodeep estimate examples/experiment.yaml       # how long will it take?
-autodeep run examples/experiment.yaml            # shows the estimate, asks to confirm, then runs with live progress
+autodeep system                                  # cores, RAM, GPU and CPU speed as AutoDeep sees them
+autodeep estimate data/churn.csv --target churned --budget 20m   # the automatic plan and how long it takes
+autodeep run data/churn.csv --target churned --budget 20m        # shows the plan, asks to confirm, runs with live progress
+autodeep run examples/experiment.yaml            # several datasets and options in a YAML file
 autodeep run examples/experiment.yaml --models fast --max-evals 5 --max-epochs 20 -y
+autodeep predict output/models/churn/best new.csv -o predictions.csv    # use the saved best model
+autodeep info output/models/churn/best          # its input columns, scores and parameters
 ```
 
 An experiment file looks like this (full commented version: [`examples/experiment.yaml`](examples/experiment.yaml)):
@@ -78,9 +88,8 @@ datasets:
     path: data/churn.csv
     target: churned
     drop_columns: [customer_id]
-models: [xgb, catboost, fttransformer]   # or: fast | default | modern | deep | all
-max_evals: 20
-timeout_per_model: 600                   # seconds, optional
+models: auto                             # default; or [xgb, catboost, fttransformer], or a preset
+time_budget: 20m                         # whole run
 output_folder: results
 ```
 
@@ -94,12 +103,17 @@ runner = AutoRunner(
         "iris": {"path": "builtin:iris"},
         "churn": {"path": "data/churn.csv", "target": "churned", "drop_columns": ["customer_id"]},
     },
-    models=["xgb", "catboost", "fttransformer"],
-    max_evals=20,
+    time_budget="20m",          # models="auto": what fits 20 minutes on this machine
+    # models=["xgb", "catboost", "fttransformer"], max_evals=20,   # ...or choose yourself
     output_folder="results",
 )
+print(runner.plan().describe()) # chosen models, trials, time limits and why
 print(runner.estimate())        # runtime estimate per (dataset, model)
 leaderboard = runner.run()      # pandas DataFrame, best test score first
+
+model = runner.best_model("churn")       # saved in results/models/churn/best
+model.predict(new_customers)             # original labels
+model.predict_proba(new_customers)       # one column per class
 
 analyzer = ResultsAnalyzer(runner.results_path)
 analyzer.view_performance(dataset_name="churn")
@@ -107,6 +121,27 @@ analyzer.view_parameters(model_name="xgb")
 ```
 
 See [`examples/quickstart.py`](examples/quickstart.py) and the notebook [`examples/walkthrough.ipynb`](examples/walkthrough.ipynb). The original constructor arguments (`data_config=`, `default_models=`, `dataset_path`/`target_col` keys) still work.
+
+---
+
+## Using the trained model
+
+After a run, the best model of each dataset (highest validation score; the test set is never used to choose) is saved with everything needed to use it: the preprocessing fitted on the training data, the model and the original class labels.
+
+```python
+import autodeep
+
+model = autodeep.load_model("results/models/churn/best")   # device="cpu" | "cuda" | "auto"
+model.predict(df)              # labels / values, one per row
+model.predict_proba(df)        # DataFrame, one column per class
+model.predict_frame(df)        # prediction + proba_<class> columns, aligned with df
+model.evaluate(labelled_df)    # metrics on rows that include the target column
+model.info                     # dataset, model, scores, parameters, input columns
+```
+
+`df` needs the columns the model was trained on (extra columns, including the target, are ignored). Missing values, categories never seen in training and numbers stored as text are handled the same way as during training. From the command line: `autodeep predict <model folder> new.csv -o predictions.csv`. In the web app: the "Use the best models" card of a run.
+
+`save_models=True` saves every model, not only the best one (`results/models/<dataset>/<model>`); `save_best=False` turns saving off. A saved model is a folder with `predictor.pt` and a readable `info.json`. It is a pickle, so only load models from sources you trust. Models trained on a GPU load on machines without one. TabICL keeps its training rows as context (that is how it predicts), so its saved file contains them; its pretrained weights are re-downloaded from Hugging Face if they are not cached.
 
 ---
 
@@ -162,6 +197,8 @@ Only `path` and `target` are required; everything else is inferred or has a defa
 | `danet` | DANet | PyTorch Tabular |
 | `resnet` | ResNet-18/34/50 on [IGTD](https://doi.org/10.1038/s41598-021-90923-y) images | tabular-as-image |
 
+**Auto (default):** AutoDeep picks models in order of expected value for the device (on CPU: xgb, catboost, tabicl, realmlp, gandalf, categoryembedding, tabm, fttransformer, mlp; on a GPU the deep models move up) and keeps each one whose minimum search (1 TabICL pass, 10 trials for boosted trees, 3 for neural networks) fits in its share of `time_budget` (default 15 minutes), with no model taking more than half of it. Every model then gets up to 30 trials and the same time limit, chosen so fast models finish all their trials and slow ones use the remaining time. `autodeep estimate` (or `runner.plan()`) shows the plan and why each skipped model was skipped. Explicit `max_evals` / `timeout_per_model` override the plan.
+
 **Presets:** `fast` = xgb, catboost, mlp · `default` = fast + tabicl, realmlp, categoryembedding, fttransformer, gandalf · `modern` = tabicl, realmlp, tabm · `deep` = realmlp, tabm and all PyTorch Tabular models · `all`.
 
 **Which deep models to try first?** On the [TabArena](https://huggingface.co/spaces/TabArena/leaderboard) benchmark, TabICLv2, RealMLP and TabM are among the strongest tabular models, ahead of the PyTorch Tabular architectures (which TabArena does not include).
@@ -184,7 +221,7 @@ Search spaces live in [`autodeep/configuration/model_config.yml`](autodeep/confi
 
 Before anything is trained, AutoDeep estimates how long each (dataset, model) search will take:
 
-1. **Built-in cost curves** per model, measured on a 12-thread CPU. They scale with rows, features, epochs and the device.
+1. **Built-in cost curves** per model, measured on a 12-thread CPU. They scale with rows, features, epochs and the device. On a new machine they are scaled by a ~0.5 s CPU benchmark (cached for 30 days in `~/.cache/autodeep/machine.json`; `autodeep system --benchmark` re-runs it).
 2. **Your machine's history.** Every finished trial is recorded in `~/.cache/autodeep/timings.jsonl`, and later estimates are rescaled to how fast your hardware actually was. The estimate table shows `history (n trials)` when this applies.
 3. **A live ETA** during the run, recomputed after every trial from the observed trial times.
 
@@ -201,7 +238,8 @@ Everything is written to `output_folder` (default `./output`):
 | `experiments.csv` | One row per (dataset, model): status, validation and test score, all metrics (JSON), best hyperparameters, duration, error if any |
 | `trials/<dataset>__<model>.csv` | Every hyperparameter trial with its train/validation metrics and duration |
 | `autodeep.log` | Full log |
-| `models/` | Best model per run, if `save_models=True` |
+| `models/<dataset>/best/` | The best model of each dataset, ready for `autodeep.load_model` / `autodeep predict` |
+| `models/<dataset>/<model>/` | Every model, if `save_models=True` |
 
 A model that fails is recorded with its error, and the run continues with the next one. Use `fail_fast=True` to stop at the first failure instead.
 
@@ -234,9 +272,9 @@ uv run pytest              # fast suite (~1 min); CI runs it on Python 3.10 and 
 uv run pytest -m slow      # trains every model on each problem type (a few minutes on CPU)
 ```
 
-Code map: `autodeep/automl.py` (AutoRunner), `datasets.py` (dataset specs and inference), `dataloaders/` (preprocessing and IGTD), `modelsdefinition/` (one trainer per model on a shared search loop), `modelutils/search.py` (hyperopt driver), `estimation.py`, `registry.py`, `cli.py`, `jobs.py`, `web/` (FastAPI server and single-page UI).
+Code map: `autodeep/automl.py` (AutoRunner), `datasets.py` (dataset specs and inference), `dataloaders/` (data loading and IGTD), `preprocessing.py` (fitted, replayable preprocessing), `predictor.py` (saved models), `autoplan.py` + `machine.py` (automatic plan and machine profile), `modelsdefinition/` (one trainer per model on a shared search loop), `modelutils/search.py` (hyperopt driver), `estimation.py`, `registry.py`, `cli.py`, `jobs.py`, `web/` (FastAPI server and single-page UI).
 
-See [CHANGELOG.md](CHANGELOG.md) for what changed in 0.2.0.
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ## License
 
