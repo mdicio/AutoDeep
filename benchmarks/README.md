@@ -36,7 +36,24 @@ Measured against the CPU cost model in `autodeep/estimation.py` (same machine), 
 ### Reproduce
 
 ```bash
-python benchmarks/larger_datasets.py --device cuda --max-evals 5 --out benchmarks/results
+python benchmarks/larger_datasets.py --suite core --device cuda --max-evals 5 --out benchmarks/results
 ```
 
 `adult` and `covertype` are downloaded from OpenML on first use. Results go to `benchmarks/results/experiments.csv` (git-ignored).
+
+## Longer runs and search diagnostics
+
+```bash
+# 5 models x 3 datasets, 25 trials each (~3.5 h on an RTX 3060)
+python benchmarks/larger_datasets.py --suite core --device cuda --max-evals 25 --out benchmarks/results_25
+# the classic deep tabular models on California housing, each search capped at 20 min (~1.5 h)
+python benchmarks/larger_datasets.py --suite deep --device cuda --max-evals 25 --out benchmarks/results_25
+# how the searches behaved
+python benchmarks/search_diagnostics.py --out benchmarks/results_25 --report benchmarks/results_25/diagnostics.md
+```
+
+Each (dataset, model) pair is a separate run, so rerunning a command after an interruption skips the pairs that already finished. With `--device cuda` the script stops before a model when less than 4 GB of GPU memory is free (`--min-free-gpu-gb`).
+
+`search_diagnostics.py` checks, for every search: whether TPE improved on the random start-up trials, at which trial the best score was found, and which numeric hyperparameters ended up at the edge of their range in `model_config.yml` (when the best trial and most of the top trials sit at the same edge, the range probably cuts off good values).
+
+Since 0.4.0 the search starts TPE after a third of the trials (5 to 10). hyperopt's default is 20 random trials first, which left only 5 guided trials in a 25-trial search.

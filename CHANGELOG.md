@@ -22,11 +22,13 @@
 - AutoInt's grid now searches `deep_layers` (true/false); its `layers` / `activation` / `dropout` entries had no effect without it.
 - Two pytorch-tabular options that were silently ignored now take effect: TabTransformer's `out_ff_layers` / `out_ff_activation` / `out_ff_dropout` / `out_ff_initialization` configure its MLP head, and `transformer_head_dim` sets the attention head size of TabTransformer and FT-Transformer.
 - Models saved with 0.3.0's pytorch-tabular trainers cannot be loaded; retrain them. All trained PyTorch models are now saved as weights plus build arguments.
+- The hyperparameter search hands over to TPE after a third of the trials (5 to 10) instead of hyperopt's fixed 20. A 25-trial search used to be 20 random trials and only 5 guided ones.
 - `autodeep.modelsdefinition.pytorch_tabular_models` is kept as an alias of the new `deep_tabular_models` module.
 - The scikit-learn MLP's runtime prior was re-measured (it was ~15x too optimistic above 10,000 rows).
 
 ### Also
 - `benchmarks/README.md`: results of `larger_datasets.py` (TabICLv2, RealMLP, TabM, CatBoost, XGBoost on three datasets of 20k-50k rows) and measured GPU speed-ups. The estimator's GPU factors for TabICLv2 (now 50x), TabM (12x) and RealMLP (1.5x) and its XGBoost/CatBoost CPU priors (for the new grids) were updated from these runs.
+- `benchmarks/larger_datasets.py` has suites (`core`, `deep`), resumes interrupted runs and stops when the GPU fills up. `benchmarks/search_diagnostics.py` reports, per search, whether TPE improved on the start-up trials, when the best trial came, and which hyperparameters sit at the edge of their range.
 - README screenshots of the web app.
 - `examples/walkthrough.ipynb` was executed end to end in Jupyter (nbconvert).
 

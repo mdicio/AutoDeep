@@ -7,6 +7,7 @@ import time
 import traceback
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Any
 
 import numpy as np
@@ -19,6 +20,15 @@ from autodeep.logging_utils import get_logger
 from autodeep.progress import RunCancelled, emit
 
 logger = get_logger("search")
+
+
+def n_startup_trials(max_evals: int) -> int:
+    """Random trials before TPE starts modelling the space.
+
+    hyperopt's default is 20, which turns a 25-trial search into 20 random trials and 5 guided ones.
+    A third of the budget, between 5 and 10 (Optuna uses 10), leaves most of the trials to TPE.
+    """
+    return max(5, min(10, int(max_evals) // 3))
 
 
 @dataclass
@@ -173,7 +183,7 @@ def run_hyperopt(
         fmin(
             wrapped,
             space=space,
-            algo=tpe.suggest,
+            algo=partial(tpe.suggest, n_startup_jobs=n_startup_trials(max_evals)),
             max_evals=int(max_evals),
             trials=trials,
             rstate=np.random.default_rng(random_state),
