@@ -35,8 +35,7 @@ dependencies = [
     "catboost>=1.2.5",
     "tabicl>=2.2,<3",               # TabICLv2 foundation model (BSD-3; weights downloaded on first use)
     "pytabkit>=1.8,<2",             # RealMLP and TabM (Apache-2.0)
-    "hyperopt>=0.2.7,<0.4",
-    "setuptools<81",                # hyperopt imports pkg_resources, removed in setuptools 81
+    "hyperopt>=0.3,<0.4",           # 0.3 no longer imports pkg_resources (no setuptools<81 pin)
     "fastapi>=0.110",
     "uvicorn>=0.27",
     "python-multipart>=0.0.9",

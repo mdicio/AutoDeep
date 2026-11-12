@@ -10,7 +10,7 @@
 - `autodeep run` / `estimate` accept a data file and `--target` directly, no YAML needed. `autodeep system` shows what AutoDeep sees on the machine.
 - Runtime estimates scale the built-in cost curves by the measured CPU speed until timings from the machine itself are available.
 
-- **No more pytorch-tabular dependency; pandas 3 supported.** The nine deep tabular architectures (CategoryEmbedding, TabNet, FT-Transformer, TabTransformer, AutoInt, GANDALF, GATE, NODE, DANet) were ported from pytorch-tabular 1.2.0 (MIT) to plain PyTorch modules in `autodeep/modelsdefinition/tabular_nets/` and are trained by AutoDeep's own loop, like the 1D-CNN and the ResNet. pytorch-tabular was the only dependency pinning `pandas<3`; the lock file now resolves pandas 3.1 (2.3 on Python 3.10). `pytorch-tabular`, `requests` and the `pytorch-tabnet<4.2` cap are gone, and so are omegaconf, rich and their transitive dependencies.
+- **No more pytorch-tabular dependency; pandas 3 supported.** The nine deep tabular architectures (CategoryEmbedding, TabNet, FT-Transformer, TabTransformer, AutoInt, GANDALF, GATE, NODE, DANet) were ported from pytorch-tabular 1.2.0 (MIT) to plain PyTorch modules in `autodeep/modelsdefinition/tabular_nets/` and are trained by AutoDeep's own loop, like the 1D-CNN and the ResNet. pytorch-tabular was the only dependency pinning `pandas<3`; the lock file now resolves pandas 3.1 (2.3 on Python 3.10). `pytorch-tabular`, `requests` and the `pytorch-tabnet<4.2` cap are gone, and so are omegaconf, rich and their transitive dependencies. hyperopt 0.3 no longer needs `pkg_resources`, so the `setuptools<81` pin is gone as well (no dependency is held back any more).
 
 ### Changed
 - TabICL predicts the test set with every training row as context (the validation score still comes from the 80% split), and no longer reports train metrics, which scored the context rows against themselves. Models can opt in with `refit_on_full_train` and `compute_train_metrics = False`.
@@ -26,6 +26,7 @@
 
 ### Fixed
 - `openml:` datasets failed on pandas 3 with scikit-learn 1.9 ("expected string or bytes-like object, got 'int'" in the ARFF parser); AutoDeep now retries with scikit-learn's `liac-arff` parser.
+- Web app: model checkboxes on cards with longer descriptions were squeezed into tiny dots.
 - XGBoost trained on a GPU printed a "mismatched devices" warning on every prediction.
 
 ## 0.3.0: modern tabular models
