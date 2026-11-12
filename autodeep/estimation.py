@@ -45,6 +45,7 @@ PRIORS: dict[str, dict[str, float]] = {
     "lgbm": dict(base=0.1, per_krow=0.11, a=1.0, b=0.8, gpu=1.0, epochs=False),  # assumed ~xgb until timed
     "catboost": dict(base=1.0, per_krow=0.28, a=1.0, b=0.7, gpu=1.0, epochs=False),
     # mlp re-measured 2026-11-12 at 16k rows (default search space, sgd trials ~30 s): steeper than linear
+    "resmlp": dict(base=0.2, per_krow=0.5, a=1.0, b=0.3, gpu=4.0, epochs=False),  # assumed, until timed
     "mlp": dict(base=0.1, per_krow=0.55, a=1.5, b=0.4, gpu=1.0, epochs=False),
     "categoryembedding": dict(base=0.6, per_krow=0.75, a=1.0, b=0.2, gpu=2.0, epochs=True),
     "tabnet": dict(base=0.3, per_krow=4.7, a=1.0, b=0.4, gpu=2.5, epochs=True),

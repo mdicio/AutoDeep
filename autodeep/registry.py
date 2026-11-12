@@ -80,6 +80,16 @@ MODELS: dict[str, ModelInfo] = {
             "fast",
         ),
         ModelInfo(
+            "resmlp",
+            "Residual MLP",
+            "neural",
+            f"{_P}.ResidualMLP:ResidualMLPTrainer",
+            "PyTorch MLP; with an offset column it starts from another model's prediction and learns the residual.",
+            True,
+            ("residualmlp",),
+            "fast",
+        ),
+        ModelInfo(
             "categoryembedding",
             "Category Embedding MLP",
             "deep_tabular",

@@ -1069,6 +1069,25 @@ model_configs:
             - 0.9
             - 0.99
       
+  resmlp:
+    data_params:
+      normalize_features: false
+      encode_categorical: False
+      return_extra_info: True
+
+    default_params:
+      val_size: 0.2
+      early_stopping_patience: 4
+
+    param_grid:
+      width: [64, 512]
+      n_layers: [1, 3]
+      dropout: [0.0, 0.3]
+      lr: [0.0003, 0.01]
+      weight_decay: [0.000001, 0.001]
+      batch_size: [null, 256, 1024, 4096]
+      max_epochs: [10, 60]
+
   mlp:
     data_params:
       normalize_features: mean_std

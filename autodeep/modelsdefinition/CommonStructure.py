@@ -23,7 +23,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 
 from autodeep.device import resolve_device
-from autodeep.evaluation.generalevaluator import Evaluator
+from autodeep.evaluation.generalevaluator import Evaluator, normalize_metric_name
 from autodeep.logging_utils import get_logger
 from autodeep.modelutils.search import TrialOutcome, run_hyperopt
 from autodeep.modelutils.trainingutilities import infer_hyperopt_space
@@ -171,11 +171,33 @@ class BaseTrainer:
         X_tr, X_val, y_tr, y_val = self._split(X, y, val_size)
         evaluator = Evaluator(problem_type=self.problem_type, run_metrics=eval_metrics, metric=metric)
 
+        # search_folds > 1: score every trial on K stratified folds of the training data (mean of the validation
+        # metrics) instead of one split. K times the cost, much less noise when candidates differ by little.
+        # The model kept for prediction is the one of the first split (the usual train/validation split).
+        n_search_folds = int(self.default_params.get("search_folds", 1) or 1)
+        extra_splits = []
+        if n_search_folds > 1:
+            from sklearn.model_selection import KFold, StratifiedKFold
+
+            cv_cls = KFold if self.problem_type == "regression" else StratifiedKFold
+            splits = list(cv_cls(n_search_folds, shuffle=True, random_state=self.random_state).split(X, y))
+            extra_splits = [(X.iloc[a], X.iloc[b], y.iloc[a], y.iloc[b]) for a, b in splits[1:]]
+
         def objective(params):
             params = {k: v for k, v in params.items() if k != _NO_PARAMS}
             model = self.fit_trial(params, X_tr, y_tr, X_val, y_val)
+            val = self._metrics(evaluator, model, X_val, y_val)
+            if extra_splits:
+                folds = [val]
+                for Xa, Xb, ya, yb in extra_splits:
+                    m = self.fit_trial(params, Xa, ya, Xb, yb)
+                    folds.append(self._metrics(evaluator, m, Xb, yb))
+                    del m
+                val = {k: float(np.mean([f[k] for f in folds])) for k in val}
+                key = normalize_metric_name(metric)
+                val[f"{key}_folds"] = [f.get(key) for f in folds]
             return TrialOutcome(
-                validation_metrics=self._metrics(evaluator, model, X_val, y_val),
+                validation_metrics=val,
                 train_metrics=self._metrics(evaluator, model, X_tr, y_tr) if self.compute_train_metrics else {},
                 model=model,
             )

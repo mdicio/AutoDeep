@@ -6,7 +6,7 @@
 
 **Benchmark gradient-boosted trees and deep learning models on your tabular data, with hyperparameter search, runtime estimates and a local web app.**
 
-AutoDeep trains and tunes up to 18 models (XGBoost, LightGBM, CatBoost, the TabICLv2 foundation model, RealMLP, TabM, an MLP, nine deep tabular architectures (CategoryEmbedding, TabNet, FT-Transformer, TabTransformer, AutoInt, GANDALF, GATE, NODE, DANet), a Soft-Ordering 1D-CNN and a ResNet on IGTD images) on one or more datasets, evaluates them on a held-out test set and gives you a leaderboard. By default it picks the models that fit your time budget on your machine, and it saves the best model of each dataset, ready to predict new rows. You can drive it from a browser, from the command line, or from Python.
+AutoDeep trains and tunes up to 19 models (XGBoost, LightGBM, CatBoost, the TabICLv2 foundation model, RealMLP, TabM, a residual MLP, an MLP, nine deep tabular architectures (CategoryEmbedding, TabNet, FT-Transformer, TabTransformer, AutoInt, GANDALF, GATE, NODE, DANet), a Soft-Ordering 1D-CNN and a ResNet on IGTD images) on one or more datasets, evaluates them on a held-out test set and gives you a leaderboard. By default it picks the models that fit your time budget on your machine, and it saves the best model of each dataset, ready to predict new rows. You can drive it from a browser, from the command line, or from Python.
 
 ```bash
 autodeep run data/churn.csv --target churned --budget 10m      # plan, train, compare, save the best model
@@ -193,6 +193,7 @@ Only `path` and `target` are required; everything else is inferred or has a defa
 | `tabicl` | [TabICLv2](https://github.com/soda-inria/tabicl), a pretrained in-context learner: no training, no tuning | foundation model |
 | `realmlp` | [RealMLP](https://github.com/dholzmueller/pytabkit) (tuned-default MLP with numerical embeddings) | neural network |
 | `tabm` | [TabM](https://github.com/yandex-research/tabm) (parameter-efficient MLP ensemble) | neural network |
+| `resmlp` | Residual MLP (PyTorch); can start from another model's prediction via an offset column | neural network |
 | `mlp` | scikit-learn MLP | neural network |
 | `s1dcnn` | Soft-Ordering 1D-CNN | neural network |
 | `categoryembedding` | Category-embedding MLP | deep tabular |

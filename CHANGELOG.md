@@ -5,6 +5,8 @@
 ### New
 - **LightGBM** (`lgbm`, CPU, native categorical columns) with a default search space; it is part of the `fast` preset.
 - **Offset columns (GLM-boost).** XGBoost and LightGBM accept `default_params: {offset_column: <name>}`: that column holds log-odds from another model (e.g. an out-of-fold logistic regression), boosting starts from it (`base_margin` / `init_score`) and predictions add it back. The column is not used as a feature. Binary classification only.
+- **Residual MLP** (`resmlp`, PyTorch): with an offset column the output is `offset + net(x)` with a zero-initialised head, so training starts at the offset model and learns its residual; otherwise a plain MLP. Early stopping on validation AUC (binary) or loss.
+- **`search_folds: K`** in a model's `default_params`: every trial is scored on K stratified folds (mean validation metric) instead of one split. Use it when candidates differ by less than the noise of a single validation split (K times the cost).
 - **`autodeep.ensemble.Stacker`**: stacks out-of-fold predictions (from AutoDeep or anywhere else) with Caruana hill climbing or an L2 logistic regression on logit-ranks, scored by nested cross-validation (`nested_score_`, `weights_`, `predict()`).
 
 ## 0.4.0 (unreleased): use the models, sensible defaults

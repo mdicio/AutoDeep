@@ -74,3 +74,43 @@ def test_logit_rank_and_hill_climb():
     y = np.array([0, 0, 1, 1])
     w = hill_climb(np.column_stack([[0.1, 0.2, 0.8, 0.9], [0.9, 0.1, 0.2, 0.3]]), y)
     assert w[0] == 1.0
+
+
+def test_search_folds_averages_validation_scores():
+    from sklearn.datasets import load_breast_cancer
+
+    X, y = load_breast_cancer(return_X_y=True, as_frame=True)
+    t = create_model("lgbm", "binary_classification", 0)
+    cfg = {"default_params": {"search_folds": 3, "early_stopping_rounds": 10}, "param_grid": {"n_estimators": [50], "num_leaves": [4, 16]}}
+    t.hyperopt_search(X, y, cfg, "auc", ["roc_auc"], max_evals=2, extra_info={"num_classes": 2})
+    trial = t.search_result.trials[0]
+    assert len(trial["val_roc_auc_folds"]) == 3
+    assert abs(trial["val_roc_auc"] - np.mean(trial["val_roc_auc_folds"])) < 1e-12
+
+
+def test_resmlp_all_problem_types(tmp_path, mixed_csv):
+    runner = AutoRunner(
+        datasets={
+            "mixed": {"path": str(mixed_csv), "target": "label", "drop_columns": ["id", "split"]},
+            "diabetes": {"path": "builtin:diabetes"},
+            "wine": {"path": "builtin:wine"},
+        },
+        models=["resmlp"],
+        max_evals=2,
+        max_epochs=5,
+        output_folder=tmp_path,
+        log_level="WARNING",
+    )
+    board = runner.run()
+    assert (board["status"] == "ok").all(), board[["dataset", "error"]].to_string()
+
+
+def test_resmlp_starts_at_the_offset():
+    X, y = _offset_data()
+    t = create_model("resmlp", "binary_classification", 0)
+    t.default_params = {"offset_column": "glm_offset"}
+    t.num_classes = 2
+    t.prepare(X, y, {})
+    m = t.fit_trial({"max_epochs": 3, "width": 32, "n_layers": 1}, X.iloc[:2400], y.iloc[:2400], X.iloc[2400:], y.iloc[2400:])
+    _, p = t.predict_with(m, X.iloc[2400:])
+    assert roc_auc_score(y.iloc[2400:], p) >= roc_auc_score(y.iloc[2400:], X["glm_offset"].iloc[2400:]) - 0.01
