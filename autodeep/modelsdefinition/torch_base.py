@@ -160,6 +160,7 @@ class TorchTrainer(BaseTrainer):
     def predict_with(self, net, X):
         import torch
 
+        net = self._on_own_device(net)
         net.eval()
         X_t = self.to_tensor(X)
         outs = []
@@ -203,13 +204,17 @@ class TorchTrainer(BaseTrainer):
                     net = self.build_network(params, n_features, n_outputs)
                     net.load_state_dict(saved["weights"])
                     net._autodeep_build = saved["build"]
-                    rebuilt[id(saved)] = self._to_own_device(net).eval()
+                    rebuilt[id(saved)] = net.eval()  # on CPU; predict_with() moves it to the trainer's device
                 setattr(self, key, rebuilt[id(saved)])
 
-    def _to_own_device(self, net):
-        """Put an unpickled network where :attr:`device` will send the inputs (CPU if that fails)."""
+    def _on_own_device(self, net):
+        """Move ``net`` where :attr:`device` sends the inputs, e.g. after unpickling (CPU if that fails)."""
+        device = self.device
+        param = next(net.parameters(), None)
+        if param is None or param.device.type == device:
+            return net
         try:
-            return net.to(self.device)
+            return net.to(device)
         except Exception:  # e.g. no usable GPU after all
             self._device_override = "cpu"
             return net.to("cpu")

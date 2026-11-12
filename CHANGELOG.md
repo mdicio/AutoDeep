@@ -15,6 +15,7 @@
 ### Changed
 - TabICL predicts the test set with every training row as context (the validation score still comes from the 80% split), and no longer reports train metrics, which scored the context rows against themselves. Models can opt in with `refit_on_full_train` and `compute_train_metrics = False`.
 - Estimates warn when a model that is much faster on a GPU (TabICL, TabM, the 1D-CNN, ResNet) would take more than 5 minutes on CPU. `autodeep estimate` and the run log now print the per-job warnings, which only the web app showed before.
+- **XGBoost and CatBoost search spaces are now competitive baselines.** XGBoost used to search 50-200 trees with learning rates down to 0.01 (badly underfit at low rates, and early stopping after 100 rounds could never trigger), and CatBoost only searched `iterations` between 100 and 500. Both now train up to 2000 trees with early stopping on the validation split (50 / 100 rounds) and search learning rate, depth and regularisation (XGBoost also row/column subsampling and `gamma`). Trials take longer; GBDT scores from 0.3.0 are not comparable.
 - `AutoRunner(models=None)` means `"auto"` instead of the fixed `default` preset; pass `models="default"` for the old behaviour. `max_evals` defaults to the plan's value (25 with explicit models).
 - Preprocessing is a fitted `TabularPreprocessor` object (identical output to 0.3.0 on four built-in datasets × all normalisation/encoding options). Mixed-type text columns are now always treated as categorical strings, and datetime columns with missing values no longer produce huge negative numbers.
 - The deep tabular models keep pytorch-tabular's hyperparameter names and defaults, so existing `param_grid`s work unchanged. Scores differ slightly from 0.3.0: binary targets use one logit with a class-balanced BCE loss (as the other PyTorch models do) instead of two-class cross-entropy, categories are encoded on the whole training set, and the batch size falls back to `default_params.batch_size`.
@@ -22,6 +23,10 @@
 - Models saved with 0.3.0's pytorch-tabular trainers cannot be loaded; retrain them. All trained PyTorch models are now saved as weights plus build arguments.
 - `autodeep.modelsdefinition.pytorch_tabular_models` is kept as an alias of the new `deep_tabular_models` module.
 - The scikit-learn MLP's runtime prior was re-measured (it was ~15x too optimistic above 10,000 rows).
+
+### Fixed
+- `openml:` datasets failed on pandas 3 with scikit-learn 1.9 ("expected string or bytes-like object, got 'int'" in the ARFF parser); AutoDeep now retries with scikit-learn's `liac-arff` parser.
+- XGBoost trained on a GPU printed a "mismatched devices" warning on every prediction.
 
 ## 0.3.0: modern tabular models
 

@@ -183,7 +183,12 @@ def read_table(path, sep: Optional[str] = None, nrows: Optional[int] = None) -> 
 
         ref = path_str.split(":", 1)[1].strip()
         kwargs = {"data_id": int(ref)} if ref.isdigit() else {"name": ref, "version": "active"}
-        bunch = fetch_openml(as_frame=True, parser="auto", **kwargs)
+        try:
+            bunch = fetch_openml(as_frame=True, parser="auto", **kwargs)
+        except TypeError:
+            # scikit-learn <= 1.9's pandas ARFF parser expects string categories, which pandas 3 does not always
+            # give it ("expected string or bytes-like object, got 'int'"): use the pure-Python parser instead
+            bunch = fetch_openml(as_frame=True, parser="liac-arff", **kwargs)
         df = bunch.frame.copy()
         return df.head(nrows) if nrows else df
 

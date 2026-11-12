@@ -30,7 +30,12 @@ class XGBoostTrainer(SklearnLikeTrainer):
         return model
 
     def predict_with(self, model, X):
-        return super().predict_with(model, _categories_to_pandas(X))
+        import warnings
+
+        with warnings.catch_warnings():
+            # a GPU booster given CPU data falls back to a DMatrix (still on the GPU) and warns on every call
+            warnings.filterwarnings("ignore", message=".*mismatched devices.*")
+            return super().predict_with(model, _categories_to_pandas(X))
 
     def to_device(self, device):
         super().to_device(device)

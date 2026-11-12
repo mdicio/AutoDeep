@@ -11,6 +11,7 @@ over the data schema (number of continuous columns, categorical cardinalities, o
 
 from __future__ import annotations
 
+import logging
 from collections import OrderedDict
 from types import SimpleNamespace
 from typing import Dict, List, Optional
@@ -29,6 +30,11 @@ from .node_blocks import DenseODSTBlock
 from .soft_trees import NeuralDecisionTree
 from .transformers import AppendCLSToken, TransformerEncoderBlock
 from .utils import LinearHead, _initialize_layers, _linear_dropout_bn
+
+logger = logging.getLogger(__name__)
+
+# consumed by the training loop, not by the architectures
+_TRAINER_KEYS = {"batch_size", "optimizer_fn", "scheduler_fn", "weights"}
 
 # Shared by every pytorch-tabular ModelConfig
 _COMMON = {
@@ -162,6 +168,9 @@ def embedding_dims(categorical_cardinality: List[int]):
 
 def make_hparams(model: str, params: Dict, continuous_dim: int, categorical_cardinality: List[int], output_dim: int, task: str):
     hp = {**_COMMON, **DEFAULTS[model]}
+    ignored = sorted(k for k in params if k not in hp and k not in _TRAINER_KEYS)
+    if ignored:
+        logger.debug(f"{model}: ignoring parameters the architecture does not use: {ignored}")
     hp.update({k: v for k, v in params.items() if k in hp or k == "batch_size"})
     hp["head_config"] = {**_COMMON["head_config"], **(hp.get("head_config") or {})}
     hp.update(

@@ -291,6 +291,9 @@ class AutoRunner:
         setup_logging(self.log_level, log_file=self.output_folder / "autodeep.log")
         set_device(self.device)
         device = apply_device_policy()  # before anything initialises CUDA
+        # pin the device for the whole run: with "auto", every lookup would query nvidia-smi again and a run
+        # could switch to CPU halfway once its own GPU allocations shrink the free memory
+        set_device(device)
         self.run_id = datetime.now().strftime("%Y%m%d-%H%M%S-") + uuid4().hex[:6]
         from autodeep.factory import seed_everything
 
@@ -361,6 +364,7 @@ class AutoRunner:
         finally:
             progress.emit("run_end", run_id=self.run_id, cancelled=cancelled, n_results=len(self.results))
             progress.set_reporter(previous)
+            set_device(self.device)
         board = self.leaderboard()
         if not board.empty:
             logger.info("Leaderboard:\n" + board.to_string(index=False, max_colwidth=40))
