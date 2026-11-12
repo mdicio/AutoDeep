@@ -13,6 +13,8 @@ autodeep run data/churn.csv --target churned --budget 10m      # plan, train, co
 autodeep predict output/models/churn/best new_customers.csv -o predictions.csv
 ```
 
+![A finished run in the web app: the saved best model and the leaderboard](images/ui_results.png)
+
 ---
 
 ## Install
@@ -62,6 +64,12 @@ This opens `http://127.0.0.1:8765` (or the next free port). Then:
 5. **Use the model.** The best model of each dataset is saved. Download it, or upload a file and get its predictions back as CSV.
 
 Uploaded files and runs are stored in `./autodeep_workspace` (change it with `--workspace`). Everything stays on your machine.
+
+<details><summary>Screenshot: setting up an experiment</summary>
+
+![Datasets and model picker of a new experiment](images/ui_new_experiment.png)
+
+</details>
 
 ### 2. Command line
 
@@ -201,7 +209,7 @@ Only `path` and `target` are required; everything else is inferred or has a defa
 
 **Presets:** `fast` = xgb, catboost, mlp · `default` = fast + tabicl, realmlp, categoryembedding, fttransformer, gandalf · `modern` = tabicl, realmlp, tabm · `deep` = realmlp, tabm and the nine deep tabular models · `all`.
 
-**Which deep models to try first?** On the [TabArena](https://huggingface.co/spaces/TabArena/leaderboard) benchmark, TabICLv2, RealMLP and TabM are among the strongest tabular models, ahead of the older deep tabular architectures (which TabArena does not include).
+**Which deep models to try first?** On the [TabArena](https://huggingface.co/spaces/TabArena/leaderboard) benchmark, TabICLv2, RealMLP and TabM are among the strongest tabular models, ahead of the older deep tabular architectures (which TabArena does not include). In AutoDeep's own [benchmark](benchmarks/README.md) on three datasets of 20,000-50,000 rows, TabICLv2 was the best model on two of them without any tuning, and tuned CatBoost/XGBoost won on the third (adult, mostly categorical).
 
 The nine deep tabular architectures were ported from [PyTorch Tabular](https://github.com/manujosephv/pytorch_tabular) (MIT) to plain PyTorch modules in `autodeep/modelsdefinition/tabular_nets/`, and are trained by AutoDeep's own loop (early stopping, best weights kept in memory). Hyperparameter names are the same as in PyTorch Tabular's model configs. AutoDeep no longer depends on PyTorch Tabular, which pins `pandas<3`.
 

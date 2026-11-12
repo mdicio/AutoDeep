@@ -24,6 +24,11 @@
 - `autodeep.modelsdefinition.pytorch_tabular_models` is kept as an alias of the new `deep_tabular_models` module.
 - The scikit-learn MLP's runtime prior was re-measured (it was ~15x too optimistic above 10,000 rows).
 
+### Also
+- `benchmarks/README.md`: results of `larger_datasets.py` (TabICLv2, RealMLP, TabM, CatBoost, XGBoost on three datasets of 20k-50k rows) and measured GPU speed-ups. The estimator's GPU factors for TabICLv2 (now 50x), TabM (12x) and RealMLP (1.5x) and its XGBoost/CatBoost CPU priors (for the new grids) were updated from these runs.
+- README screenshots of the web app.
+- `examples/walkthrough.ipynb` was executed end to end in Jupyter (nbconvert).
+
 ### Fixed
 - `openml:` datasets failed on pandas 3 with scikit-learn 1.9 ("expected string or bytes-like object, got 'int'" in the ARFF parser); AutoDeep now retries with scikit-learn's `liac-arff` parser.
 - Web app: model checkboxes on cards with longer descriptions were squeezed into tiny dots.

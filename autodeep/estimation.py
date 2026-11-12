@@ -39,8 +39,10 @@ TYPICAL_EPOCHS = 40
 # ~2k rows (XS search space) and ~16k rows (default search space). node/danet/s1dcnn/resnet are
 # extrapolated from the 2k point. GPU factors are rough guesses: your history replaces them.
 PRIORS: dict[str, dict[str, float]] = {
-    "xgb": dict(base=0.1, per_krow=0.012, a=1.0, b=0.8, gpu=1.0, epochs=False),
-    "catboost": dict(base=1.0, per_krow=0.06, a=1.0, b=0.7, gpu=1.0, epochs=False),
+    # xgb/catboost re-fitted 2026-11-12 for the 0.4.0 grids (up to 2000 trees + early stopping) on CPU at 16k-40k
+    # rows (medians of 5 trials on california_housing, adult, covertype_50k; multiclass costs ~3x more for xgb)
+    "xgb": dict(base=0.1, per_krow=0.11, a=1.0, b=0.8, gpu=1.0, epochs=False),
+    "catboost": dict(base=1.0, per_krow=0.28, a=1.0, b=0.7, gpu=1.0, epochs=False),
     # mlp re-measured 2026-11-12 at 16k rows (default search space, sgd trials ~30 s): steeper than linear
     "mlp": dict(base=0.1, per_krow=0.55, a=1.5, b=0.4, gpu=1.0, epochs=False),
     "categoryembedding": dict(base=0.6, per_krow=0.75, a=1.0, b=0.2, gpu=2.0, epochs=True),
@@ -56,9 +58,11 @@ PRIORS: dict[str, dict[str, float]] = {
     "resnet": dict(base=1.0, per_krow=95.0, a=1.0, b=0.3, gpu=10.0, epochs=True),
     # added 2026-11 (same machine). tabicl: one forward pass, cost ~ rows x context (2k: 38 s, 16k: 497 s on CPU).
     # realmlp: fixed 256 epochs (2k: 17 s, 16k: 110 s). tabm: early stopping (2k: 109 s; 16k extrapolated).
-    "tabicl": dict(base=3.0, per_krow=16.0, a=1.23, b=0.5, gpu=15.0, epochs=False),
-    "realmlp": dict(base=0.5, per_krow=9.4, a=0.89, b=0.5, gpu=5.0, epochs=True, typical_epochs=256),
-    "tabm": dict(base=1.0, per_krow=60.0, a=0.85, b=0.5, gpu=10.0, epochs=True, typical_epochs=100),
+    # GPU factors of these three measured 2026-11-12 on an RTX 3060 (benchmarks/larger_datasets.py, 16k-40k rows):
+    # tabicl 54-78x, tabm 10-43x (median 13x), realmlp 0.9-2.1x (batch 256 x 256 epochs is launch-bound).
+    "tabicl": dict(base=3.0, per_krow=16.0, a=1.23, b=0.5, gpu=50.0, epochs=False),
+    "realmlp": dict(base=0.5, per_krow=9.4, a=0.89, b=0.5, gpu=1.5, epochs=True, typical_epochs=256),
+    "tabm": dict(base=1.0, per_krow=60.0, a=0.85, b=0.5, gpu=12.0, epochs=True, typical_epochs=100),
 }
 DEFAULT_PRIOR = dict(base=5.0, per_krow=5.0, a=1.0, b=0.5, gpu=3.0, epochs=True)
 # models with a GPU factor of at least GPU_HUNGRY get a warning when their CPU estimate exceeds SLOW_ON_CPU_SECONDS
