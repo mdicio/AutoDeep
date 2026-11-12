@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import copy
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -54,7 +54,7 @@ class BaseTrainer:
     model_name = "base"
     space_fn = staticmethod(infer_hyperopt_space)
     #: upper bound on the number of search trials (1 for models with nothing to tune, e.g. TabICL)
-    max_trials: Optional[int] = None
+    max_trials: int | None = None
     #: allow running with an empty ``param_grid`` (defaults only)
     allow_empty_grid = False
     #: first trial uses the first option of every ``param_grid`` choice (``null`` = the library's tuned default)
@@ -67,33 +67,33 @@ class BaseTrainer:
     #: Only for models where that is cheap and needs no early stopping, e.g. in-context learners.
     refit_on_full_train = False
 
-    def __init__(self, problem_type: str = "binary_classification", random_state: int = 42, num_workers: Optional[int] = None):
+    def __init__(self, problem_type: str = "binary_classification", random_state: int = 42, num_workers: int | None = None):
         self.problem_type = problem_type
         self.random_state = random_state
         self.task = "regression" if problem_type == "regression" else "classification"
         self.logger = get_logger(self.model_name)
         self.model = None
-        self.extra_info: Optional[Dict[str, Any]] = None
-        self.default_params: Dict[str, Any] = {}
+        self.extra_info: dict[str, Any] | None = None
+        self.default_params: dict[str, Any] = {}
         self.num_workers = num_workers
-        self.output_dir: Optional[Path] = None  # set by AutoRunner; where per-trial files go
-        self.max_epochs: Optional[int] = None  # global override, e.g. for quick runs
-        self.timeout: Optional[float] = None  # seconds for the whole search
+        self.output_dir: Path | None = None  # set by AutoRunner; where per-trial files go
+        self.max_epochs: int | None = None  # global override, e.g. for quick runs
+        self.timeout: float | None = None  # seconds for the whole search
         self.search_result = None
-        self.num_classes: Optional[int] = None
+        self.num_classes: int | None = None
 
     # ------------------------------------------------------------------ hooks
-    def prepare(self, X: pd.DataFrame, y: pd.Series, extra_info: Optional[Dict]) -> None:
+    def prepare(self, X: pd.DataFrame, y: pd.Series, extra_info: dict | None) -> None:
         """Called once before the search (e.g. compute class weights)."""
 
     def transform_X(self, X: pd.DataFrame) -> pd.DataFrame:
         """Applied to every feature matrix before fitting / predicting."""
         return X
 
-    def fit_trial(self, params: Dict[str, Any], X_train, y_train, X_val, y_val):
+    def fit_trial(self, params: dict[str, Any], X_train, y_train, X_val, y_val):
         raise NotImplementedError
 
-    def predict_with(self, model, X: pd.DataFrame) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    def predict_with(self, model, X: pd.DataFrame) -> tuple[np.ndarray, np.ndarray | None]:
         """Return ``(predictions, probabilities)``; probabilities are 1-D (binary), 2-D (multiclass) or ``None``."""
         raise NotImplementedError
 
@@ -122,7 +122,7 @@ class BaseTrainer:
 
         return torch_threads(n_rows)
 
-    def class_weights(self, y: pd.Series) -> Optional[np.ndarray]:
+    def class_weights(self, y: pd.Series) -> np.ndarray | None:
         if self.problem_type == "regression":
             return None
         classes = np.arange(self.num_classes)
@@ -135,7 +135,7 @@ class BaseTrainer:
         stratify = y if self.problem_type != "regression" and y.value_counts().min() >= 2 else None
         return train_test_split(X, y, test_size=val_size, random_state=self.random_state, stratify=stratify)
 
-    def _metrics(self, evaluator: Evaluator, model, X, y) -> Dict[str, float]:
+    def _metrics(self, evaluator: Evaluator, model, X, y) -> dict[str, float]:
         if len(X) > self.max_rows_for_train_metrics:
             idx = np.random.default_rng(0).choice(len(X), self.max_rows_for_train_metrics, replace=False)
             X, y = X.iloc[idx], y.iloc[idx]
@@ -217,7 +217,7 @@ class BaseTrainer:
         """Hyperopt point selecting option 0 of every choice, if every parameter is a choice starting with ``None``."""
         if not (self.first_trial_defaults and param_grid):
             return None
-        if all(isinstance(v, (list, tuple)) and len(v) > 1 and v[0] is None for v in param_grid.values()):
+        if all(isinstance(v, list | tuple) and len(v) > 1 and v[0] is None for v in param_grid.values()):
             return [{name: 0 for name in param_grid}]
         self.logger.debug(f"{self.model_name}: param_grid is not all null-first choices, first trial is random")
         return None

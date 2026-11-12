@@ -23,7 +23,7 @@ import threading
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import pandas as pd
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
@@ -48,25 +48,25 @@ MAX_PROFILE_ROWS = 200_000
 class DatasetIn(BaseModel):
     name: str
     path: str
-    target: Optional[str] = None
-    problem_type: Optional[str] = None
-    metric: Optional[str] = None
-    eval_metrics: Optional[List[str]] = None
+    target: str | None = None
+    problem_type: str | None = None
+    metric: str | None = None
+    eval_metrics: list[str] | None = None
     test_size: float = 0.2
-    split_col: Optional[str] = None
-    train_value: Optional[Any] = None
-    test_value: Optional[Any] = None
-    drop_columns: List[str] = Field(default_factory=list)
-    max_rows: Optional[int] = None
+    split_col: str | None = None
+    train_value: Any | None = None
+    test_value: Any | None = None
+    drop_columns: list[str] = Field(default_factory=list)
+    max_rows: int | None = None
 
 
 class JobIn(BaseModel):
-    name: Optional[str] = None
-    datasets: List[DatasetIn]
-    models: List[str]
+    name: str | None = None
+    datasets: list[DatasetIn]
+    models: list[str]
     max_evals: int = 20
-    max_epochs: Optional[int] = None
-    timeout_per_model: Optional[float] = None
+    max_epochs: int | None = None
+    timeout_per_model: float | None = None
     device: str = "auto"
     random_state: int = 42
     save_models: bool = False
@@ -74,15 +74,15 @@ class JobIn(BaseModel):
 
 
 class PlanIn(BaseModel):
-    datasets: List[DatasetIn]
+    datasets: list[DatasetIn]
     time_budget: float = 15 * 60  # seconds, whole run
     device: str = "auto"
-    max_epochs: Optional[int] = None
+    max_epochs: int | None = None
 
 
 class ProfileIn(BaseModel):
     path: str
-    target: Optional[str] = None
+    target: str | None = None
 
 
 # --------------------------------------------------------------------------------------
@@ -99,11 +99,11 @@ class Workspace:
         for d in (self.datasets_dir, self.runs_dir):
             d.mkdir(parents=True, exist_ok=True)
         self.lock = threading.Lock()
-        self.procs: Dict[str, subprocess.Popen] = {}
-        self._profile_cache: Dict[str, Any] = {}
+        self.procs: dict[str, subprocess.Popen] = {}
+        self._profile_cache: dict[str, Any] = {}
 
     # datasets ----------------------------------------------------------------
-    def registered(self) -> List[Dict]:
+    def registered(self) -> list[dict]:
         if not self.registry_file.exists():
             return []
         try:
@@ -111,7 +111,7 @@ class Workspace:
         except json.JSONDecodeError:
             return []
 
-    def save_registered(self, items: List[Dict]) -> None:
+    def save_registered(self, items: list[dict]) -> None:
         with self.lock:
             self.registry_file.write_text(json.dumps(items, indent=2, default=str))
 
@@ -134,7 +134,7 @@ class Workspace:
             raise HTTPException(404, f"job {job_id} not found")
         return d
 
-    def job_status(self, job_id: str) -> Dict:
+    def job_status(self, job_id: str) -> dict:
         d = self.job_dir(job_id)
         job = json.loads((d / JOB_FILE).read_text())
         status = {}
@@ -170,7 +170,7 @@ def _safe_filename(name: str) -> str:
     return f"{stem}{ext.lower()}"
 
 
-def _read_events(path: Path, since: int = 0, limit: int = 500) -> List[Dict]:
+def _read_events(path: Path, since: int = 0, limit: int = 500) -> list[dict]:
     if not path.exists():
         return []
     out = []
@@ -189,7 +189,7 @@ def _read_events(path: Path, since: int = 0, limit: int = 500) -> List[Dict]:
     return out
 
 
-def _best_models(job_dir: Path) -> List[Dict]:
+def _best_models(job_dir: Path) -> list[dict]:
     """Saved best model per dataset (read from info.json; the server never unpickles models)."""
     out = []
     for info_file in sorted((job_dir / "output" / "models").glob("*/best/info.json")):
@@ -202,7 +202,7 @@ def _best_models(job_dir: Path) -> List[Dict]:
     return out
 
 
-def _results(job_dir: Path) -> List[Dict]:
+def _results(job_dir: Path) -> list[dict]:
     path = job_dir / "output" / "experiments.csv"
     if not path.exists():
         return []
@@ -223,7 +223,7 @@ def _results(job_dir: Path) -> List[Dict]:
 # --------------------------------------------------------------------------------------
 
 
-def create_app(workspace: Optional[str] = None) -> FastAPI:
+def create_app(workspace: str | None = None) -> FastAPI:
     ws = Workspace(Path(workspace or os.environ.get("AUTODEEP_WORKSPACE", "autodeep_workspace")))
     app = FastAPI(title="AutoDeep", version=__version__)
     app.state.workspace = ws
@@ -263,7 +263,7 @@ def create_app(workspace: Optional[str] = None) -> FastAPI:
         return {"builtin": list_builtin_datasets(), "registered": ws.registered(), "supported_extensions": list(SUPPORTED_EXTENSIONS)}
 
     @app.post("/api/datasets/upload")
-    async def upload(file: UploadFile = File(...), name: Optional[str] = Form(None)):
+    async def upload(file: UploadFile = File(...), name: str | None = Form(None)):
         filename = _safe_filename(file.filename)
         if not filename.lower().endswith(SUPPORTED_EXTENSIONS):
             raise HTTPException(400, f"Unsupported file type. Use one of {', '.join(SUPPORTED_EXTENSIONS)}")
@@ -548,7 +548,7 @@ def _port_free(host: str, port: int) -> bool:
             return False
 
 
-def serve(host: str = "127.0.0.1", port: Optional[int] = None, workspace: Optional[str] = None, open_browser: bool = True):
+def serve(host: str = "127.0.0.1", port: int | None = None, workspace: str | None = None, open_browser: bool = True):
     import uvicorn
 
     if port is None:  # default port busy (another app?) -> take the next free one

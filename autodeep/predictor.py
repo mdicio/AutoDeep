@@ -24,7 +24,7 @@ import json
 import platform
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -37,17 +37,17 @@ FORMAT_VERSION = 1
 PICKLE_FILE = "predictor.pt"
 INFO_FILE = "info.json"
 
-DataLike = Union[pd.DataFrame, str, Path, Dict[str, Any], List[Dict[str, Any]]]
+DataLike = pd.DataFrame | str | Path | dict[str, Any] | list[dict[str, Any]]
 
 
 def _jsonable(value):
     if isinstance(value, dict):
         return {str(k): _jsonable(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, list | tuple):
         return [_jsonable(v) for v in value]
     if isinstance(value, np.generic):
         return value.item()
-    if isinstance(value, (str, int, float, bool)) or value is None:
+    if isinstance(value, str | int | float | bool) or value is None:
         return value
     return str(value)
 
@@ -55,7 +55,7 @@ def _jsonable(value):
 class Predictor:
     """Preprocessing + trained model for one (dataset, model) pair."""
 
-    def __init__(self, trainer, preprocessor, info: Dict[str, Any]):
+    def __init__(self, trainer, preprocessor, info: dict[str, Any]):
         self.trainer = trainer
         self.preprocessor = preprocessor
         self.info = dict(info)
@@ -70,24 +70,24 @@ class Predictor:
         return self.info["model"]
 
     @property
-    def classes(self) -> Optional[List[Any]]:
+    def classes(self) -> list[Any] | None:
         """Original class labels (classification), in the order of the probability columns."""
         return self.info.get("classes")
 
     @property
-    def input_columns(self) -> List[str]:
+    def input_columns(self) -> list[str]:
         return list(self.preprocessor.input_columns)
 
     def __repr__(self) -> str:
         i = self.info
-        score = f", test {i.get('metric')}={i['test_score']:.4f}" if isinstance(i.get("test_score"), (int, float)) else ""
+        score = f", test {i.get('metric')}={i['test_score']:.4f}" if isinstance(i.get("test_score"), int | float) else ""
         return f"Predictor({i.get('model')} on {i.get('dataset')!r}, {i.get('problem_type')}{score}, {len(self.input_columns)} input columns)"
 
     # ------------------------------------------------------------------ prediction
     def _frame(self, data: DataLike) -> pd.DataFrame:
         if isinstance(data, pd.DataFrame):
             return data
-        if isinstance(data, (str, Path)):
+        if isinstance(data, str | Path):
             from autodeep.datasets import read_table
 
             return read_table(data)
@@ -144,7 +144,7 @@ class Predictor:
             out = pd.concat([out, probs], axis=1)
         return out
 
-    def evaluate(self, data: DataLike, target: Optional[str] = None, metrics: Optional[List[str]] = None) -> Dict[str, float]:
+    def evaluate(self, data: DataLike, target: str | None = None, metrics: list[str] | None = None) -> dict[str, float]:
         """Score the model on labelled rows (the target column must be present)."""
         from autodeep.evaluation.generalevaluator import Evaluator
 
@@ -171,7 +171,7 @@ class Predictor:
         ).evaluate_model()
 
     # ------------------------------------------------------------------ persistence
-    def save(self, path: Union[str, Path]) -> Path:
+    def save(self, path: str | Path) -> Path:
         """Write the predictor to the folder ``path`` (created if needed)."""
         import torch
 
@@ -193,7 +193,7 @@ class Predictor:
         return path
 
     @classmethod
-    def load(cls, path: Union[str, Path], device: str = "auto") -> "Predictor":
+    def load(cls, path: str | Path, device: str = "auto") -> Predictor:
         """Load a predictor saved with :meth:`save`. ``device``: ``"auto"``, ``"cpu"`` or ``"cuda"``."""
         import torch
 
@@ -210,7 +210,7 @@ class Predictor:
         obj.to(device)
         return obj
 
-    def to(self, device: str = "auto") -> "Predictor":
+    def to(self, device: str = "auto") -> Predictor:
         """Run predictions on ``device`` (``"auto"`` picks the GPU only if it has enough free memory)."""
         if device in (None, "auto"):
             from autodeep.device import resolve_device
@@ -222,6 +222,6 @@ class Predictor:
         return self
 
 
-def load_model(path: Union[str, Path], device: str = "auto") -> Predictor:
+def load_model(path: str | Path, device: str = "auto") -> Predictor:
     """Load a model saved by AutoDeep (a folder such as ``output/models/<dataset>/best``)."""
     return Predictor.load(path, device=device)

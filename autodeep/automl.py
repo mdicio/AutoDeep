@@ -7,9 +7,10 @@ import gc
 import json
 import time
 import traceback
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any
 from uuid import uuid4
 
 import numpy as np
@@ -59,16 +60,16 @@ RESULT_FIELDS = [
 logger = get_logger()
 
 
-def _load_yaml(path) -> Dict:
-    with open(path, "r") as f:
+def _load_yaml(path) -> dict:
+    with open(path) as f:
         return yaml.safe_load(f)
 
 
 def _json(value) -> str:
     def default(o):
-        if isinstance(o, (np.integer,)):
+        if isinstance(o, np.integer):
             return int(o)
-        if isinstance(o, (np.floating,)):
+        if isinstance(o, np.floating):
             return float(o)
         if isinstance(o, np.ndarray):
             return o.tolist()
@@ -131,26 +132,26 @@ class AutoRunner:
         datasets=None,
         models=None,
         execution_mode: str = "hyperopt",
-        max_evals: Optional[int] = None,
+        max_evals: int | None = None,
         random_state: int = 42,
-        model_config: Union[str, Path, Dict, None] = None,
-        output_folder: Union[str, Path] = DEFAULT_OUTPUT_FOLDER,
+        model_config: str | Path | dict | None = None,
+        output_folder: str | Path = DEFAULT_OUTPUT_FOLDER,
         output_filename: str = "experiments",
-        igtd_path: Union[str, Path, None] = None,
-        igtd_config: Optional[Dict] = None,
-        timeout_per_model: Optional[float] = None,
-        max_epochs: Optional[int] = None,
+        igtd_path: str | Path | None = None,
+        igtd_config: dict | None = None,
+        timeout_per_model: float | None = None,
+        max_epochs: int | None = None,
         device: str = "auto",
-        on_event: Optional[Callable[[Dict], None]] = None,
+        on_event: Callable[[dict], None] | None = None,
         fail_fast: bool = False,
         save_models: bool = False,
         save_best: bool = True,
-        time_budget: Union[None, float, str] = None,
+        time_budget: None | float | str = None,
         log_level: str = "INFO",
     ):
         if execution_mode != "hyperopt":
             raise ValueError("Only execution_mode='hyperopt' is implemented.")
-        self.datasets: List[DatasetSpec] = parse_datasets(datasets if datasets is not None else data_config)
+        self.datasets: list[DatasetSpec] = parse_datasets(datasets if datasets is not None else data_config)
         names = [d.name for d in self.datasets]
         if len(set(names)) != len(names):
             raise ValueError(f"Dataset names must be unique, got {names}")
@@ -158,7 +159,7 @@ class AutoRunner:
 
         requested = models if models is not None else default_models
         self.auto = requested is None or (isinstance(requested, str) and requested.strip().lower() == "auto")
-        self.models: List[str] = [] if self.auto else resolve_models(requested)  # auto: filled in by plan()
+        self.models: list[str] = [] if self.auto else resolve_models(requested)  # auto: filled in by plan()
         self.execution_mode = execution_mode
         self.time_budget = parse_duration(time_budget)
         self._user_max_evals = None if max_evals is None else int(max_evals)
@@ -180,11 +181,11 @@ class AutoRunner:
         self.fail_fast = fail_fast
         self.save_models = bool(save_models)
         self.save_best = bool(save_best)
-        self.best_models: Dict[str, Any] = {}  # dataset -> Predictor (best validation score)
-        self.best_model_paths: Dict[str, Path] = {}
+        self.best_models: dict[str, Any] = {}  # dataset -> Predictor (best validation score)
+        self.best_model_paths: dict[str, Path] = {}
         self.log_level = log_level
-        self.results: List[Dict[str, Any]] = []
-        self.trained_models: Dict[tuple, Any] = {}
+        self.results: list[dict[str, Any]] = []
+        self.trained_models: dict[tuple, Any] = {}
         self.run_id = None
 
     # backwards-compatible attribute names
@@ -197,7 +198,7 @@ class AutoRunner:
         return {d.name: d.as_legacy_dict() for d in self.datasets}
 
     @classmethod
-    def from_yaml(cls, path, **overrides) -> "AutoRunner":
+    def from_yaml(cls, path, **overrides) -> AutoRunner:
         """Build a runner from an experiment YAML file (see ``examples/experiment.yaml``)."""
         cfg = _load_yaml(path) or {}
         base = Path(path).resolve().parent
@@ -215,7 +216,7 @@ class AutoRunner:
 
     # ------------------------------------------------------------------ config
     @staticmethod
-    def _load_model_config(cfg) -> Dict:
+    def _load_model_config(cfg) -> dict:
         if isinstance(cfg, dict):
             return copy.deepcopy(cfg)
         return _load_yaml(cfg)
@@ -223,7 +224,7 @@ class AutoRunner:
     def _load_config(self, path):  # backwards compatibility
         return _load_yaml(path)
 
-    def model_config_for(self, n_train_rows: int) -> Dict:
+    def model_config_for(self, n_train_rows: int) -> dict:
         if self.user_model_config is not None:
             return self.user_model_config
         path = XS_MODEL_CONFIG_FILE if n_train_rows <= XS_MAX_TRAIN_ROWS else DEFAULT_MODEL_CONFIG_FILE
@@ -349,7 +350,7 @@ class AutoRunner:
         try:
             for spec, shape in zip(self.datasets, shapes):
                 model_cfg = self.model_config_for(shape.n_train)
-                cache: Dict[tuple, tuple] = {}
+                cache: dict[tuple, tuple] = {}
                 for model_name in self.models:
                     try:
                         self._run_one(spec, frames[spec.name], model_name, model_cfg, cache, device)
@@ -399,7 +400,7 @@ class AutoRunner:
         from autodeep.factory import create_model
 
         t0 = time.perf_counter()
-        row: Dict[str, Any] = {
+        row: dict[str, Any] = {
             "run_id": self.run_id,
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             "dataset": spec.name,
@@ -488,7 +489,7 @@ class AutoRunner:
 
     def _write_result(self, row):
         path = self.results_path
-        flat = {k: (_json(v) if isinstance(v, (dict, list)) else v) for k, v in row.items()}
+        flat = {k: (_json(v) if isinstance(v, dict | list) else v) for k, v in row.items()}
         new = pd.DataFrame([flat]).reindex(columns=RESULT_FIELDS)
         if path.exists() and path.stat().st_size > 0:
             header = pd.read_csv(path, nrows=0).columns.tolist()
@@ -509,7 +510,7 @@ class AutoRunner:
         for t in trials:
             t = dict(t)
             params = t.pop("params", {}) or {}
-            rows.append({"run_id": self.run_id, **t, **{f"param_{k}": (_json(v) if isinstance(v, (dict, list)) else v) for k, v in params.items()}})
+            rows.append({"run_id": self.run_id, **t, **{f"param_{k}": (_json(v) if isinstance(v, dict | list) else v) for k, v in params.items()}})
         path = folder / f"{dataset}__{model}.csv"
         df = pd.DataFrame(rows)
         if path.exists():
@@ -574,7 +575,7 @@ class AutoRunner:
         except Exception as e:
             logger.warning(f"Could not save the best model for {dataset}: {e}")
 
-    def best_model(self, dataset: Optional[str] = None):
+    def best_model(self, dataset: str | None = None):
         """The best model of ``dataset`` (highest validation score) as a :class:`~autodeep.predictor.Predictor`.
 
         ``dataset`` may be omitted when the run has a single dataset. Falls back to the saved copy on disk.

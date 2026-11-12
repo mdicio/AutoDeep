@@ -24,7 +24,6 @@ import os
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -39,7 +38,7 @@ TYPICAL_EPOCHS = 40
 # Measured 2026-11 on a 12-thread CPU (Ryzen-class), median of random hyperparameter trials, at
 # ~2k rows (XS search space) and ~16k rows (default search space). node/danet/s1dcnn/resnet are
 # extrapolated from the 2k point. GPU factors are rough guesses: your history replaces them.
-PRIORS: Dict[str, Dict[str, float]] = {
+PRIORS: dict[str, dict[str, float]] = {
     "xgb": dict(base=0.1, per_krow=0.012, a=1.0, b=0.8, gpu=1.0, epochs=False),
     "catboost": dict(base=1.0, per_krow=0.06, a=1.0, b=0.7, gpu=1.0, epochs=False),
     # mlp re-measured 2026-11-12 at 16k rows (default search space, sgd trials ~30 s): steeper than linear
@@ -101,7 +100,7 @@ def _effective_features(model: str, shape: DatasetShape) -> int:
     return shape.n_onehot_features if model in ("xgb", "mlp", "resnet", "s1dcnn") else shape.n_features
 
 
-def prior_seconds_per_trial(model: str, n_train: int, n_features: int, device: str = "cpu", max_epochs: Optional[int] = None) -> float:
+def prior_seconds_per_trial(model: str, n_train: int, n_features: int, device: str = "cpu", max_epochs: int | None = None) -> float:
     p = PRIORS.get(model, DEFAULT_PRIOR)
     # hyperopt's internal validation split: models train on ~80% of the training rows
     krows = max(n_train * 0.8, 1) / 1000.0
@@ -121,9 +120,9 @@ def igtd_seconds(n_features: int) -> float:
 class TimingHistory:
     def __init__(self, path: Path = HISTORY_FILE):
         self.path = Path(path)
-        self._records: Optional[List[Dict]] = None
+        self._records: list[dict] | None = None
 
-    def records(self) -> List[Dict]:
+    def records(self) -> list[dict]:
         if self._records is None:
             self._records = []
             if self.path.exists():
@@ -134,7 +133,7 @@ class TimingHistory:
                         continue
         return self._records
 
-    def add(self, record: Dict) -> None:
+    def add(self, record: dict) -> None:
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with open(self.path, "a") as f:
@@ -179,12 +178,12 @@ class JobEstimate:
     high_seconds: float
     source: str  # "prior" | "history (n)"
     capped_by_timeout: bool = False
-    warning: Optional[str] = None
+    warning: str | None = None
 
 
 @dataclass
 class Plan:
-    jobs: List[JobEstimate] = field(default_factory=list)
+    jobs: list[JobEstimate] = field(default_factory=list)
     device: str = "cpu"
 
     @property
@@ -202,7 +201,7 @@ class Plan:
     def human_total(self) -> str:
         return f"~{format_duration(self.total_seconds)} (range {format_duration(self.low_seconds)} - {format_duration(self.high_seconds)})"
 
-    def to_records(self) -> List[Dict]:
+    def to_records(self) -> list[dict]:
         return [asdict(j) for j in self.jobs]
 
     def to_dataframe(self) -> pd.DataFrame:
@@ -213,7 +212,7 @@ class Plan:
         df["range"] = [f"{format_duration(lo)} - {format_duration(hi)}" for lo, hi in zip(df.low_seconds, df.high_seconds)]
         return df[["dataset", "model", "n_train", "n_features", "trials", "seconds_per_trial", "estimate", "range", "source"]]
 
-    def summary(self) -> Dict:
+    def summary(self) -> dict:
         return {
             "device": self.device,
             "total_seconds": self.total_seconds,
@@ -228,9 +227,9 @@ def seconds_per_trial(
     model: str,
     shape: DatasetShape,
     device: str = "cpu",
-    max_epochs: Optional[int] = None,
-    history: Optional[TimingHistory] = None,
-    speed_factor: Optional[float] = None,
+    max_epochs: int | None = None,
+    history: TimingHistory | None = None,
+    speed_factor: float | None = None,
 ):
     """``(seconds, low_factor, high_factor, source)`` for one search trial of ``model`` on ``shape``."""
     history = history or TimingHistory()
@@ -258,14 +257,14 @@ def _trials_for(model: str, max_evals: int) -> int:
 
 
 def estimate_plan(
-    shapes: List[DatasetShape],
-    models: List[str],
+    shapes: list[DatasetShape],
+    models: list[str],
     max_evals: int,
-    timeout_per_model: Optional[float] = None,
-    max_epochs: Optional[int] = None,
+    timeout_per_model: float | None = None,
+    max_epochs: int | None = None,
     device: str = "cpu",
-    history: Optional[TimingHistory] = None,
-    speed_factor: Optional[float] = None,
+    history: TimingHistory | None = None,
+    speed_factor: float | None = None,
 ) -> Plan:
     """Estimate every (dataset, model) search. ``speed_factor`` scales the built-in priors (see :mod:`autodeep.machine`)."""
     history = history or TimingHistory()
@@ -327,7 +326,7 @@ def format_duration(seconds: float) -> str:
 class RunTracker:
     """Consumes progress events, records timings and maintains a live ETA."""
 
-    def __init__(self, plan: Plan, device: str = "cpu", max_epochs: Optional[int] = None, history: Optional[TimingHistory] = None):
+    def __init__(self, plan: Plan, device: str = "cpu", max_epochs: int | None = None, history: TimingHistory | None = None):
         self.plan = plan
         self.device = device
         self.max_epochs = max_epochs
@@ -336,7 +335,7 @@ class RunTracker:
         self.order = [(j.dataset, j.model) for j in plan.jobs]
         self.done_jobs = set()
         self.current = None
-        self.current_durations: List[float] = []
+        self.current_durations: list[float] = []
         self.current_started = None
         self.started = time.time()
         self.trials_done = 0
@@ -347,7 +346,7 @@ class RunTracker:
     def total_trials(self) -> int:
         return sum(j.trials for j in self.plan.jobs)
 
-    def observe(self, evt: Dict) -> None:
+    def observe(self, evt: dict) -> None:
         kind = evt.get("event")
         if kind == "model_start":
             self.current = (evt["dataset"], evt["model"])
@@ -398,7 +397,7 @@ class RunTracker:
                 remaining += job.total_seconds * calib
         return remaining
 
-    def snapshot(self) -> Dict:
+    def snapshot(self) -> dict:
         eta = self.eta_seconds()
         elapsed = time.time() - self.started
         total_jobs = len(self.order)

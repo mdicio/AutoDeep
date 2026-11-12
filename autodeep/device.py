@@ -21,13 +21,12 @@ import os
 import shutil
 import subprocess
 from functools import lru_cache
-from typing import Dict, Optional
 
 MIN_FREE_GPU_MB = int(os.environ.get("AUTODEEP_MIN_FREE_GPU_MB", "2048"))
-_override: Optional[str] = None
+_override: str | None = None
 
 
-def set_device(device: Optional[str]) -> None:
+def set_device(device: str | None) -> None:
     """Choose the device for this process: ``"auto"`` (default), ``"cpu"`` or ``"cuda"``."""
     global _override
     if device not in (None, "auto", "cpu", "cuda", "gpu"):
@@ -119,7 +118,7 @@ def _nvidia_smi():
     return gpus
 
 
-def gpu_info() -> Dict:
+def gpu_info() -> dict:
     """Information about the first visible GPU, without initialising CUDA when possible."""
     if not _torch_built_with_cuda():
         return {"available": False, "reason": "PyTorch was installed without CUDA support"}

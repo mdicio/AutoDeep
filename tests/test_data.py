@@ -108,4 +108,4 @@ def test_search_spaces():
         assert 0.0 <= s["dropout"] <= 0.3
     plain = infer_hyperopt_space({"max_depth": [3, 8], "learning_rate": [0.3, 0.01], "hidden_layer_sizes": [[64], [64, 32]]})
     s = sample(plain, rng=rng)
-    assert 3 <= s["max_depth"] <= 8 and isinstance(s["hidden_layer_sizes"], (list, tuple))
+    assert 3 <= s["max_depth"] <= 8 and isinstance(s["hidden_layer_sizes"], list | tuple)

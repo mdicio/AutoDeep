@@ -6,7 +6,7 @@ import copy
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -20,7 +20,7 @@ logger = get_logger("data")
 
 TARGET = "target"
 
-DEFAULT_IGTD_CONFIG: Dict[str, Any] = {
+DEFAULT_IGTD_CONFIG: dict[str, Any] = {
     "img_size": "auto",
     "save_image_size": 3,
     "max_step": 30000,
@@ -40,7 +40,7 @@ DEFAULT_IGTD_CONFIG: Dict[str, Any] = {
 class IGTDPreprocessor:
     """Compute (and cache on disk) the IGTD feature -> pixel ordering used by the ResNet model."""
 
-    def __init__(self, dataset_name: str = None, igtd_configs: Dict = None, base_result_dir: str = "IGTD", exclude_cols: Optional[List[str]] = None):
+    def __init__(self, dataset_name: str = None, igtd_configs: dict = None, base_result_dir: str = "IGTD", exclude_cols: list[str] | None = None):
         self.dataset_name = dataset_name or "dataset"
         cfg = copy.deepcopy(DEFAULT_IGTD_CONFIG)
         cfg.update(copy.deepcopy(igtd_configs or {}))
@@ -67,7 +67,7 @@ class IGTDPreprocessor:
         key = hashlib.sha1(json.dumps([list(map(str, X.columns)), self.igtd_configs], sort_keys=True, default=str).encode()).hexdigest()[:10]
         return self.base_result_dir / f"{self.dataset_name}_{key}"
 
-    def run(self, X: pd.DataFrame) -> Dict[str, Any]:
+    def run(self, X: pd.DataFrame) -> dict[str, Any]:
         from autodeep.modelutils.igtdutilities import table_to_image
 
         if self.img_size == "auto":
@@ -124,12 +124,12 @@ class IGTDPreprocessor:
 class ExtraInfoCreator:
     """Dataset statistics passed to the models (categorical columns, sizes, IGTD ordering...)."""
 
-    def __init__(self, dataset_name, run_igtd=False, igtd_preprocessor: Optional[IGTDPreprocessor] = None):
+    def __init__(self, dataset_name, run_igtd=False, igtd_preprocessor: IGTDPreprocessor | None = None):
         self.dataset_name = dataset_name
         self.run_igtd = run_igtd
         self.igtd_preprocessor = igtd_preprocessor
 
-    def create_extra_info(self, df: pd.DataFrame, dataset_name: str = None) -> Dict[str, Any]:
+    def create_extra_info(self, df: pd.DataFrame, dataset_name: str = None) -> dict[str, Any]:
         cat_cols = list(df.select_dtypes(include=["object", "category", "string"]).columns)
         num_cols = [c for c in df.columns if c not in cat_cols]
         info = {
@@ -218,12 +218,12 @@ class DynamicDataLoader(DataLoader):
         return_extra_info=True,
         encode_categorical=False,
         run_igtd=False,
-        igtd_configs: Optional[Dict] = None,
-        igtd_result_base_dir: Optional[str] = "IGTD",
-        drop_columns: Optional[List[str]] = None,
-        dataframe: Optional[pd.DataFrame] = None,
-        sep: Optional[str] = None,
-        max_rows: Optional[int] = None,
+        igtd_configs: dict | None = None,
+        igtd_result_base_dir: str | None = "IGTD",
+        drop_columns: list[str] | None = None,
+        dataframe: pd.DataFrame | None = None,
+        sep: str | None = None,
+        max_rows: int | None = None,
     ):
         self.dataset_name = dataset_name
         self.dataset_path = dataset_path
@@ -242,7 +242,7 @@ class DynamicDataLoader(DataLoader):
         self.dataframe = dataframe
         self.sep = sep
         self.max_rows = max_rows
-        self.preprocessor: Optional[TabularPreprocessor] = None  # fitted by load_data()
+        self.preprocessor: TabularPreprocessor | None = None  # fitted by load_data()
         self.classes = None
         self.extra_info_creator = ExtraInfoCreator(
             dataset_name,

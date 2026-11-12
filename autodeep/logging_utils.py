@@ -7,17 +7,16 @@ import os
 import sys
 import warnings
 from pathlib import Path
-from typing import Optional
 
 LOGGER_NAME = "autodeep"
 _FMT = "%(asctime)s | %(levelname)-7s | %(name)s | %(message)s"
 
 
-def get_logger(name: Optional[str] = None) -> logging.Logger:
+def get_logger(name: str | None = None) -> logging.Logger:
     return logging.getLogger(LOGGER_NAME if not name else f"{LOGGER_NAME}.{name}")
 
 
-def setup_logging(level: str = "INFO", log_file: Optional[Path] = None, quiet_libraries: bool = True) -> logging.Logger:
+def setup_logging(level: str = "INFO", log_file: Path | None = None, quiet_libraries: bool = True) -> logging.Logger:
     """Configure the ``autodeep`` logger (idempotent)."""
     logger = logging.getLogger(LOGGER_NAME)
     logger.setLevel(logging.DEBUG)

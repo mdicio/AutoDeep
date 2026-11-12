@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import Callable, Optional
+from collections.abc import Callable
 
 _local = threading.local()
 
@@ -17,11 +17,11 @@ class RunCancelled(Exception):
     """Raised to abort a run (e.g. the user pressed *Stop* in the web UI)."""
 
 
-def set_reporter(fn: Optional[Callable[[dict], None]]) -> None:
+def set_reporter(fn: Callable[[dict], None] | None) -> None:
     _local.reporter = fn
 
 
-def get_reporter() -> Optional[Callable[[dict], None]]:
+def get_reporter() -> Callable[[dict], None] | None:
     return getattr(_local, "reporter", None)
 
 

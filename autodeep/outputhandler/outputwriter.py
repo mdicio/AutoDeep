@@ -52,7 +52,7 @@ class OutputWriter:
             row = {}
             for field in self.fields:
                 value = kwargs.get(field)
-                if isinstance(value, (list, dict)):
+                if isinstance(value, list | dict):
                     value = str(value)
                 row[field] = value
             writer.writerow(row)

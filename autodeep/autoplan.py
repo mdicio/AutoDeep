@@ -23,7 +23,6 @@ from __future__ import annotations
 import math
 import re
 from dataclasses import asdict, dataclass, field
-from typing import Dict, List, Optional, Union
 
 from autodeep.estimation import DatasetShape, TimingHistory, format_duration, seconds_per_trial, setup_seconds
 
@@ -40,11 +39,11 @@ CPU_ORDER = ["xgb", "catboost", "tabicl", "realmlp", "gandalf", "categoryembeddi
 GPU_ORDER = ["tabicl", "xgb", "catboost", "realmlp", "tabm", "fttransformer", "gandalf", "categoryembedding", "mlp"]
 
 
-def parse_duration(value: Union[None, int, float, str]) -> Optional[float]:
+def parse_duration(value: None | int | float | str) -> float | None:
     """Seconds from ``90``, ``"90s"``, ``"15m"``, ``"1h30m"``, ``"1.5h"`` (``None`` stays ``None``)."""
     if value is None or value == "":
         return None
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return float(value)
     text = str(value).strip().lower().replace(" ", "")
     if re.fullmatch(r"\d+(\.\d+)?", text):
@@ -56,7 +55,7 @@ def parse_duration(value: Union[None, int, float, str]) -> Optional[float]:
     return float(sum(float(n) * unit[u[0]] for n, u in parts))
 
 
-def time_limit(full_seconds: List[float], budget: float, overrun: Optional[List[float]] = None) -> float:
+def time_limit(full_seconds: list[float], budget: float, overrun: list[float] | None = None) -> float:
     """Common per-model limit ``T`` with ``sum(min(full, T + overrun)) == budget`` (``inf`` when everything fits).
 
     ``overrun`` is how far a model typically runs past its limit (the running trial finishes: ~half a trial).
@@ -89,19 +88,19 @@ class Candidate:
 
 @dataclass
 class AutoPlan:
-    models: List[str]
+    models: list[str]
     max_evals: int
-    timeout_per_model: Optional[float]
+    timeout_per_model: float | None
     budget_seconds: float
     device: str
-    reasons: List[str] = field(default_factory=list)
-    candidates: List[Candidate] = field(default_factory=list)
+    reasons: list[str] = field(default_factory=list)
+    candidates: list[Candidate] = field(default_factory=list)
 
-    def settings(self) -> Dict:
+    def settings(self) -> dict:
         """The AutoRunner arguments this plan sets."""
         return {"models": list(self.models), "max_evals": self.max_evals, "timeout_per_model": self.timeout_per_model}
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         d = asdict(self)
         d["budget_human"] = format_duration(self.budget_seconds)
         return d
@@ -111,12 +110,12 @@ class AutoPlan:
 
 
 def recommend(
-    shapes: List[DatasetShape],
-    budget_seconds: Optional[float] = None,
+    shapes: list[DatasetShape],
+    budget_seconds: float | None = None,
     device: str = "cpu",
-    speed_factor: Optional[float] = None,
-    max_epochs: Optional[int] = None,
-    history: Optional[TimingHistory] = None,
+    speed_factor: float | None = None,
+    max_epochs: int | None = None,
+    history: TimingHistory | None = None,
     machine=None,
     max_models: int = MAX_MODELS,
 ) -> AutoPlan:
@@ -136,7 +135,7 @@ def recommend(
 
     largest = max(shapes, key=lambda s: s.n_train * max(s.n_features, 1))
     order = GPU_ORDER if device == "cuda" else CPU_ORDER
-    cands: List[Candidate] = []
+    cands: list[Candidate] = []
     for model in order:
         worst = max(shapes, key=lambda s: seconds_per_trial(model, s, device, max_epochs, history, speed_factor)[0])
         pt, _, _, source = seconds_per_trial(model, worst, device, max_epochs, history, speed_factor)
@@ -145,7 +144,7 @@ def recommend(
         n_full = 1 if model == "tabicl" else MAX_TRIALS
         cands.append(Candidate(model, round(pt, 2), n_min, round(setup + n_min * pt, 1), round(setup + n_full * pt, 1), source))
 
-    chosen: List[Candidate] = []
+    chosen: list[Candidate] = []
     for c in cands:
         if len(chosen) >= max_models:
             c.note = f"left out: the plan already has {max_models} models"

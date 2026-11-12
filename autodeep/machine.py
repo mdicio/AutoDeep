@@ -19,7 +19,6 @@ import sys
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Dict, Optional
 
 # best-of-5 timings of _benchmark() on the reference machine (AMD Ryzen 5 3600, 6 cores / 12 threads)
 REFERENCE_TIMES = {"matmul": 0.0100, "sort": 0.0220, "python": 0.0217}
@@ -38,14 +37,14 @@ class MachineProfile:
     cpu_name: str
     logical_cores: int
     physical_cores: int
-    ram_total_gb: Optional[float]
-    ram_available_gb: Optional[float]
-    gpu: Dict = field(default_factory=dict)
+    ram_total_gb: float | None
+    ram_available_gb: float | None
+    gpu: dict = field(default_factory=dict)
     device: str = "cpu"  # what device="auto" resolves to right now
     speed_factor: float = 1.0  # > 1: slower than the reference machine
     speed_source: str = "default"
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return asdict(self)
 
     def describe(self) -> str:
@@ -149,7 +148,7 @@ def _ram_gb():
     return None, None
 
 
-def _benchmark() -> Dict[str, float]:
+def _benchmark() -> dict[str, float]:
     """Best-of-5 timings of three small workloads (~0.3 s in total on the reference machine)."""
     import numpy as np
 
@@ -186,7 +185,7 @@ def _benchmark() -> Dict[str, float]:
     return out
 
 
-def speed_factor_from(times: Dict[str, float]) -> float:
+def speed_factor_from(times: dict[str, float]) -> float:
     """Weighted geometric mean of ``time / reference_time`` (clipped to 0.25 - 8)."""
     import math
 
@@ -198,7 +197,7 @@ def _machine_key(cpu: str, logical: int) -> str:
     return f"{socket.gethostname()}|{cpu}|{logical}"
 
 
-_SPEED_MEMO: Dict[str, tuple] = {}
+_SPEED_MEMO: dict[str, tuple] = {}
 
 
 def measure_speed(cpu: str, logical: int, refresh: bool = False):

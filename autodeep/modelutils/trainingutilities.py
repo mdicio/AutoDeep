@@ -12,8 +12,6 @@ Grammar of a ``param_grid`` entry in ``model_config.yml``:
 
 from __future__ import annotations
 
-from typing import Dict
-
 import numpy as np
 import pandas as pd
 from hyperopt import hp
@@ -37,7 +35,7 @@ def map_scheduler_str_to_class(scheduler_str):
 
 
 def _ensure_min_max(values):
-    if isinstance(values[0], (float, int)) and not isinstance(values[0], bool):
+    if isinstance(values[0], float | int) and not isinstance(values[0], bool):
         return min(values), max(values)
     return values
 
@@ -58,13 +56,13 @@ def _is_categorical(name, values):
     return (
         name in CATEGORICAL_NUMERIC_PARAMS
         or any(v is None for v in values)
-        or isinstance(values[0], (str, bool, list, tuple))
-        or not all(isinstance(v, (int, float)) for v in values)
+        or isinstance(values[0], str | bool | list | tuple)
+        or not all(isinstance(v, int | float) for v in values)
     )
 
 
 def _param_space(name, values, int_step=1):
-    if not isinstance(values, (list, tuple)):
+    if not isinstance(values, list | tuple):
         return values  # constant
     if len(values) == 0:
         raise ValueError(f"Empty value list for hyperparameter '{name}'")
@@ -73,14 +71,14 @@ def _param_space(name, values, int_step=1):
     return _numeric_space(name, values, int_step=int_step)
 
 
-def infer_hyperopt_space(param_grid: Dict):
+def infer_hyperopt_space(param_grid: dict):
     """Search space for plain (non-torch) models such as XGBoost, CatBoost and scikit-learn MLP."""
     param_grid = dict(param_grid)
     param_grid.pop("default_params", None)
     return {name: _param_space(name, values) for name, values in param_grid.items()}
 
 
-def _conditional_choice(param_name, options: Dict, key, mapping):
+def _conditional_choice(param_name, options: dict, key, mapping):
     branches = []
     for option_name, sub_params in options.items():
         branch = {key: mapping[option_name]}
@@ -90,7 +88,7 @@ def _conditional_choice(param_name, options: Dict, key, mapping):
     return hp.choice(param_name, branches)
 
 
-def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
+def infer_hyperopt_space_pytorch_tabular(param_grid: dict):
     """Search space for torch models: also understands ``optimizer_fn`` / ``scheduler_fn`` blocks."""
     param_grid = dict(param_grid)
     param_grid.pop("default_params", None)
@@ -108,7 +106,7 @@ def infer_hyperopt_space_pytorch_tabular(param_grid: Dict):
                         space[new_name] = _param_space(new_name, subsub_values)
         else:
             step = 1
-            if name == "batch_size" and isinstance(values, (list, tuple)) and not _is_categorical(name, values):
+            if name == "batch_size" and isinstance(values, list | tuple) and not _is_categorical(name, values):
                 step = max(1, min(32, int(min(values))))  # quniform may round down to 0 if step > lower bound
             space[name] = _param_space(name, values, int_step=step)
     return space

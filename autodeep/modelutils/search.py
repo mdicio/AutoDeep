@@ -5,8 +5,9 @@ from __future__ import annotations
 import math
 import time
 import traceback
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 from hyperopt import STATUS_FAIL, STATUS_OK, Trials, fmin, tpe
@@ -24,23 +25,23 @@ logger = get_logger("search")
 class TrialOutcome:
     """What a model's ``objective`` must return for one hyperparameter set."""
 
-    validation_metrics: Dict[str, float]
-    train_metrics: Dict[str, float]
+    validation_metrics: dict[str, float]
+    train_metrics: dict[str, float]
     model: Any = None
-    extra: Dict[str, Any] = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class SearchResult:
-    best_params: Dict[str, Any]
+    best_params: dict[str, Any]
     best_score: float
-    train_metrics: Dict[str, float]
-    validation_metrics: Dict[str, float]
+    train_metrics: dict[str, float]
+    validation_metrics: dict[str, float]
     best_model: Any
-    trials: List[Dict[str, Any]]
+    trials: list[dict[str, Any]]
     n_failed: int
     duration: float
-    best_raw_params: Optional[Dict[str, Any]] = None  # as passed to the objective (before JSON cleaning)
+    best_raw_params: dict[str, Any] | None = None  # as passed to the objective (before JSON cleaning)
 
 
 def short_error(e: BaseException, limit: int = 300) -> str:
@@ -54,7 +55,7 @@ def make_serializable(value):
     """Turn hyperopt-sampled params (which may contain classes / numpy types) into plain JSON-able values."""
     if isinstance(value, dict):
         return {str(k): make_serializable(v) for k, v in value.items()}
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, list | tuple):
         return [make_serializable(v) for v in value]
     if isinstance(value, type):
         return value.__name__
@@ -66,15 +67,15 @@ def make_serializable(value):
 
 
 def run_hyperopt(
-    objective: Callable[[Dict[str, Any]], TrialOutcome],
-    space: Dict[str, Any],
+    objective: Callable[[dict[str, Any]], TrialOutcome],
+    space: dict[str, Any],
     metric: str,
     max_evals: int,
     random_state: int = 42,
-    timeout: Optional[float] = None,
+    timeout: float | None = None,
     model_name: str = "model",
     stop_on_perfect_score: bool = True,
-    points_to_evaluate: Optional[List[Dict[str, Any]]] = None,
+    points_to_evaluate: list[dict[str, Any]] | None = None,
 ) -> SearchResult:
     """Run a TPE search, keeping only the best model in memory.
 
@@ -86,7 +87,7 @@ def run_hyperopt(
     metric = normalize_metric_name(metric)
     info = METRICS[metric]
     state = {"best_loss": math.inf, "best": None, "n_done": 0, "n_failed": 0, "last_error": None}
-    records: List[Dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
     t_start = time.perf_counter()
 
     def wrapped(params):

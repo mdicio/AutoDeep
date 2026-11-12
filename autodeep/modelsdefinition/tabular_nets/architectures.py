@@ -14,7 +14,6 @@ from __future__ import annotations
 import logging
 from collections import OrderedDict
 from types import SimpleNamespace
-from typing import Dict, List, Optional
 
 import torch
 import torch.nn as nn
@@ -46,7 +45,7 @@ _COMMON = {
 }
 
 #: pytorch-tabular 1.2.0 defaults of the model config classes (fields used by the architectures)
-DEFAULTS: Dict[str, Dict] = {
+DEFAULTS: dict[str, dict] = {
     "categoryembedding": {
         "layers": "128-64-32",
         "activation": "ReLU",
@@ -161,12 +160,12 @@ DEFAULTS: Dict[str, Dict] = {
 }
 
 
-def embedding_dims(categorical_cardinality: List[int]):
+def embedding_dims(categorical_cardinality: list[int]):
     """pytorch-tabular's rule for the 1-D categorical embeddings."""
     return [(c, min(50, (c + 1) // 2)) for c in categorical_cardinality]
 
 
-def make_hparams(model: str, params: Dict, continuous_dim: int, categorical_cardinality: List[int], output_dim: int, task: str):
+def make_hparams(model: str, params: dict, continuous_dim: int, categorical_cardinality: list[int], output_dim: int, task: str):
     hp = {**_COMMON, **DEFAULTS[model]}
     ignored = sorted(k for k in params if k not in hp and k not in _TRAINER_KEYS)
     if ignored:
@@ -534,7 +533,7 @@ class TabTransformerBackbone(nn.Module):
             self.normalizing_batch_norm = BatchNorm1d(hp.continuous_dim, hp.virtual_batch_size)
         self.output_dim = hp.input_embed_dim * hp.categorical_dim + hp.continuous_dim
 
-    def forward(self, x_cat: Optional[torch.Tensor], x_cont: torch.Tensor) -> torch.Tensor:
+    def forward(self, x_cat: torch.Tensor | None, x_cont: torch.Tensor) -> torch.Tensor:
         x = None
         if self.categorical_dim > 0:
             for block in self.transformer_blocks:
@@ -674,7 +673,7 @@ BUILDERS = {
 }
 
 
-def build_network(model: str, params: Dict, continuous_dim: int, categorical_cardinality: List[int], output_dim: int, task: str) -> TabularNet:
+def build_network(model: str, params: dict, continuous_dim: int, categorical_cardinality: list[int], output_dim: int, task: str) -> TabularNet:
     """Build one of the nine architectures for the given data schema."""
     hp = make_hparams(model, params, continuous_dim, categorical_cardinality, output_dim, task)
     return BUILDERS[model](hp)

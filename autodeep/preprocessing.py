@@ -8,7 +8,7 @@ fitted scaler. The data loader uses it to build ``X_train`` / ``X_test``, and a 
 
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -54,19 +54,19 @@ class TabularPreprocessor:
         self.encode_categorical = bool(encode_categorical)
         self.max_categories = int(max_categories)
         # schema
-        self.input_columns: List[str] = []
-        self.rename: Dict[Any, str] = {}
-        self.categorical: List[str] = []  # sanitised names
-        self.datetime: List[str] = []
-        self.numeric: List[str] = []
+        self.input_columns: list[str] = []
+        self.rename: dict[Any, str] = {}
+        self.categorical: list[str] = []  # sanitised names
+        self.datetime: list[str] = []
+        self.numeric: list[str] = []
         # fitted state
-        self.fill_values: Dict[str, Any] = {}
-        self.onehot_top: Dict[str, List[str]] = {}
-        self.onehot_columns: List[str] = []
-        self.onehot_rename: Dict[str, str] = {}
-        self.scale_columns: List[str] = []
+        self.fill_values: dict[str, Any] = {}
+        self.onehot_top: dict[str, list[str]] = {}
+        self.onehot_columns: list[str] = []
+        self.onehot_rename: dict[str, str] = {}
+        self.scale_columns: list[str] = []
         self.scaler = None
-        self.output_columns: List[str] = []
+        self.output_columns: list[str] = []
         self.fitted = False
 
     # ------------------------------------------------------------------ schema
@@ -102,7 +102,7 @@ class TabularPreprocessor:
             elif c in self.datetime:
                 out[c] = _datetime_seconds(s)
             elif not pd.api.types.is_numeric_dtype(s) or pd.api.types.is_bool_dtype(s):  # e.g. numbers read as text
-                converted = pd.to_numeric(s.map(lambda v: v if not isinstance(v, (bool, np.bool_)) else int(v)), errors="coerce")
+                converted = pd.to_numeric(s.map(lambda v: v if not isinstance(v, bool | np.bool_) else int(v)), errors="coerce")
                 bad = int(converted.isna().sum() - s.isna().sum())
                 if bad > 0:
                     logger.warning(f"Column '{c}': {bad} value(s) are not numbers and are treated as missing")
@@ -112,7 +112,7 @@ class TabularPreprocessor:
         return pd.DataFrame(out, index=X.index)
 
     # ------------------------------------------------------------------ fit / transform
-    def fit(self, X_train: pd.DataFrame) -> "TabularPreprocessor":
+    def fit(self, X_train: pd.DataFrame) -> TabularPreprocessor:
         """Learn imputation values, one-hot categories and the scaler from typed training rows."""
         self.fill_values = {}
         for c in X_train.columns:
@@ -186,7 +186,7 @@ class TabularPreprocessor:
         return self.transform(self._apply_schema(X))
 
     # ------------------------------------------------------------------ info
-    def schema(self) -> List[Dict[str, Any]]:
+    def schema(self) -> list[dict[str, Any]]:
         """``[{"name", "type"}]`` of the expected input columns (original names)."""
         kind = {**{c: "categorical" for c in self.categorical}, **{c: "datetime" for c in self.datetime}}
         return [{"name": str(c), "type": kind.get(self.rename[c], "numeric")} for c in self.input_columns]

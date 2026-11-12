@@ -9,7 +9,7 @@ standardised during training. Hyperparameter names are the same as in pytorch-ta
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -23,7 +23,7 @@ class EmbeddingTorchTrainer(TorchTrainer):
     arch: str = ""
 
     # ------------------------------------------------------------------ hooks
-    def adjust_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def adjust_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """Model specific parameter fix-ups (override in subclasses)."""
         return params
 

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import importlib
 from dataclasses import asdict, dataclass, field
-from typing import Dict, List, Optional, Tuple
 
 
 @dataclass(frozen=True)
@@ -18,15 +17,15 @@ class ModelInfo:
     target: str  # "module:Class"
     description: str
     uses_gpu: bool = False
-    aliases: Tuple[str, ...] = field(default_factory=tuple)
+    aliases: tuple[str, ...] = field(default_factory=tuple)
     speed: str = "medium"  # "fast" | "medium" | "slow"  (rough guide for the UI)
-    max_trials: Optional[int] = None  # e.g. 1 for models without hyperparameters
+    max_trials: int | None = None  # e.g. 1 for models without hyperparameters
 
     def load(self):
         module, cls = self.target.split(":")
         return getattr(importlib.import_module(module), cls)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         d = asdict(self)
         d.pop("target")
         d["aliases"] = list(self.aliases)
@@ -37,7 +36,7 @@ _P = "autodeep.modelsdefinition"
 _PT = f"{_P}.deep_tabular_models"
 _FM = f"{_P}.foundation_models"
 
-MODELS: Dict[str, ModelInfo] = {
+MODELS: dict[str, ModelInfo] = {
     m.name: m
     for m in [
         ModelInfo(
@@ -190,7 +189,7 @@ def canonical_name(name: str) -> str:
     return key
 
 
-def resolve_models(models) -> List[str]:
+def resolve_models(models) -> list[str]:
     """Accept a list of names, a preset name (``"fast"``, ``"default"``, ``"modern"``, ``"deep"``, ``"all"``) or ``None``."""
     if models is None:
         return list(DEFAULT_MODELS)
@@ -207,7 +206,7 @@ def resolve_models(models) -> List[str]:
     return list(dict.fromkeys(out))
 
 
-def list_models() -> List[Dict]:
+def list_models() -> list[dict]:
     return [m.to_dict() for m in MODELS.values()]
 
 

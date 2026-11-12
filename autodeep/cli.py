@@ -237,7 +237,7 @@ def cmd_info(args):
     print(f"{info.get('model_display_name', info.get('model'))} trained on '{info.get('dataset')}' ({info.get('problem_type')})")
     print(f"  target: {info.get('target')}" + (f"   classes: {info.get('classes')}" if info.get("classes") else ""))
     metric = info.get("metric")
-    fmt = lambda v: f"{v:.5f}" if isinstance(v, (int, float)) else "?"  # noqa: E731
+    fmt = lambda v: f"{v:.5f}" if isinstance(v, int | float) else "?"  # noqa: E731
     print(f"  {metric}: validation {fmt(info.get('val_score'))}, test {fmt(info.get('test_score'))}")
     print(f"  saved {info.get('saved_at')} with AutoDeep {info.get('autodeep_version')}, trained on {info.get('trained_on_device')}")
     print("\nInput columns:")

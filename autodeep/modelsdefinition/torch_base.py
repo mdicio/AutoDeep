@@ -5,7 +5,6 @@ from __future__ import annotations
 import copy
 import math
 import random
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -229,7 +228,7 @@ class TorchTrainer(BaseTrainer):
 
         torch.save(self.model.state_dict(), str(path))
 
-    def _load_model(self, path, params: Optional[dict] = None):  # pragma: no cover - convenience
+    def _load_model(self, path, params: dict | None = None):  # pragma: no cover - convenience
         import torch
 
         self.model.load_state_dict(torch.load(str(path), map_location=self.device))
