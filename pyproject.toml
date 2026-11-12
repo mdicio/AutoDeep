@@ -23,16 +23,14 @@ classifiers = [
 ]
 dependencies = [
     "numpy>=1.24",
-    "pandas>=2.0,<3",               # pytorch-tabular 1.2 does not support pandas 3 yet
+    "pandas>=2.0",
     "scipy>=1.10",
     "scikit-learn>=1.3,<2",
     "pyyaml>=6.0",
     "matplotlib>=3.7",              # IGTD writes diagnostic PNGs
     "torch>=2.2",
     "torchvision>=0.17",
-    "pytorch-tabular>=1.1.1,<1.3",
-    "requests>=2.28",               # imported by pytorch-tabular but not declared by it
-    "pytorch-tabnet>=4.1,<4.2",     # pytorch-tabular's TabNet needs it (optional there, required here)
+    "pytorch-tabnet>=4.1",          # the TabNet network
     "xgboost>=2.0",
     "catboost>=1.2.5",
     "tabicl>=2.2,<3",               # TabICLv2 foundation model (BSD-3; weights downloaded on first use)
@@ -58,7 +56,7 @@ Repository = "https://github.com/mdicio/AutoDeep"
 include = ["autodeep*"]
 
 [tool.setuptools.package-data]
-autodeep = ["configuration/*.yml", "web/static/*"]
+autodeep = ["configuration/*.yml", "web/static/*", "modelsdefinition/tabular_nets/LICENSE"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

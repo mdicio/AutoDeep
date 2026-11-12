@@ -34,7 +34,7 @@ class ModelInfo:
 
 
 _P = "autodeep.modelsdefinition"
-_PT = f"{_P}.pytorch_tabular_models"
+_PT = f"{_P}.deep_tabular_models"
 _FM = f"{_P}.foundation_models"
 
 MODELS: Dict[str, ModelInfo] = {

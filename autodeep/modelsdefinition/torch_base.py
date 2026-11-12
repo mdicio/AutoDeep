@@ -1,9 +1,10 @@
-"""Training loop shared by the custom PyTorch models (ResNet on IGTD images, Soft-Ordering 1D-CNN)."""
+"""Training loop shared by AutoDeep's own PyTorch models (embedding-based tabular nets, ResNet on IGTD images, 1D-CNN)."""
 
 from __future__ import annotations
 
 import copy
 import math
+import random
 from typing import Optional
 
 import numpy as np
@@ -29,7 +30,7 @@ class TorchTrainer(BaseTrainer):
     def to_tensor(self, X: pd.DataFrame):
         import torch
 
-        return torch.as_tensor(X.to_numpy(dtype=np.float32))
+        return torch.tensor(X.to_numpy(dtype=np.float32))  # a copy: with pandas 3 copy-on-write, to_numpy() can be read-only
 
     # ------------------------------------------------------------------ setup
     @property
@@ -56,7 +57,7 @@ class TorchTrainer(BaseTrainer):
     def _target_tensor(self, y):
         import torch
 
-        y = np.asarray(y)
+        y = np.array(y)  # a copy: with pandas 3 copy-on-write, np.asarray(series) is read-only
         if self.problem_type == "multiclass_classification":
             return torch.as_tensor(y, dtype=torch.long)
         if self.problem_type == "regression":
@@ -87,6 +88,9 @@ class TorchTrainer(BaseTrainer):
             pin_memory=self.device == "cuda",
         )
 
+    def init_network(self, net, X_train_t, y_train_t) -> None:
+        """Hook called once per trial before the first epoch, e.g. for data-aware initialisation."""
+
     def _forward(self, net, xb):
         out = net(xb)
         return out.reshape(-1) if self.n_outputs == 1 else out
@@ -96,8 +100,10 @@ class TorchTrainer(BaseTrainer):
         import torch
 
         torch.manual_seed(self.random_state)
+        random.seed(self.random_state)  # some architectures draw their initial masks with random / numpy
+        np.random.seed(self.random_state % 2**32)
         device = self.device
-        batch_size = int(min(int(params.get("batch_size", 256)), len(X_train)))
+        batch_size = int(min(int(params.get("batch_size", self.default_params.get("batch_size", 256))), len(X_train)))
         max_epochs = max(1, int(self._setting("max_epochs", 100)))
         patience = int(self.default_params.get("early_stopping_patience", 10))
         tol = float(self.default_params.get("tol", 0.0))
@@ -106,7 +112,9 @@ class TorchTrainer(BaseTrainer):
         net._autodeep_build = (dict(params), int(X_train.shape[1]), int(self.n_outputs))  # to rebuild the net after unpickling
         opt, sched = self._optimizer(params, net)
         loss_fn = self._loss_fn(y_train)
-        train_loader = self._loader(self.to_tensor(X_train), self._target_tensor(y_train), batch_size, shuffle=True)
+        X_train_t, y_train_t = self.to_tensor(X_train), self._target_tensor(y_train)
+        self.init_network(net, X_train_t, y_train_t)
+        train_loader = self._loader(X_train_t, y_train_t, batch_size, shuffle=True)
         val_loader = self._loader(self.to_tensor(X_val), self._target_tensor(y_val), max(batch_size, 1024), shuffle=False)
 
         best_loss, best_state, best_epoch, bad_epochs = math.inf, None, 0, 0

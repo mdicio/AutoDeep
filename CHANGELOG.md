@@ -5,15 +5,20 @@
 ### New
 - **Saved, ready-to-use models.** Every run keeps the best model of each dataset (chosen on the validation score, never the test score) and saves it with its preprocessing to `<output>/models/<dataset>/best`. `runner.best_model("churn").predict(new_rows)`, `autodeep.load_model(path)`, `autodeep predict <model> new.csv -o predictions.csv` and `autodeep info <model>`. New rows need the original columns: missing values, unseen categories and numbers stored as text are handled like during training, and predictions use the original class labels. `predict_proba` returns one column per class; `evaluate` scores labelled rows. In the web app, each run has a "Use the best models" card to download a model or predict an uploaded file.
 - `save_models=True` now saves every model in the same loadable format (`models/<dataset>/<model>`); `save_best=False` turns saving off. The leaderboard has a `selected` column.
-- All 17 models can be saved and loaded. Models trained on a GPU load on machines without one (checked for XGBoost, PyTorch Tabular, RealMLP, TabM, the 1D-CNN and TabICL).
+- All 17 models can be saved and loaded. Models trained on a GPU load on machines without one (checked for XGBoost, RealMLP, TabM, the 1D-CNN, TabICL and, before the port, the pytorch-tabular models).
 - **`models: auto` (the new default) with a time budget.** AutoDeep measures the machine (cores, RAM, GPU, a ~0.5 s CPU benchmark) and picks the models, trials and per-model time limit that fit `time_budget` (default 15 minutes), explaining what it skipped and why. `AutoRunner(time_budget="20m")`, `autodeep run data.csv --target y --budget 20m`, `time_budget:` in YAML, and an Auto mode in the web app. With explicit models, a budget sets `timeout_per_model`.
 - `autodeep run` / `estimate` accept a data file and `--target` directly, no YAML needed. `autodeep system` shows what AutoDeep sees on the machine.
 - Runtime estimates scale the built-in cost curves by the measured CPU speed until timings from the machine itself are available.
 
+- **No more pytorch-tabular dependency; pandas 3 supported.** The nine deep tabular architectures (CategoryEmbedding, TabNet, FT-Transformer, TabTransformer, AutoInt, GANDALF, GATE, NODE, DANet) were ported from pytorch-tabular 1.2.0 (MIT) to plain PyTorch modules in `autodeep/modelsdefinition/tabular_nets/` and are trained by AutoDeep's own loop, like the 1D-CNN and the ResNet. pytorch-tabular was the only dependency pinning `pandas<3`; the lock file now resolves pandas 3.1 (2.3 on Python 3.10). `pytorch-tabular`, `requests` and the `pytorch-tabnet<4.2` cap are gone, and so are omegaconf, rich and their transitive dependencies.
+
 ### Changed
 - `AutoRunner(models=None)` means `"auto"` instead of the fixed `default` preset; pass `models="default"` for the old behaviour. `max_evals` defaults to the plan's value (25 with explicit models).
 - Preprocessing is a fitted `TabularPreprocessor` object (identical output to 0.3.0 on four built-in datasets × all normalisation/encoding options). Mixed-type text columns are now always treated as categorical strings, and datetime columns with missing values no longer produce huge negative numbers.
-- Saved PyTorch Tabular models no longer carry the training data or the Lightning trainer; the 1D-CNN and ResNet are saved as weights plus build arguments.
+- The deep tabular models keep pytorch-tabular's hyperparameter names and defaults, so existing `param_grid`s work unchanged. Scores differ slightly from 0.3.0: binary targets use one logit with a class-balanced BCE loss (as the other PyTorch models do) instead of two-class cross-entropy, categories are encoded on the whole training set, and the batch size falls back to `default_params.batch_size`.
+- Two pytorch-tabular options that were silently ignored now take effect: TabTransformer's `out_ff_layers` / `out_ff_activation` / `out_ff_dropout` / `out_ff_initialization` configure its MLP head, and `transformer_head_dim` sets the attention head size of TabTransformer and FT-Transformer.
+- Models saved with 0.3.0's pytorch-tabular trainers cannot be loaded; retrain them. All trained PyTorch models are now saved as weights plus build arguments.
+- `autodeep.modelsdefinition.pytorch_tabular_models` is kept as an alias of the new `deep_tabular_models` module.
 - The scikit-learn MLP's runtime prior was re-measured (it was ~15x too optimistic above 10,000 rows).
 
 ## 0.3.0: modern tabular models

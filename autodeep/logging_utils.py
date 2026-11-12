@@ -54,7 +54,7 @@ def setup_logging(level: str = "INFO", log_file: Optional[Path] = None, quiet_li
 
 def quiet_third_party() -> None:
     os.environ.setdefault("PT_LOGLEVEL", "ERROR")
-    for name in ("pytorch_lightning", "lightning", "lightning.pytorch", "lightning_fabric", "pytorch_tabular", "hyperopt", "matplotlib"):
+    for name in ("pytorch_lightning", "lightning", "lightning.pytorch", "lightning_fabric", "hyperopt", "matplotlib"):
         logging.getLogger(name).setLevel(logging.ERROR)
     warnings.filterwarnings("ignore", category=FutureWarning)
     warnings.filterwarnings("ignore", category=DeprecationWarning)
