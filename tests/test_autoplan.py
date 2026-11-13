@@ -34,7 +34,7 @@ def test_time_limit_water_filling():
 
 def test_small_data_gets_many_models(no_history):
     plan = recommend([shape(150, 4)], 900, "cpu", history=no_history)
-    assert plan.models[:3] == ["xgb", "catboost", "tabicl"] and len(plan.models) >= 6
+    assert plan.models[:4] == ["xgb", "catboost", "lgbm", "tabicl"] and len(plan.models) >= 6
     assert plan.max_evals == 30 and plan.timeout_per_model is None  # everything fits
 
 

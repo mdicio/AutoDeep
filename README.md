@@ -6,27 +6,47 @@
 
 **Benchmark gradient-boosted trees and deep learning models on your tabular data, with hyperparameter search, runtime estimates and a local web app.**
 
-AutoDeep trains and tunes up to 19 models (XGBoost, LightGBM, CatBoost, the TabICLv2 foundation model, RealMLP, TabM, a residual MLP, an MLP, nine deep tabular architectures (CategoryEmbedding, TabNet, FT-Transformer, TabTransformer, AutoInt, GANDALF, GATE, NODE, DANet), a Soft-Ordering 1D-CNN and a ResNet on IGTD images) on one or more datasets, evaluates them on a held-out test set and gives you a leaderboard. By default it picks the models that fit your time budget on your machine, and it saves the best model of each dataset, ready to predict new rows. You can drive it from a browser, from the command line, or from Python.
+<p align="center">
+  <img src="images/demo.gif" alt="AutoDeep web app: add a dataset, let Auto pick the models for a 3-minute budget, watch the run and get the leaderboard and the saved best model" width="900"><br>
+  <sub>The web app on a 6-core desktop CPU: one dataset, a 3-minute budget, 8 models picked automatically (the run is sped up 15x). <a href="images/demo.mp4">Full-resolution video</a>.</sub>
+</p>
+
+## Description
+
+AutoDeep is a flexible and easy-to-use API for automating machine learning experiments (AutoML) on tabular datasets. It facilitates testing various deep learning models as well as tree based models to compare their performance on multiple datasets with hyperparameter optimization and evaluation. By using the AutoRunner class (or the command line, or the web app), you can quickly train and evaluate models like XGBoost, LightGBM, CatBoost, the TabICLv2 foundation model, RealMLP, TabM, FT-Transformer, ResNet, and more on tabular data.
+
+The goal of this project is to provide an easy interface for training, hyperparameter tuning, and evaluating models, so researchers and developers can quickly benchmark different models on their datasets. By default it picks the models that fit your time budget on your machine, and it saves the best model of each dataset, ready to predict new rows.
 
 ```bash
 autodeep run data/churn.csv --target churned --budget 10m      # plan, train, compare, save the best model
 autodeep predict output/models/churn/best new_customers.csv -o predictions.csv
 ```
 
-![A finished run in the web app: the saved best model and the leaderboard](images/ui_results.png)
+## Features
+
+- **Supports multiple machine learning models**: 19 models, from gradient-boosted trees (XGBoost, LightGBM, CatBoost) to the TabICLv2 foundation model, RealMLP, TabM, nine deep tabular architectures (FT-Transformer, TabNet, GANDALF, …), a 1D-CNN and a ResNet on IGTD images.
+- **Hyperparameter optimization**: Automatically tunes hyperparameters using Bayesian Optimization (Hyperopt TPE), with a search space per model and per dataset size.
+- **Fits your time budget**: `models: auto` measures your machine and picks the models, trials and time limits that fit, and tells you what it skipped and why. Runtime estimates before anything is trained, live ETA while it runs.
+- **Data configuration**: Only a path and a target column are needed. Problem type, metric, column types and preprocessing are inferred; CSV, Parquet, Excel, JSON, built-in datasets and OpenML work out of the box.
+- **Web app, CLI and Python API**: the same experiments from a browser, a terminal or a notebook.
+- **Ready-to-use models**: the best model of each dataset is saved with its preprocessing. Load it and call `predict` on new rows, or use `autodeep predict`.
+- **Output handling**: Saves the results of experiments, including evaluation metrics, every trial and the best hyperparameters, in CSV format.
+- **Easy integration**: Simple to configure and extend with additional models or datasets.
 
 ---
 
-## Install
+## Installation
 
 You need Python 3.10 – 3.13. A GPU is optional.
+
+1. Clone the repository:
 
 ```bash
 git clone https://github.com/mdicio/AutoDeep.git
 cd AutoDeep
 ```
 
-**With [uv](https://docs.astral.sh/uv/) (recommended, uses the exact tested versions from `uv.lock`):**
+2. Install the dependencies. **With [uv](https://docs.astral.sh/uv/)** (recommended, uses the exact tested versions from `uv.lock`):
 
 ```bash
 uv sync
@@ -47,7 +67,26 @@ Optional extras: `pip install -e ".[files]"` adds Parquet/Feather/Excel input, `
 
 ---
 
-## Three ways to use it
+## Quick start in Python
+
+```python
+from autodeep import AutoRunner
+
+runner = AutoRunner(
+    datasets={"churn": {"path": "data/churn.csv", "target": "churned"}},
+    time_budget="10m",                   # AutoDeep picks the models that fit 10 minutes on this machine
+)
+leaderboard = runner.run()               # pandas DataFrame, best test score first
+
+model = runner.best_model("churn")       # saved with its preprocessing in output/models/churn/best
+model.predict(new_customers)             # original labels, one per row
+```
+
+That is all you need. The sections below show the three ways to use AutoDeep in more detail.
+
+---
+
+## How to Use
 
 ### 1. Web app
 
@@ -65,11 +104,11 @@ This opens `http://127.0.0.1:8765` (or the next free port). Then:
 
 Uploaded files and runs are stored in `./autodeep_workspace` (change it with `--workspace`). Everything stays on your machine.
 
-<details><summary>Screenshot: setting up an experiment</summary>
+| Set up an experiment | Watch it run |
+|---|---|
+| ![Datasets, the Auto plan and the model picker](images/ui_new_experiment.png) | ![Live progress, leaderboard and activity feed](images/ui_run_progress.png) |
 
-![Datasets and model picker of a new experiment](images/ui_new_experiment.png)
-
-</details>
+![A finished run: the saved best model, ready to download or predict a file, and the leaderboard](images/ui_results.png)
 
 ### 2. Command line
 
@@ -103,8 +142,18 @@ output_folder: results
 
 ### 3. Python
 
+#### Prepare the data configuration
+
+Define the datasets you want to run experiments on in the `datasets` dictionary. Each dataset needs a `path` and a `target` column; everything else (problem type, metric, test size, split column, evaluation metrics, …) is optional and listed in [Defining datasets](#defining-datasets).
+
+#### Define the models to use
+
+`models="auto"` (the default) chooses for you within `time_budget`. You can also give a list such as `["xgb", "catboost", "mlp"]`, or a preset (`"fast"`, `"default"`, `"modern"`, `"deep"`, `"all"`). The supported models are listed in [Models](#models).
+
+#### Initialize AutoRunner and run the experiment
+
 ```python
-from autodeep import AutoRunner, ResultsAnalyzer
+from autodeep import AutoRunner
 
 runner = AutoRunner(
     datasets={
@@ -113,7 +162,8 @@ runner = AutoRunner(
     },
     time_budget="20m",          # models="auto": what fits 20 minutes on this machine
     # models=["xgb", "catboost", "fttransformer"], max_evals=20,   # ...or choose yourself
-    output_folder="results",
+    output_folder="results",    # where you want experiment outputs and logs to be saved
+    random_state=42,
 )
 print(runner.plan().describe()) # chosen models, trials, time limits and why
 print(runner.estimate())        # runtime estimate per (dataset, model)
@@ -122,11 +172,24 @@ leaderboard = runner.run()      # pandas DataFrame, best test score first
 model = runner.best_model("churn")       # saved in results/models/churn/best
 model.predict(new_customers)             # original labels
 model.predict_proba(new_customers)       # one column per class
+```
+
+This will start the training and evaluation of models on the specified datasets. The results will be saved in the output folder.
+
+#### View results
+
+After the experiment finishes, the results are saved in a CSV format in the `output_folder`, including performance metrics (train, validation, test) and hyperparameters. `ResultsAnalyzer` reads them back, also later from another session:
+
+```python
+from autodeep import ResultsAnalyzer
 
 analyzer = ResultsAnalyzer(runner.results_path)
-analyzer.view_performance(dataset_name="churn")
-analyzer.view_parameters(model_name="xgb")
+analyzer.view_results(dataset_name="churn", model_name="xgb")   # key columns, metrics and hyperparameters
+analyzer.view_performance(dataset_name="churn")                  # performance columns only
+analyzer.view_parameters(model_name="xgb")                       # hyperparameter columns only
 ```
+
+All three filter by `dataset_name` and `model_name`.
 
 See [`examples/quickstart.py`](examples/quickstart.py) and the notebook [`examples/walkthrough.ipynb`](examples/walkthrough.ipynb). The original constructor arguments (`data_config=`, `default_models=`, `dataset_path`/`target_col` keys) still work.
 
@@ -207,7 +270,7 @@ Only `path` and `target` are required; everything else is inferred or has a defa
 | `danet` | DANet | deep tabular |
 | `resnet` | ResNet-18/34/50 on [IGTD](https://doi.org/10.1038/s41598-021-90923-y) images | tabular-as-image |
 
-**Auto (default):** AutoDeep picks models in order of expected value for the device (on CPU: xgb, catboost, tabicl, realmlp, gandalf, categoryembedding, tabm, fttransformer, mlp; on a GPU the deep models move up) and keeps each one whose minimum search (1 TabICL pass, 10 trials for boosted trees, 3 for neural networks) fits in its share of `time_budget` (default 15 minutes), with no model taking more than half of it. Every model then gets up to 30 trials and the same time limit, chosen so fast models finish all their trials and slow ones use the remaining time. `autodeep estimate` (or `runner.plan()`) shows the plan and why each skipped model was skipped. Explicit `max_evals` / `timeout_per_model` override the plan.
+**Auto (default):** AutoDeep picks models in order of expected value for the device (on CPU: xgb, catboost, lgbm, tabicl, realmlp, gandalf, categoryembedding, tabm, fttransformer, mlp; on a GPU the deep models move up) and keeps each one whose minimum search (1 TabICL pass, 10 trials for boosted trees, 3 for neural networks) fits in its share of `time_budget` (default 15 minutes), with no model taking more than half of it. Every model then gets up to 30 trials and the same time limit, chosen so fast models finish all their trials and slow ones use the remaining time. `autodeep estimate` (or `runner.plan()`) shows the plan and why each skipped model was skipped. Explicit `max_evals` / `timeout_per_model` override the plan.
 
 **Presets:** `fast` = xgb, lgbm, catboost, mlp · `default` = fast + tabicl, realmlp, categoryembedding, fttransformer, gandalf · `modern` = tabicl, realmlp, tabm · `deep` = realmlp, tabm and the nine deep tabular models · `all`.
 
@@ -271,7 +334,6 @@ A model that fails is recorded with its error, and the run continues with the ne
 | Port already in use | `autodeep ui` picks the next free port automatically; `--port` forces one |
 | Very slow deep models on CPU | Set `max_epochs` (e.g. 30), fewer `max_evals`, or `max_rows` on the dataset |
 | TabICL fails to download its weights | It needs internet access once (Hugging Face Hub). Afterwards the weights are cached in `~/.cache/huggingface` |
-| `ModuleNotFoundError: pkg_resources` | Your environment has setuptools ≥ 81: `pip install "setuptools<81"` (hyperopt needs it) |
 | Parquet / Excel files fail to load | `pip install -e ".[files]"` |
 
 ---
@@ -284,14 +346,27 @@ uv run pytest              # fast suite (~1 min); CI runs it on Python 3.10 and 
 uv run pytest -m slow      # trains every model on each problem type (a few minutes on CPU)
 ```
 
-Code map: `autodeep/automl.py` (AutoRunner), `datasets.py` (dataset specs and inference), `dataloaders/` (data loading and IGTD), `preprocessing.py` (fitted, replayable preprocessing), `predictor.py` (saved models), `autoplan.py` + `machine.py` (automatic plan and machine profile), `modelsdefinition/` (one trainer per model on a shared search loop), `modelutils/search.py` (hyperopt driver), `estimation.py`, `registry.py`, `cli.py`, `jobs.py`, `web/` (FastAPI server and single-page UI).
+## Repository Structure
+
+The repository is organized as follows:
+
+- `autodeep/` – Core library: `automl.py` (AutoRunner), `datasets.py` (dataset specs and inference), `preprocessing.py` (fitted, replayable preprocessing), `predictor.py` (saved models), `autoplan.py` + `machine.py` (automatic plan and machine profile), `estimation.py`, `registry.py`, `cli.py`, `jobs.py`.
+- `autodeep/modelsdefinition/` – One trainer per model on a shared hyperopt search loop (`autodeep/modelutils/search.py`); the deep tabular networks are in `tabular_nets/`.
+- `autodeep/dataloaders/` – Data loading and IGTD images.
+- `autodeep/configuration/` – Search spaces and default settings per model (`model_config.yml`, `model_config_XS.yml`).
+- `autodeep/web/` – FastAPI server and single-page web app.
+- `examples/` – A quickstart script, a walkthrough notebook and a commented experiment file.
+- `benchmarks/` – Benchmark scripts and results.
+- `tests/` – Test suite.
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ## License
 
-MIT. See [LICENCE](LICENCE).
+This project is licensed under the MIT License. See the [LICENCE](LICENCE) file for details.
 
-## Acknowledgements
+## Acknowledgments
 
-Built on [TabICL](https://github.com/soda-inria/tabicl), [pytabkit](https://github.com/dholzmueller/pytabkit), [Hyperopt](https://github.com/hyperopt/hyperopt), [XGBoost](https://xgboost.ai), [CatBoost](https://catboost.ai), [PyTorch](https://pytorch.org) and the [IGTD](https://github.com/zhuyitan/IGTD) algorithm. The deep tabular architectures are adapted from [PyTorch Tabular](https://github.com/manujosephv/pytorch_tabular) (Manu Joseph, MIT licence) and TabNet uses [pytorch-tabnet](https://github.com/dreamquark-ai/tabnet)'s network; many thanks to both projects.
+This library builds on top of several popular open-source projects, including [TabICL](https://github.com/soda-inria/tabicl), [pytabkit](https://github.com/dholzmueller/pytabkit), [Hyperopt](https://github.com/hyperopt/hyperopt), [XGBoost](https://xgboost.ai), [LightGBM](https://lightgbm.readthedocs.io), [CatBoost](https://catboost.ai), [PyTorch](https://pytorch.org) (obviously) and the [IGTD](https://github.com/zhuyitan/IGTD) algorithm.
+
+Special thanks to [PyTorch Tabular](https://github.com/manujosephv/pytorch_tabular) (Manu Joseph, MIT licence), which provided a very intuitive API for deep learning models on tabular data: the deep tabular architectures in AutoDeep are adapted from it, and TabNet uses [pytorch-tabnet](https://github.com/dreamquark-ai/tabnet)'s network. If the owner ever sees this I would be honoured to try and integrate some of the AutoDeep functionalities in the project.

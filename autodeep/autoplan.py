@@ -31,12 +31,12 @@ MAX_TRIALS = 30
 MAX_MODELS = 8
 SLACK = 0.92  # plan for 92% of the budget: the last trial of a model runs past its time limit
 MAX_SHARE = 0.5  # no single model may need more than half of a dataset's budget (keeps the comparison diverse)
-MIN_TRIALS = {"xgb": 10, "catboost": 10, "mlp": 5, "tabicl": 1}
+MIN_TRIALS = {"xgb": 10, "lgbm": 10, "catboost": 10, "mlp": 5, "tabicl": 1}
 DEFAULT_MIN_TRIALS = 3
 
 # candidates in order of expected value (TabArena results for the modern models, practical experience for the rest)
-CPU_ORDER = ["xgb", "catboost", "tabicl", "realmlp", "gandalf", "categoryembedding", "tabm", "fttransformer", "mlp"]
-GPU_ORDER = ["tabicl", "xgb", "catboost", "realmlp", "tabm", "fttransformer", "gandalf", "categoryembedding", "mlp"]
+CPU_ORDER = ["xgb", "catboost", "lgbm", "tabicl", "realmlp", "gandalf", "categoryembedding", "tabm", "fttransformer", "mlp"]
+GPU_ORDER = ["tabicl", "xgb", "catboost", "lgbm", "realmlp", "tabm", "fttransformer", "gandalf", "categoryembedding", "mlp"]
 
 
 def parse_duration(value: None | int | float | str) -> float | None:

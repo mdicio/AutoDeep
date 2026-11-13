@@ -1,15 +1,18 @@
 # Changelog
 
-## 0.5.0 (unreleased): competition tools
+## 0.5.0 (2026-11-13): competition tools, LightGBM
 
 ### New
-- **LightGBM** (`lgbm`, CPU, native categorical columns) with a default search space; it is part of the `fast` preset.
+- **LightGBM** (`lgbm`, CPU, native categorical columns) with a default search space; it is part of the `fast` preset and of the `models: auto` candidates (after CatBoost).
 - **Offset columns (GLM-boost).** XGBoost and LightGBM accept `default_params: {offset_column: <name>}`: that column holds log-odds from another model (e.g. an out-of-fold logistic regression), boosting starts from it (`base_margin` / `init_score`) and predictions add it back. The column is not used as a feature. Binary classification only.
 - **Residual MLP** (`resmlp`, PyTorch): with an offset column the output is `offset + net(x)` with a zero-initialised head, so training starts at the offset model and learns its residual; otherwise a plain MLP. Early stopping on validation AUC (binary) or loss.
 - **`search_folds: K`** in a model's `default_params`: every trial is scored on K stratified folds (mean validation metric) instead of one split. Use it when candidates differ by less than the noise of a single validation split (K times the cost).
 - **`autodeep.ensemble.Stacker`**: stacks out-of-fold predictions (from AutoDeep or anywhere else) with Caruana hill climbing or an L2 logistic regression on logit-ranks, scored by nested cross-validation (`nested_score_`, `weights_`, `predict()`).
 
-## 0.4.0 (unreleased): use the models, sensible defaults
+### Also
+- README: a demo clip of the web app, new screenshots and a minimal Python quick start.
+
+## 0.4.0 (2026-11-13): use the models, sensible defaults
 
 ### New
 - **Saved, ready-to-use models.** Every run keeps the best model of each dataset (chosen on the validation score, never the test score) and saves it with its preprocessing to `<output>/models/<dataset>/best`. `runner.best_model("churn").predict(new_rows)`, `autodeep.load_model(path)`, `autodeep predict <model> new.csv -o predictions.csv` and `autodeep info <model>`. New rows need the original columns: missing values, unseen categories and numbers stored as text are handled like during training, and predictions use the original class labels. `predict_proba` returns one column per class; `evaluate` scores labelled rows. In the web app, each run has a "Use the best models" card to download a model or predict an uploaded file.
