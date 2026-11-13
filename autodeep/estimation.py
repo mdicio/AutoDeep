@@ -4,6 +4,8 @@ Three layers, from coarse to precise:
 
 1. **Priors**: per-model cost curves ``seconds_per_trial = base + per_krow * (n_train/1000)^a * (n_features/20)^b``
    measured on a 12-thread CPU. They capture how cost scales with data size.
+   Before there is any history, they are scaled by this machine's measured CPU speed
+   (:func:`autodeep.machine.measure_speed`, a ~0.5 s benchmark cached for 30 days).
 2. **History**: every finished trial is appended to ``~/.cache/autodeep/timings.jsonl``. When a model has
    history on the current device, the prior is rescaled by the median ``actual / prior`` ratio, so
    estimates adapt to *your* machine after the first run.
@@ -22,7 +24,6 @@ import os
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -37,10 +38,15 @@ TYPICAL_EPOCHS = 40
 # Measured 2026-11 on a 12-thread CPU (Ryzen-class), median of random hyperparameter trials, at
 # ~2k rows (XS search space) and ~16k rows (default search space). node/danet/s1dcnn/resnet are
 # extrapolated from the 2k point. GPU factors are rough guesses: your history replaces them.
-PRIORS: Dict[str, Dict[str, float]] = {
-    "xgb": dict(base=0.1, per_krow=0.012, a=1.0, b=0.8, gpu=1.0, epochs=False),
-    "catboost": dict(base=1.0, per_krow=0.06, a=1.0, b=0.7, gpu=1.0, epochs=False),
-    "mlp": dict(base=0.1, per_krow=0.11, a=1.0, b=0.4, gpu=1.0, epochs=False),
+PRIORS: dict[str, dict[str, float]] = {
+    # xgb/catboost re-fitted 2026-11-12 for the 0.4.0 grids (up to 2000 trees + early stopping) on CPU at 16k-40k
+    # rows (medians of 5 trials on california_housing, adult, covertype_50k; multiclass costs ~3x more for xgb)
+    "xgb": dict(base=0.1, per_krow=0.11, a=1.0, b=0.8, gpu=1.0, epochs=False),
+    "lgbm": dict(base=0.1, per_krow=0.11, a=1.0, b=0.8, gpu=1.0, epochs=False),  # assumed ~xgb until timed
+    "catboost": dict(base=1.0, per_krow=0.28, a=1.0, b=0.7, gpu=1.0, epochs=False),
+    # mlp re-measured 2026-11-12 at 16k rows (default search space, sgd trials ~30 s): steeper than linear
+    "resmlp": dict(base=0.2, per_krow=0.5, a=1.0, b=0.3, gpu=4.0, epochs=False),  # assumed, until timed
+    "mlp": dict(base=0.1, per_krow=0.55, a=1.5, b=0.4, gpu=1.0, epochs=False),
     "categoryembedding": dict(base=0.6, per_krow=0.75, a=1.0, b=0.2, gpu=2.0, epochs=True),
     "tabnet": dict(base=0.3, per_krow=4.7, a=1.0, b=0.4, gpu=2.5, epochs=True),
     "fttransformer": dict(base=0.6, per_krow=63.0, a=1.0, b=1.0, gpu=6.0, epochs=True),
@@ -54,11 +60,16 @@ PRIORS: Dict[str, Dict[str, float]] = {
     "resnet": dict(base=1.0, per_krow=95.0, a=1.0, b=0.3, gpu=10.0, epochs=True),
     # added 2026-11 (same machine). tabicl: one forward pass, cost ~ rows x context (2k: 38 s, 16k: 497 s on CPU).
     # realmlp: fixed 256 epochs (2k: 17 s, 16k: 110 s). tabm: early stopping (2k: 109 s; 16k extrapolated).
-    "tabicl": dict(base=3.0, per_krow=16.0, a=1.23, b=0.5, gpu=15.0, epochs=False),
-    "realmlp": dict(base=0.5, per_krow=9.4, a=0.89, b=0.5, gpu=5.0, epochs=True, typical_epochs=256),
-    "tabm": dict(base=1.0, per_krow=60.0, a=0.85, b=0.5, gpu=10.0, epochs=True, typical_epochs=100),
+    # GPU factors of these three measured 2026-11-12 on an RTX 3060 (benchmarks/larger_datasets.py, 16k-40k rows):
+    # tabicl 54-78x, tabm 10-43x (median 13x), realmlp 0.9-2.1x (batch 256 x 256 epochs is launch-bound).
+    "tabicl": dict(base=3.0, per_krow=16.0, a=1.23, b=0.5, gpu=50.0, epochs=False),
+    "realmlp": dict(base=0.5, per_krow=9.4, a=0.89, b=0.5, gpu=1.5, epochs=True, typical_epochs=256),
+    "tabm": dict(base=1.0, per_krow=60.0, a=0.85, b=0.5, gpu=12.0, epochs=True, typical_epochs=100),
 }
 DEFAULT_PRIOR = dict(base=5.0, per_krow=5.0, a=1.0, b=0.5, gpu=3.0, epochs=True)
+# models with a GPU factor of at least GPU_HUNGRY get a warning when their CPU estimate exceeds SLOW_ON_CPU_SECONDS
+GPU_HUNGRY = 10.0
+SLOW_ON_CPU_SECONDS = 300
 
 
 @dataclass
@@ -95,7 +106,7 @@ def _effective_features(model: str, shape: DatasetShape) -> int:
     return shape.n_onehot_features if model in ("xgb", "mlp", "resnet", "s1dcnn") else shape.n_features
 
 
-def prior_seconds_per_trial(model: str, n_train: int, n_features: int, device: str = "cpu", max_epochs: Optional[int] = None) -> float:
+def prior_seconds_per_trial(model: str, n_train: int, n_features: int, device: str = "cpu", max_epochs: int | None = None) -> float:
     p = PRIORS.get(model, DEFAULT_PRIOR)
     # hyperopt's internal validation split: models train on ~80% of the training rows
     krows = max(n_train * 0.8, 1) / 1000.0
@@ -115,9 +126,9 @@ def igtd_seconds(n_features: int) -> float:
 class TimingHistory:
     def __init__(self, path: Path = HISTORY_FILE):
         self.path = Path(path)
-        self._records: Optional[List[Dict]] = None
+        self._records: list[dict] | None = None
 
-    def records(self) -> List[Dict]:
+    def records(self) -> list[dict]:
         if self._records is None:
             self._records = []
             if self.path.exists():
@@ -128,7 +139,7 @@ class TimingHistory:
                         continue
         return self._records
 
-    def add(self, record: Dict) -> None:
+    def add(self, record: dict) -> None:
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             with open(self.path, "a") as f:
@@ -173,12 +184,12 @@ class JobEstimate:
     high_seconds: float
     source: str  # "prior" | "history (n)"
     capped_by_timeout: bool = False
-    warning: Optional[str] = None
+    warning: str | None = None
 
 
 @dataclass
 class Plan:
-    jobs: List[JobEstimate] = field(default_factory=list)
+    jobs: list[JobEstimate] = field(default_factory=list)
     device: str = "cpu"
 
     @property
@@ -196,7 +207,7 @@ class Plan:
     def human_total(self) -> str:
         return f"~{format_duration(self.total_seconds)} (range {format_duration(self.low_seconds)} - {format_duration(self.high_seconds)})"
 
-    def to_records(self) -> List[Dict]:
+    def to_records(self) -> list[dict]:
         return [asdict(j) for j in self.jobs]
 
     def to_dataframe(self) -> pd.DataFrame:
@@ -207,7 +218,7 @@ class Plan:
         df["range"] = [f"{format_duration(lo)} - {format_duration(hi)}" for lo, hi in zip(df.low_seconds, df.high_seconds)]
         return df[["dataset", "model", "n_train", "n_features", "trials", "seconds_per_trial", "estimate", "range", "source"]]
 
-    def summary(self) -> Dict:
+    def summary(self) -> dict:
         return {
             "device": self.device,
             "total_seconds": self.total_seconds,
@@ -216,6 +227,30 @@ class Plan:
             "human": self.human_total(),
             "jobs": self.to_records(),
         }
+
+
+def seconds_per_trial(
+    model: str,
+    shape: DatasetShape,
+    device: str = "cpu",
+    max_epochs: int | None = None,
+    history: TimingHistory | None = None,
+    speed_factor: float | None = None,
+):
+    """``(seconds, low_factor, high_factor, source)`` for one search trial of ``model`` on ``shape``."""
+    history = history or TimingHistory()
+    per_trial = prior_seconds_per_trial(model, shape.n_train, _effective_features(model, shape), device, max_epochs)
+    ratio, n_hist = history.calibration(model, device)
+    if ratio is not None:
+        lo_f, hi_f = (0.6, 1.6) if n_hist >= 5 else (0.4, 2.0)
+        return per_trial * ratio, lo_f, hi_f, f"history ({n_hist} trials)"
+    if device == "cpu" and speed_factor and abs(speed_factor - 1.0) > 0.05:  # the benchmark measures the CPU only
+        return per_trial * speed_factor, 0.35, 2.5, f"prior x{speed_factor:.2f} (CPU benchmark)"
+    return per_trial, 0.35, 2.5, "prior"
+
+
+def setup_seconds(model: str, shape: DatasetShape) -> float:
+    return igtd_seconds(_effective_features(model, shape)) if model == "resnet" else 0.0
 
 
 def _trials_for(model: str, max_evals: int) -> int:
@@ -228,29 +263,23 @@ def _trials_for(model: str, max_evals: int) -> int:
 
 
 def estimate_plan(
-    shapes: List[DatasetShape],
-    models: List[str],
+    shapes: list[DatasetShape],
+    models: list[str],
     max_evals: int,
-    timeout_per_model: Optional[float] = None,
-    max_epochs: Optional[int] = None,
+    timeout_per_model: float | None = None,
+    max_epochs: int | None = None,
     device: str = "cpu",
-    history: Optional[TimingHistory] = None,
+    history: TimingHistory | None = None,
+    speed_factor: float | None = None,
 ) -> Plan:
+    """Estimate every (dataset, model) search. ``speed_factor`` scales the built-in priors (see :mod:`autodeep.machine`)."""
     history = history or TimingHistory()
     plan = Plan(device=device)
     for shape in shapes:
         for model in models:
             n_feat = _effective_features(model, shape)
-            per_trial = prior_seconds_per_trial(model, shape.n_train, n_feat, device, max_epochs)
-            ratio, n_hist = history.calibration(model, device)
-            if ratio is not None:
-                per_trial *= ratio
-                lo_f, hi_f = (0.6, 1.6) if n_hist >= 5 else (0.4, 2.0)
-                source = f"history ({n_hist} trials)"
-            else:
-                lo_f, hi_f = (0.35, 2.5)
-                source = "prior"
-            setup = igtd_seconds(n_feat) if model == "resnet" else 0.0
+            per_trial, lo_f, hi_f, source = seconds_per_trial(model, shape, device, max_epochs, history, speed_factor)
+            setup = setup_seconds(model, shape)
             trials = _trials_for(model, max_evals)
             total = per_trial * trials + setup
             capped, warning = False, None
@@ -259,6 +288,9 @@ def estimate_plan(
                 total, capped = setup + max(per_trial, float(timeout_per_model) + per_trial / 2), True
                 if per_trial > timeout_per_model:
                     warning = f"one trial (~{format_duration(per_trial)}) is longer than the time budget: only 1 trial will run"
+            gpu_factor = PRIORS.get(model, DEFAULT_PRIOR)["gpu"]
+            if warning is None and device == "cpu" and gpu_factor >= GPU_HUNGRY and total > SLOW_ON_CPU_SECONDS:
+                warning = f"~{format_duration(total)} on CPU; this model is much faster on a GPU (or use models: auto to fit a time budget)"
             plan.jobs.append(
                 JobEstimate(
                     dataset=shape.name,
@@ -300,7 +332,7 @@ def format_duration(seconds: float) -> str:
 class RunTracker:
     """Consumes progress events, records timings and maintains a live ETA."""
 
-    def __init__(self, plan: Plan, device: str = "cpu", max_epochs: Optional[int] = None, history: Optional[TimingHistory] = None):
+    def __init__(self, plan: Plan, device: str = "cpu", max_epochs: int | None = None, history: TimingHistory | None = None):
         self.plan = plan
         self.device = device
         self.max_epochs = max_epochs
@@ -309,7 +341,7 @@ class RunTracker:
         self.order = [(j.dataset, j.model) for j in plan.jobs]
         self.done_jobs = set()
         self.current = None
-        self.current_durations: List[float] = []
+        self.current_durations: list[float] = []
         self.current_started = None
         self.started = time.time()
         self.trials_done = 0
@@ -320,7 +352,7 @@ class RunTracker:
     def total_trials(self) -> int:
         return sum(j.trials for j in self.plan.jobs)
 
-    def observe(self, evt: Dict) -> None:
+    def observe(self, evt: dict) -> None:
         kind = evt.get("event")
         if kind == "model_start":
             self.current = (evt["dataset"], evt["model"])
@@ -371,7 +403,7 @@ class RunTracker:
                 remaining += job.total_seconds * calib
         return remaining
 
-    def snapshot(self) -> Dict:
+    def snapshot(self) -> dict:
         eta = self.eta_seconds()
         elapsed = time.time() - self.started
         total_jobs = len(self.order)

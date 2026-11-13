@@ -1,10 +1,10 @@
-"""Training loop shared by the custom PyTorch models (ResNet on IGTD images, Soft-Ordering 1D-CNN)."""
+"""Training loop shared by AutoDeep's own PyTorch models (embedding-based tabular nets, ResNet on IGTD images, 1D-CNN)."""
 
 from __future__ import annotations
 
 import copy
 import math
-from typing import Optional
+import random
 
 import numpy as np
 import pandas as pd
@@ -29,7 +29,7 @@ class TorchTrainer(BaseTrainer):
     def to_tensor(self, X: pd.DataFrame):
         import torch
 
-        return torch.as_tensor(X.to_numpy(dtype=np.float32))
+        return torch.tensor(X.to_numpy(dtype=np.float32))  # a copy: with pandas 3 copy-on-write, to_numpy() can be read-only
 
     # ------------------------------------------------------------------ setup
     @property
@@ -56,7 +56,7 @@ class TorchTrainer(BaseTrainer):
     def _target_tensor(self, y):
         import torch
 
-        y = np.asarray(y)
+        y = np.array(y)  # a copy: with pandas 3 copy-on-write, np.asarray(series) is read-only
         if self.problem_type == "multiclass_classification":
             return torch.as_tensor(y, dtype=torch.long)
         if self.problem_type == "regression":
@@ -87,6 +87,9 @@ class TorchTrainer(BaseTrainer):
             pin_memory=self.device == "cuda",
         )
 
+    def init_network(self, net, X_train_t, y_train_t) -> None:
+        """Hook called once per trial before the first epoch, e.g. for data-aware initialisation."""
+
     def _forward(self, net, xb):
         out = net(xb)
         return out.reshape(-1) if self.n_outputs == 1 else out
@@ -96,16 +99,21 @@ class TorchTrainer(BaseTrainer):
         import torch
 
         torch.manual_seed(self.random_state)
+        random.seed(self.random_state)  # some architectures draw their initial masks with random / numpy
+        np.random.seed(self.random_state % 2**32)
         device = self.device
-        batch_size = int(min(int(params.get("batch_size", 256)), len(X_train)))
+        batch_size = int(min(int(params.get("batch_size", self.default_params.get("batch_size", 256))), len(X_train)))
         max_epochs = max(1, int(self._setting("max_epochs", 100)))
         patience = int(self.default_params.get("early_stopping_patience", 10))
         tol = float(self.default_params.get("tol", 0.0))
 
         net = self.build_network(params, X_train.shape[1], self.n_outputs).to(device)
+        net._autodeep_build = (dict(params), int(X_train.shape[1]), int(self.n_outputs))  # to rebuild the net after unpickling
         opt, sched = self._optimizer(params, net)
         loss_fn = self._loss_fn(y_train)
-        train_loader = self._loader(self.to_tensor(X_train), self._target_tensor(y_train), batch_size, shuffle=True)
+        X_train_t, y_train_t = self.to_tensor(X_train), self._target_tensor(y_train)
+        self.init_network(net, X_train_t, y_train_t)
+        train_loader = self._loader(X_train_t, y_train_t, batch_size, shuffle=True)
         val_loader = self._loader(self.to_tensor(X_val), self._target_tensor(y_val), max(batch_size, 1024), shuffle=False)
 
         best_loss, best_state, best_epoch, bad_epochs = math.inf, None, 0, 0
@@ -151,6 +159,7 @@ class TorchTrainer(BaseTrainer):
     def predict_with(self, net, X):
         import torch
 
+        net = self._on_own_device(net)
         net.eval()
         X_t = self.to_tensor(X)
         outs = []
@@ -166,12 +175,60 @@ class TorchTrainer(BaseTrainer):
         prob = torch.softmax(out, dim=1).numpy()
         return prob.argmax(axis=1), prob
 
+    # Networks are pickled as (build arguments, weights): some layers (weight_norm parametrizations,
+    # locally defined classes) cannot be pickled as modules.
+    def __getstate__(self):
+        state, packed = self.__dict__.copy(), {}
+        for key in ("model", "best_model"):
+            net = state.get(key)
+            if net is not None and hasattr(net, "_autodeep_build"):
+                if id(net) not in packed:
+                    packed[id(net)] = {
+                        "_autodeep_net": True,
+                        "build": net._autodeep_build,
+                        "weights": {k: v.cpu() for k, v in net.state_dict().items()},
+                    }
+                state[key] = packed[id(net)]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        rebuilt = {}
+        for key in ("model", "best_model"):
+            saved = state.get(key)
+            if isinstance(saved, dict) and saved.get("_autodeep_net"):
+                if id(saved) not in rebuilt:
+                    params, n_features, n_outputs = saved["build"]
+                    params = {**params, "weights": None}  # no pretrained download: the weights come from the file
+                    net = self.build_network(params, n_features, n_outputs)
+                    net.load_state_dict(saved["weights"])
+                    net._autodeep_build = saved["build"]
+                    rebuilt[id(saved)] = net.eval()  # on CPU; predict_with() moves it to the trainer's device
+                setattr(self, key, rebuilt[id(saved)])
+
+    def _on_own_device(self, net):
+        """Move ``net`` where :attr:`device` sends the inputs, e.g. after unpickling (CPU if that fails)."""
+        device = self.device
+        param = next(net.parameters(), None)
+        if param is None or param.device.type == device:
+            return net
+        try:
+            return net.to(device)
+        except Exception:  # e.g. no usable GPU after all
+            self._device_override = "cpu"
+            return net.to("cpu")
+
+    def to_device(self, device: str) -> None:
+        super().to_device(device)
+        if self.model is not None:
+            self.model.to(device)
+
     def save_model(self, path):
         import torch
 
         torch.save(self.model.state_dict(), str(path))
 
-    def _load_model(self, path, params: Optional[dict] = None):  # pragma: no cover - convenience
+    def _load_model(self, path, params: dict | None = None):  # pragma: no cover - convenience
         import torch
 
         self.model.load_state_dict(torch.load(str(path), map_location=self.device))

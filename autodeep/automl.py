@@ -7,9 +7,10 @@ import gc
 import json
 import time
 import traceback
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any
 from uuid import uuid4
 
 import numpy as np
@@ -21,7 +22,7 @@ from autodeep.datasets import DatasetSpec, parse_datasets
 from autodeep.device import apply_device_policy, resolve_device, set_device
 from autodeep.evaluation.generalevaluator import METRICS, Evaluator
 from autodeep.logging_utils import get_logger, setup_logging
-from autodeep.registry import DEFAULT_MODELS, resolve_models
+from autodeep.registry import resolve_models
 
 CONFIG_DIR = Path(__file__).parent / "configuration"
 DEFAULT_MODEL_CONFIG_FILE = CONFIG_DIR / "model_config.yml"
@@ -59,16 +60,16 @@ RESULT_FIELDS = [
 logger = get_logger()
 
 
-def _load_yaml(path) -> Dict:
-    with open(path, "r") as f:
+def _load_yaml(path) -> dict:
+    with open(path) as f:
         return yaml.safe_load(f)
 
 
 def _json(value) -> str:
     def default(o):
-        if isinstance(o, (np.integer,)):
+        if isinstance(o, np.integer):
             return int(o)
-        if isinstance(o, (np.floating,)):
+        if isinstance(o, np.floating):
             return float(o)
         if isinstance(o, np.ndarray):
             return o.tolist()
@@ -90,16 +91,24 @@ class AutoRunner:
 
         runner = AutoRunner(
             datasets={"iris": {"path": "builtin:iris"}, "mine": {"path": "data.csv", "target": "label"}},
-            models=["xgb", "catboost", "fttransformer"],   # or a preset: "fast", "default", "modern", "deep", "all"
-            max_evals=20,
+            time_budget="20m",          # models="auto" (default): pick what fits this machine in 20 minutes
         )
-        print(runner.estimate())   # how long will it take?
+        print(runner.plan().describe())   # which models and why
+        print(runner.estimate())          # how long will it take?
         leaderboard = runner.run()
+        runner.best_model("mine").predict(new_rows)
+
+        # or choose yourself: models=["xgb", "catboost", "fttransformer"] or a preset
+        # ("fast", "default", "modern", "deep", "all"), max_evals=20
 
     Args:
         datasets / data_config: ``{name: {...}}`` dict, list of dicts or :class:`DatasetSpec` objects.
-        models / default_models: model names or a preset name.
-        max_evals: hyperparameter-search trials per (dataset, model).
+        models / default_models: ``"auto"`` (default: pick models that fit ``time_budget`` on this machine,
+            see :mod:`autodeep.autoplan`), model names or a preset name.
+        time_budget: total time for the run, in seconds or as text (``"20m"``, ``"1h"``). With ``models="auto"``
+            it decides the models, trials and time limits (default 15 minutes); with explicit models it sets
+            ``timeout_per_model`` (budget / number of searches) unless that is given.
+        max_evals: hyperparameter-search trials per (dataset, model) (default: from the auto plan, else 25).
         timeout_per_model: optional time budget in seconds for each (dataset, model) search.
         max_epochs: optional cap on training epochs of every neural model (great for quick runs).
         model_config: path or dict overriding the bundled search spaces for every dataset. By default
@@ -107,7 +116,12 @@ class AutoRunner:
         device: ``"auto"`` (GPU if available with enough free memory), ``"cpu"`` or ``"cuda"``.
         on_event: callback receiving progress events (dicts) - used by the CLI and the web UI.
         fail_fast: raise on the first failing model instead of recording the error and continuing.
-        save_models: also store the best model of every run under ``<output_folder>/models``.
+        save_best: save the best model of each dataset (highest validation score) to
+            ``<output_folder>/models/<dataset>/best``, ready for :func:`autodeep.load_model` / ``autodeep predict``.
+        save_models: also save every trained model to ``<output_folder>/models/<dataset>/<model>``.
+
+    After :meth:`run`, :meth:`best_model` returns the best model of a dataset as a
+    :class:`~autodeep.predictor.Predictor` (preprocessing + model): ``runner.best_model("churn").predict(new_rows)``.
     """
 
     def __init__(
@@ -118,32 +132,42 @@ class AutoRunner:
         datasets=None,
         models=None,
         execution_mode: str = "hyperopt",
-        max_evals: int = 25,
+        max_evals: int | None = None,
         random_state: int = 42,
-        model_config: Union[str, Path, Dict, None] = None,
-        output_folder: Union[str, Path] = DEFAULT_OUTPUT_FOLDER,
+        model_config: str | Path | dict | None = None,
+        output_folder: str | Path = DEFAULT_OUTPUT_FOLDER,
         output_filename: str = "experiments",
-        igtd_path: Union[str, Path, None] = None,
-        igtd_config: Optional[Dict] = None,
-        timeout_per_model: Optional[float] = None,
-        max_epochs: Optional[int] = None,
+        igtd_path: str | Path | None = None,
+        igtd_config: dict | None = None,
+        timeout_per_model: float | None = None,
+        max_epochs: int | None = None,
         device: str = "auto",
-        on_event: Optional[Callable[[Dict], None]] = None,
+        on_event: Callable[[dict], None] | None = None,
         fail_fast: bool = False,
         save_models: bool = False,
+        save_best: bool = True,
+        time_budget: None | float | str = None,
         log_level: str = "INFO",
     ):
         if execution_mode != "hyperopt":
             raise ValueError("Only execution_mode='hyperopt' is implemented.")
-        self.datasets: List[DatasetSpec] = parse_datasets(datasets if datasets is not None else data_config)
+        self.datasets: list[DatasetSpec] = parse_datasets(datasets if datasets is not None else data_config)
         names = [d.name for d in self.datasets]
         if len(set(names)) != len(names):
             raise ValueError(f"Dataset names must be unique, got {names}")
-        self.models: List[str] = resolve_models(models if models is not None else (default_models if default_models is not None else DEFAULT_MODELS))
+        from autodeep.autoplan import parse_duration
+
+        requested = models if models is not None else default_models
+        self.auto = requested is None or (isinstance(requested, str) and requested.strip().lower() == "auto")
+        self.models: list[str] = [] if self.auto else resolve_models(requested)  # auto: filled in by plan()
         self.execution_mode = execution_mode
-        self.max_evals = int(max_evals)
+        self.time_budget = parse_duration(time_budget)
+        self._user_max_evals = None if max_evals is None else int(max_evals)
+        self._user_timeout = timeout_per_model
+        self.max_evals = self._user_max_evals or 25
         if self.max_evals < 1:
             raise ValueError("max_evals must be >= 1")
+        self.auto_plan = None
         self.random_state = random_state
         self.user_model_config = self._load_model_config(model_config) if model_config is not None else None
         self.output_folder = Path(output_folder)
@@ -155,10 +179,13 @@ class AutoRunner:
         self.device = device
         self.on_event = on_event
         self.fail_fast = fail_fast
-        self.save_models = save_models
+        self.save_models = bool(save_models)
+        self.save_best = bool(save_best)
+        self.best_models: dict[str, Any] = {}  # dataset -> Predictor (best validation score)
+        self.best_model_paths: dict[str, Path] = {}
         self.log_level = log_level
-        self.results: List[Dict[str, Any]] = []
-        self.trained_models: Dict[tuple, Any] = {}
+        self.results: list[dict[str, Any]] = []
+        self.trained_models: dict[tuple, Any] = {}
         self.run_id = None
 
     # backwards-compatible attribute names
@@ -171,7 +198,7 @@ class AutoRunner:
         return {d.name: d.as_legacy_dict() for d in self.datasets}
 
     @classmethod
-    def from_yaml(cls, path, **overrides) -> "AutoRunner":
+    def from_yaml(cls, path, **overrides) -> AutoRunner:
         """Build a runner from an experiment YAML file (see ``examples/experiment.yaml``)."""
         cfg = _load_yaml(path) or {}
         base = Path(path).resolve().parent
@@ -189,7 +216,7 @@ class AutoRunner:
 
     # ------------------------------------------------------------------ config
     @staticmethod
-    def _load_model_config(cfg) -> Dict:
+    def _load_model_config(cfg) -> dict:
         if isinstance(cfg, dict):
             return copy.deepcopy(cfg)
         return _load_yaml(cfg)
@@ -197,7 +224,7 @@ class AutoRunner:
     def _load_config(self, path):  # backwards compatibility
         return _load_yaml(path)
 
-    def model_config_for(self, n_train_rows: int) -> Dict:
+    def model_config_for(self, n_train_rows: int) -> dict:
         if self.user_model_config is not None:
             return self.user_model_config
         path = XS_MODEL_CONFIG_FILE if n_train_rows <= XS_MAX_TRAIN_ROWS else DEFAULT_MODEL_CONFIG_FILE
@@ -213,10 +240,44 @@ class AutoRunner:
             df = spec.read()
             spec.resolve(df)
             shapes.append(shape_from_spec(spec, df))
+        device = self._device()
+        self._plan_settings(shapes, device)
         plan = estimate_plan(
-            shapes, self.models, self.max_evals, timeout_per_model=self.timeout_per_model, max_epochs=self.max_epochs, device=self._device()
+            shapes,
+            self.models,
+            self.max_evals,
+            timeout_per_model=self.timeout_per_model,
+            max_epochs=self.max_epochs,
+            device=device,
+            speed_factor=self._speed_factor(),
         )
         return plan.to_dataframe() if as_dataframe else plan
+
+    @staticmethod
+    def _speed_factor() -> float:
+        from autodeep.machine import current_speed_factor
+
+        return current_speed_factor()
+
+    def _plan_settings(self, shapes, device) -> None:
+        """Resolve ``models="auto"`` and ``time_budget`` into models, max_evals and timeout_per_model."""
+        if self.auto:
+            from autodeep.autoplan import recommend
+            from autodeep.machine import machine_profile
+
+            self.auto_plan = recommend(
+                shapes, self.time_budget, device=device, speed_factor=self._speed_factor(), max_epochs=self.max_epochs, machine=machine_profile()
+            )
+            self.models = self.auto_plan.models
+            self.max_evals = self._user_max_evals or self.auto_plan.max_evals
+            self.timeout_per_model = self._user_timeout if self._user_timeout is not None else self.auto_plan.timeout_per_model
+        elif self.time_budget and self._user_timeout is None:
+            self.timeout_per_model = round(self.time_budget / max(len(shapes) * len(self.models), 1), 1)
+
+    def plan(self):
+        """The automatic plan (models, trials, time limit and the reasons), for ``models="auto"``."""
+        self.estimate(as_dataframe=False)
+        return self.auto_plan
 
     def _device(self):
         set_device(self.device)
@@ -231,6 +292,9 @@ class AutoRunner:
         setup_logging(self.log_level, log_file=self.output_folder / "autodeep.log")
         set_device(self.device)
         device = apply_device_policy()  # before anything initialises CUDA
+        # pin the device for the whole run: with "auto", every lookup would query nvidia-smi again and a run
+        # could switch to CPU halfway once its own GPU allocations shrink the free memory
+        set_device(device)
         self.run_id = datetime.now().strftime("%Y%m%d-%H%M%S-") + uuid4().hex[:6]
         from autodeep.factory import seed_everything
 
@@ -243,7 +307,18 @@ class AutoRunner:
             spec.resolve(df)
             frames[spec.name] = df
         shapes = [shape_from_spec(s, frames[s.name]) for s in self.datasets]
-        plan = estimate_plan(shapes, self.models, self.max_evals, timeout_per_model=self.timeout_per_model, max_epochs=self.max_epochs, device=device)
+        self._plan_settings(shapes, device)
+        if self.auto_plan is not None:
+            logger.info("Automatic plan:\n" + self.auto_plan.describe())
+        plan = estimate_plan(
+            shapes,
+            self.models,
+            self.max_evals,
+            timeout_per_model=self.timeout_per_model,
+            max_epochs=self.max_epochs,
+            device=device,
+            speed_factor=self._speed_factor(),
+        )
         tracker = RunTracker(plan, device=device, max_epochs=self.max_epochs)
 
         def reporter(evt):
@@ -258,6 +333,9 @@ class AutoRunner:
             f"Run {self.run_id}: {len(self.datasets)} dataset(s) x {len(self.models)} model(s), {self.max_evals} trial(s) each, "
             f"device={device}. Estimated time: {plan.human_total()}. Outputs -> {self.output_folder.resolve()}"
         )
+        for job in plan.jobs:
+            if job.warning:
+                logger.warning(f"{job.model} on {job.dataset}: {job.warning}")
         progress.emit(
             "run_start",
             run_id=self.run_id,
@@ -266,12 +344,13 @@ class AutoRunner:
             max_evals=self.max_evals,
             device=device,
             plan=plan.to_records(),
+            auto_plan=self.auto_plan.reasons if self.auto_plan is not None else None,
         )
         cancelled = False
         try:
             for spec, shape in zip(self.datasets, shapes):
                 model_cfg = self.model_config_for(shape.n_train)
-                cache: Dict[tuple, tuple] = {}
+                cache: dict[tuple, tuple] = {}
                 for model_name in self.models:
                     try:
                         self._run_one(spec, frames[spec.name], model_name, model_cfg, cache, device)
@@ -279,11 +358,14 @@ class AutoRunner:
                         cancelled = True
                         break
                 frames[spec.name] = None
+                cache.clear()
+                self._save_best(spec.name)
                 if cancelled:
                     break
         finally:
             progress.emit("run_end", run_id=self.run_id, cancelled=cancelled, n_results=len(self.results))
             progress.set_reporter(previous)
+            set_device(self.device)
         board = self.leaderboard()
         if not board.empty:
             logger.info("Leaderboard:\n" + board.to_string(index=False, max_colwidth=40))
@@ -311,14 +393,14 @@ class AutoRunner:
             )
             if run_igtd:
                 progress.emit("stage", stage="igtd", dataset=spec.name, model=model_name, message="Computing IGTD image layout")
-            cache[key] = loader.load_data()
+            cache[key] = (*loader.load_data(), loader.preprocessor)
         return cache[key]
 
     def _run_one(self, spec: DatasetSpec, df, model_name, model_cfg, cache, device):
         from autodeep.factory import create_model
 
         t0 = time.perf_counter()
-        row: Dict[str, Any] = {
+        row: dict[str, Any] = {
             "run_id": self.run_id,
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             "dataset": spec.name,
@@ -334,7 +416,7 @@ class AutoRunner:
             cfg = (model_cfg.get("model_configs", {}) or {}).get(model_name)
             if not cfg:
                 raise ValueError(f"No configuration for model '{model_name}' in the model config file")
-            X_train, X_test, y_train, y_test, extra_info = self._get_data(spec, df, model_name, model_cfg, cache)
+            X_train, X_test, y_train, y_test, extra_info, preprocessor = self._get_data(spec, df, model_name, model_cfg, cache)
             row.update(n_train=len(X_train), n_test=len(X_test), n_features=X_train.shape[1])
             trainer = create_model(model_name, problem_type=spec.problem_type, random_state=self.random_state)
             trainer.output_dir = self.output_folder / "tmp"
@@ -371,8 +453,7 @@ class AutoRunner:
                 n_failed_trials=sr.n_failed,
             )
             self._write_trials(spec.name, model_name, sr.trials)
-            if self.save_models:
-                self._save_model(trainer, spec.name, model_name)
+            self._keep_model(spec, model_name, trainer, preprocessor, extra_info, row)
             self.trained_models[(spec.name, model_name)] = trainer if self.save_models else None
             logger.info(f"{model_name} on {spec.name}: validation {spec.metric}={best_score:.5f}, test {spec.metric}={row['test_score']:.5f}")
         except progress.RunCancelled:
@@ -408,7 +489,7 @@ class AutoRunner:
 
     def _write_result(self, row):
         path = self.results_path
-        flat = {k: (_json(v) if isinstance(v, (dict, list)) else v) for k, v in row.items()}
+        flat = {k: (_json(v) if isinstance(v, dict | list) else v) for k, v in row.items()}
         new = pd.DataFrame([flat]).reindex(columns=RESULT_FIELDS)
         if path.exists() and path.stat().st_size > 0:
             header = pd.read_csv(path, nrows=0).columns.tolist()
@@ -429,24 +510,90 @@ class AutoRunner:
         for t in trials:
             t = dict(t)
             params = t.pop("params", {}) or {}
-            rows.append({"run_id": self.run_id, **t, **{f"param_{k}": (_json(v) if isinstance(v, (dict, list)) else v) for k, v in params.items()}})
+            rows.append({"run_id": self.run_id, **t, **{f"param_{k}": (_json(v) if isinstance(v, dict | list) else v) for k, v in params.items()}})
         path = folder / f"{dataset}__{model}.csv"
         df = pd.DataFrame(rows)
         if path.exists():
             df = pd.concat([pd.read_csv(path), df], ignore_index=True)
         df.to_csv(path, index=False)
 
-    def _save_model(self, trainer, dataset, model):
-        folder = self.output_folder / "models" / f"{dataset}__{model}"
-        folder.mkdir(parents=True, exist_ok=True)
+    # ------------------------------------------------------------------ trained models
+    @property
+    def models_folder(self) -> Path:
+        return self.output_folder / "models"
+
+    def _keep_model(self, spec, model_name, trainer, preprocessor, extra_info, row):
+        """Wrap a finished model as a Predictor; keep it if it is the best so far, save it if asked."""
+        from autodeep.evaluation.generalevaluator import is_better
+        from autodeep.predictor import Predictor
+        from autodeep.registry import MODELS
+
+        if not (self.save_best or self.save_models):
+            return
+        info = {
+            "dataset": spec.name,
+            "model": model_name,
+            "model_display_name": MODELS[model_name].display_name if model_name in MODELS else model_name,
+            "problem_type": spec.problem_type,
+            "target": spec.target,
+            "classes": (extra_info or {}).get("classes"),
+            "metric": spec.metric,
+            "eval_metrics": list(spec.eval_metrics or []),
+            "val_score": row.get("best_score"),
+            "test_score": row.get("test_score"),
+            "test_metrics": row.get("test_metrics"),
+            "best_params": row.get("best_params"),
+            "n_train": row.get("n_train"),
+            "trained_on_device": row.get("device"),
+            "run_id": self.run_id,
+        }
+        predictor = Predictor(trainer, preprocessor, info)
+        if self.save_models:
+            try:
+                path = predictor.save(self.models_folder / spec.name / model_name)
+                logger.info(f"Saved {model_name} model to {path}")
+            except Exception as e:  # saving must never lose the results
+                logger.warning(f"Could not save model {model_name}: {e}")
+        current = self.best_models.get(spec.name)
+        score = row.get("best_score")
+        if score is None or not np.isfinite(score):
+            return
+        if current is None or is_better(score, current.info["val_score"], spec.metric):
+            self.best_models[spec.name] = predictor
+
+    def _save_best(self, dataset: str) -> None:
+        predictor = self.best_models.get(dataset)
+        if predictor is None or not self.save_best:
+            return
         try:
-            ext = {"xgb": "model.json", "catboost": "model.cbm", "mlp": "model.joblib", "resnet": "model.pt", "s1dcnn": "model.pt"}.get(
-                model, "model"
+            path = predictor.save(self.models_folder / dataset / "best")
+            self.best_model_paths[dataset] = path
+            logger.info(
+                f"Best model for {dataset}: {predictor.model_name} (validation {predictor.info['metric']}={predictor.info['val_score']:.5f}) -> {path}"
             )
-            trainer.save_model(folder / ext)
-            logger.info(f"Saved best {model} model to {folder}")
-        except Exception as e:  # saving must never lose the results
-            logger.warning(f"Could not save model {model}: {e}")
+            progress.emit("model_saved", dataset=dataset, model=predictor.model_name, path=str(path.resolve()))
+        except Exception as e:
+            logger.warning(f"Could not save the best model for {dataset}: {e}")
+
+    def best_model(self, dataset: str | None = None):
+        """The best model of ``dataset`` (highest validation score) as a :class:`~autodeep.predictor.Predictor`.
+
+        ``dataset`` may be omitted when the run has a single dataset. Falls back to the saved copy on disk.
+        """
+        names = [d.name for d in self.datasets]
+        if dataset is None:
+            if len(names) != 1:
+                raise ValueError(f"Several datasets were run, pass one of {names}")
+            dataset = names[0]
+        if dataset in self.best_models:
+            return self.best_models[dataset]
+        path = self.models_folder / dataset / "best"
+        if path.exists():
+            from autodeep.predictor import Predictor
+
+            self.best_models[dataset] = Predictor.load(path)
+            return self.best_models[dataset]
+        raise ValueError(f"No trained model for dataset '{dataset}' (did run() finish at least one model?)")
 
     def leaderboard(self) -> pd.DataFrame:
         """One row per (dataset, model), best test score first within each dataset."""
@@ -457,7 +604,9 @@ class AutoRunner:
             if c not in df:
                 df[c] = None
         df = df.rename(columns={"best_score": "val_score"})
-        cols = ["dataset", "model", "status", "metric", "val_score", "test_score", "duration_sec", "n_trials", "error"]
+        best = {ds: p.model_name for ds, p in self.best_models.items()}
+        df["selected"] = [best.get(ds) == m for ds, m in zip(df["dataset"], df["model"])]
+        cols = ["dataset", "model", "status", "metric", "val_score", "test_score", "selected", "duration_sec", "n_trials", "error"]
         df = df[cols]
         parts = []
         for _, g in df.groupby("dataset", sort=False):

@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -108,7 +108,7 @@ def _load_synthetic_mixed(n_samples=3000, random_state=0):
     return df
 
 
-BUILTIN_DATASETS: Dict[str, Dict[str, Any]] = {
+BUILTIN_DATASETS: dict[str, dict[str, Any]] = {
     "iris": {
         "loader": _load_iris,
         "target": "species",
@@ -159,7 +159,7 @@ _BUILTIN_ALIASES = {"breastcancer": "breast_cancer", "housing": "california_hous
 SUPPORTED_EXTENSIONS = (".csv", ".tsv", ".txt", ".parquet", ".pq", ".feather", ".json", ".jsonl", ".xlsx", ".xls")
 
 
-def list_builtin_datasets() -> List[Dict[str, Any]]:
+def list_builtin_datasets() -> list[dict[str, Any]]:
     return [{"name": k, "path": f"builtin:{k}", **{kk: vv for kk, vv in v.items() if kk != "loader"}} for k, v in BUILTIN_DATASETS.items()]
 
 
@@ -168,7 +168,7 @@ def list_builtin_datasets() -> List[Dict[str, Any]]:
 # --------------------------------------------------------------------------------------
 
 
-def read_table(path, sep: Optional[str] = None, nrows: Optional[int] = None) -> pd.DataFrame:
+def read_table(path, sep: str | None = None, nrows: int | None = None) -> pd.DataFrame:
     """Read a dataset from a path or a ``builtin:``/``openml:`` reference into a DataFrame."""
     path_str = str(path)
     if path_str.startswith("builtin:"):
@@ -183,7 +183,12 @@ def read_table(path, sep: Optional[str] = None, nrows: Optional[int] = None) -> 
 
         ref = path_str.split(":", 1)[1].strip()
         kwargs = {"data_id": int(ref)} if ref.isdigit() else {"name": ref, "version": "active"}
-        bunch = fetch_openml(as_frame=True, parser="auto", **kwargs)
+        try:
+            bunch = fetch_openml(as_frame=True, parser="auto", **kwargs)
+        except TypeError:
+            # scikit-learn <= 1.9's pandas ARFF parser expects string categories, which pandas 3 does not always
+            # give it ("expected string or bytes-like object, got 'int'"): use the pure-Python parser instead
+            bunch = fetch_openml(as_frame=True, parser="liac-arff", **kwargs)
         df = bunch.frame.copy()
         return df.head(nrows) if nrows else df
 
@@ -211,7 +216,7 @@ def read_table(path, sep: Optional[str] = None, nrows: Optional[int] = None) -> 
 def _sniff_separator(path: Path) -> str:
     import csv
 
-    with open(path, "r", newline="", errors="replace") as f:
+    with open(path, newline="", errors="replace") as f:
         sample = f.read(64 * 1024)
     try:
         return csv.Sniffer().sniff(sample, delimiters=",;\t|").delimiter
@@ -251,7 +256,7 @@ def sanitize_column_name(name: Any) -> str:
     return s
 
 
-def sanitize_columns(columns) -> Dict[Any, str]:
+def sanitize_columns(columns) -> dict[Any, str]:
     mapping, seen = {}, set()
     for col in columns:
         base = sanitize_column_name(col)
@@ -293,22 +298,22 @@ class DatasetSpec:
 
     name: str
     path: str
-    target: Optional[str] = None
-    problem_type: Optional[str] = None
-    metric: Optional[str] = None
-    eval_metrics: Optional[List[str]] = None
+    target: str | None = None
+    problem_type: str | None = None
+    metric: str | None = None
+    eval_metrics: list[str] | None = None
     test_size: float = 0.2
-    split_col: Optional[str] = None
+    split_col: str | None = None
     train_value: Any = None
     test_value: Any = None
-    drop_columns: List[str] = field(default_factory=list)
-    sep: Optional[str] = None
-    max_rows: Optional[int] = None
-    igtd_configs: Optional[Dict[str, Any]] = None
+    drop_columns: list[str] = field(default_factory=list)
+    sep: str | None = None
+    max_rows: int | None = None
+    igtd_configs: dict[str, Any] | None = None
 
     # ---------------------------------------------------------------- construction
     @classmethod
-    def from_dict(cls, name: str, cfg: Dict[str, Any]) -> "DatasetSpec":
+    def from_dict(cls, name: str, cfg: dict[str, Any]) -> DatasetSpec:
         cfg = dict(cfg)
         for old, new in _LEGACY_KEYS.items():
             if old in cfg:
@@ -327,10 +332,10 @@ class DatasetSpec:
         return cls(**cfg)
 
     @classmethod
-    def builtin(cls, name: str, **overrides) -> "DatasetSpec":
+    def builtin(cls, name: str, **overrides) -> DatasetSpec:
         return cls.from_dict(name, {"path": f"builtin:{name}", **overrides})
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in asdict(self).items() if v not in (None, [], {})}
 
     # ---------------------------------------------------------------- resolution
@@ -340,7 +345,7 @@ class DatasetSpec:
             df = df.sample(n=int(self.max_rows), random_state=0).reset_index(drop=True)
         return df
 
-    def resolve(self, df: Optional[pd.DataFrame] = None) -> "DatasetSpec":
+    def resolve(self, df: pd.DataFrame | None = None) -> DatasetSpec:
         """Fill in target / problem type / metrics from the data and validate everything."""
         if self.target is None and self.path.startswith("builtin:"):
             key = _BUILTIN_ALIASES.get(self.path.split(":", 1)[1], self.path.split(":", 1)[1])
@@ -380,7 +385,7 @@ class DatasetSpec:
         self.eval_metrics = list(dict.fromkeys(evals))
         return self
 
-    def as_legacy_dict(self) -> Dict[str, Any]:
+    def as_legacy_dict(self) -> dict[str, Any]:
         """The dictionary format used by the original AutoRunner ``data_config``."""
         return {
             "dataset_path": self.path,
@@ -395,7 +400,7 @@ class DatasetSpec:
         }
 
 
-def parse_datasets(data_config) -> List[DatasetSpec]:
+def parse_datasets(data_config) -> list[DatasetSpec]:
     """Accept a dict ``{name: {...}}``, a list of dicts/specs or a single spec."""
     if data_config is None:
         raise ValueError("No datasets given. Pass `datasets=` (or the legacy `data_config=`).")
@@ -403,7 +408,7 @@ def parse_datasets(data_config) -> List[DatasetSpec]:
         return [data_config]
     if isinstance(data_config, dict):
         return [v if isinstance(v, DatasetSpec) else DatasetSpec.from_dict(k, v) for k, v in data_config.items()]
-    if isinstance(data_config, (list, tuple)):
+    if isinstance(data_config, list | tuple):
         specs = []
         for i, item in enumerate(data_config):
             if isinstance(item, DatasetSpec):
@@ -424,7 +429,7 @@ def parse_datasets(data_config) -> List[DatasetSpec]:
 # --------------------------------------------------------------------------------------
 
 
-def profile_dataframe(df: pd.DataFrame, target: Optional[str] = None, n_preview: int = 8) -> Dict[str, Any]:
+def profile_dataframe(df: pd.DataFrame, target: str | None = None, n_preview: int = 8) -> dict[str, Any]:
     """Lightweight per-column summary of a dataset, with hints about likely problems."""
     n = len(df)
     columns = []

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Dict, FrozenSet, List
 
 import numpy as np
 from sklearn.metrics import (
@@ -30,7 +30,7 @@ class MetricInfo:
     name: str
     maximize: bool
     best: float
-    problem_types: FrozenSet[str]
+    problem_types: frozenset[str]
     needs_proba: bool
     description: str
 
@@ -66,8 +66,8 @@ def _log_loss(y_true, y_pred, y_prob, problem_type):
     return log_loss(y_true, np.clip(y_prob, 1e-15, 1 - 1e-15), labels=np.arange(y_prob.shape[1]))
 
 
-METRICS: Dict[str, MetricInfo] = {}
-_FUNCS: Dict[str, Callable] = {}
+METRICS: dict[str, MetricInfo] = {}
+_FUNCS: dict[str, Callable] = {}
 
 
 def _register(name, maximize, best, problem_types, needs_proba, description, fn):
@@ -146,7 +146,7 @@ def validate_metric(name: str, problem_type: str) -> None:
         raise ValueError(f"Metric '{name}' is not valid for {problem_type}. Valid metrics: {valid}")
 
 
-def metrics_for_problem(problem_type: str) -> List[Dict]:
+def metrics_for_problem(problem_type: str) -> list[dict]:
     return [
         {"name": m.name, "maximize": m.maximize, "needs_proba": m.needs_proba, "description": m.description}
         for m in METRICS.values()
@@ -191,7 +191,7 @@ class Evaluator:
             raise ValueError(f"Metric '{name}' needs predicted probabilities but none were provided.")
         return float(_FUNCS[name](y_true, y_pred, self.y_prob, self.problem_type))
 
-    def evaluate_model(self) -> Dict[str, float]:
+    def evaluate_model(self) -> dict[str, float]:
         if self.problem_type not in PROBLEM_TYPES:
             raise ValueError(f"Invalid problem type: {self.problem_type}")
         names = [normalize_metric_name(m) for m in self.run_metrics]

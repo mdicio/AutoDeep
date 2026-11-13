@@ -7,17 +7,16 @@ import os
 import sys
 import warnings
 from pathlib import Path
-from typing import Optional
 
 LOGGER_NAME = "autodeep"
 _FMT = "%(asctime)s | %(levelname)-7s | %(name)s | %(message)s"
 
 
-def get_logger(name: Optional[str] = None) -> logging.Logger:
+def get_logger(name: str | None = None) -> logging.Logger:
     return logging.getLogger(LOGGER_NAME if not name else f"{LOGGER_NAME}.{name}")
 
 
-def setup_logging(level: str = "INFO", log_file: Optional[Path] = None, quiet_libraries: bool = True) -> logging.Logger:
+def setup_logging(level: str = "INFO", log_file: Path | None = None, quiet_libraries: bool = True) -> logging.Logger:
     """Configure the ``autodeep`` logger (idempotent)."""
     logger = logging.getLogger(LOGGER_NAME)
     logger.setLevel(logging.DEBUG)
@@ -54,7 +53,7 @@ def setup_logging(level: str = "INFO", log_file: Optional[Path] = None, quiet_li
 
 def quiet_third_party() -> None:
     os.environ.setdefault("PT_LOGLEVEL", "ERROR")
-    for name in ("pytorch_lightning", "lightning", "lightning.pytorch", "lightning_fabric", "pytorch_tabular", "hyperopt", "matplotlib"):
+    for name in ("pytorch_lightning", "lightning", "lightning.pytorch", "lightning_fabric", "hyperopt", "matplotlib"):
         logging.getLogger(name).setLevel(logging.ERROR)
     warnings.filterwarnings("ignore", category=FutureWarning)
     warnings.filterwarnings("ignore", category=DeprecationWarning)

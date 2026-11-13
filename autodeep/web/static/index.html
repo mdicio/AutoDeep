@@ -76,6 +76,15 @@ button.btn:disabled { opacity: .5; cursor: not-allowed; }
 .ds .body { padding: 12px; }
 .ds .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
 .hint { font-size: 12px; color: var(--muted); }
+.bestmodel { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.bestmodel:last-child { border-bottom: 0; }
+.bestmodel code { font-family: var(--mono); font-size: 12px; background: var(--surface-2); padding: 2px 6px; border-radius: 6px; overflow-wrap: anywhere; }
+.tag.saved { background: var(--accent-soft); color: var(--text); }
+.autobox { border: 1px solid var(--border); background: var(--surface-2); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; }
+.autobox input { font: inherit; padding: 3px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); }
+.autoreasons { margin: 8px 0 0; padding-left: 18px; font-size: 12.5px; color: var(--text-2); }
+.autoreasons:empty { display: none; }
+.autoreasons li { margin: 2px 0; }
 .warnline { font-size: 12.5px; color: var(--text-2); margin-top: 8px; }
 .warnline::before { content: "\26A0  "; color: var(--warning); }
 .err { color: var(--critical); font-size: 13px; margin-top: 8px; white-space: pre-wrap; }
@@ -90,6 +99,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .model.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .model .t { font-weight: 600; font-size: 13.5px; }
 .model .d { color: var(--muted); font-size: 12px; }
+.model input[type=checkbox] { flex: none; margin-top: 3px; }  /* long descriptions must not squeeze the box */
 .fam { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 0 6px; font-weight: 600; }
 .estimate { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; padding: 14px 16px; border-top: 1px solid var(--border); }
 .hero { font-size: 30px; font-weight: 650; letter-spacing: -.02em; }
@@ -168,7 +178,17 @@ details > summary { cursor: pointer; color: var(--text-2); font-size: 12.5px; }
     <div class="hd"><div class="step">2</div><h2>Models</h2><span class="sub" id="modelCount"></span>
       <div style="margin-left:auto" class="row" id="presets"></div>
     </div>
-    <div class="bd" id="modelGrid"></div>
+    <div class="bd">
+      <div class="autobox">
+        <div class="row" style="align-items:center">
+          <button class="btn sm primary" id="autoBtn" onclick="useAuto()" title="Pick models, trials and time limits that fit the budget on this machine">Auto</button>
+          <label class="hint" style="display:flex;align-items:center;gap:6px">time budget <input type="number" id="budget" min="1" step="1" value="15" style="width:64px"> min</label>
+          <span class="hint grow" id="autoState"></span>
+        </div>
+        <ul class="autoreasons" id="autoReasons"></ul>
+      </div>
+      <div id="modelGrid"></div>
+    </div>
   </div>
 
   <div class="card">
@@ -180,10 +200,10 @@ details > summary { cursor: pointer; color: var(--text-2); font-size: 12.5px; }
         <label class="f" style="width:150px">Max epochs (neural)<input type="number" id="maxEpochs" min="1" placeholder="config default"></label>
         <label class="f" style="width:130px">Device<select id="device"><option value="auto">auto</option><option value="cpu">CPU</option><option value="cuda">GPU (CUDA)</option></select></label>
         <label class="f" style="width:110px">Random seed<input type="number" id="seed" value="42"></label>
-        <label class="chk" style="padding-bottom:8px"><input type="checkbox" id="saveModels"> save best models</label>
+        <label class="chk" style="padding-bottom:8px" title="The best model of each dataset is always saved. Tick to also keep every other model."><input type="checkbox" id="saveModels"> also save every model</label>
         <label class="f grow">Run name<input id="runName" placeholder="optional"></label>
       </div>
-      <p class="hint" style="margin:10px 0 0">Tip: for a first look use <b>5-10 trials</b> and <b>max epochs 30</b>. A time budget stops a model's search after the running trial finishes.</p>
+      <p class="hint" style="margin:10px 0 0"><b>Auto</b> (in Models) fills these in for your time budget. A time limit stops a model's search after the running trial finishes; max epochs caps the training length of the neural models.</p>
     </div>
     <div class="estimate">
       <div><div class="hero-label">Estimated time</div><div class="hero" id="estTotal">–</div><div class="hint" id="estRange"></div></div>
@@ -212,6 +232,7 @@ details > summary { cursor: pointer; color: var(--text-2); font-size: 12.5px; }
       <div class="hint" id="rdCurrent" style="margin-top:8px"></div>
       <div class="err hidden" id="rdError"></div>
     </div></div>
+    <div class="card hidden" id="rdModelsCard"><div class="hd"><h2>Use the best models</h2><span class="sub">The model with the best validation score is saved for each dataset, with its preprocessing</span></div><div class="bd" id="rdModels"></div></div>
     <div class="card"><div class="hd"><h2>Leaderboard</h2><span class="sub">Best hyperparameters per model, scored on the held-out test set</span></div><div class="bd" id="rdBoard"><div class="empty">Results appear here as models finish.</div></div></div>
     <div class="card"><div class="hd"><h2>Activity</h2></div><div class="bd"><div class="feed" id="rdFeed"></div></div></div>
     <div class="card"><div class="hd"><h2>Log</h2><button class="btn sm" style="margin-left:auto" onclick="loadLog()">Refresh</button></div><div class="bd"><pre class="log" id="rdLog"></pre></div></div>
@@ -221,7 +242,7 @@ details > summary { cursor: pointer; color: var(--text-2); font-size: 12.5px; }
 
 <script>
 // ------------------------------------------------------------------ state
-const S = { models: [], presets: {}, metrics: {}, builtin: [], datasets: [], selected: new Set(), run: null, runTimer: null, seq: 0, feed: [], polls: 0 };
+const S = { models: [], presets: {}, metrics: {}, builtin: [], datasets: [], selected: new Set(), run: null, runTimer: null, seq: 0, feed: [], polls: 0, auto: true, plan: null };
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmtDur = (s) => { if (s == null || !isFinite(s)) return "–"; s = Math.max(0, Math.round(s)); if (s < 60) return s + "s"; const m = Math.floor(s/60), r = s%60; if (m < 60) return `${m}m ${String(r).padStart(2,"0")}s`; return `${Math.floor(m/60)}h ${String(m%60).padStart(2,"0")}m`; };
@@ -254,8 +275,9 @@ async function init() {
   S.models = models.models; S.presets = models.presets; S.metrics = metrics; S.builtin = ds.builtin; S.saved = ds.registered;
   const draft = store.get("draft", null);
   S.selected = new Set(draft?.models?.length ? draft.models : models.default);
+  S.auto = draft ? (draft.auto ?? !draft.models?.length) : true;
   if (draft?.settings) for (const [k, v] of Object.entries(draft.settings)) { const el = $(k); if (el) el.type === "checkbox" ? el.checked = v : el.value = v; }
-  renderBuiltin(); renderSaved(); renderModels();
+  renderBuiltin(); renderSaved(); renderModels(); renderAuto();
   if (draft?.datasets?.length) for (const d of draft.datasets) await addDataset(d, { silent: true });
   renderDatasets(); scheduleEstimate();
   api("/api/system").then(renderSystem).catch(() => {});
@@ -360,7 +382,7 @@ async function saveDs(i) { try { const r = await api("/api/datasets/register", {
 function dsPayload(d) { const o = {}; for (const [k, v] of Object.entries(d)) if (!k.startsWith("_") && v !== null && v !== "" && v !== undefined) o[k] = v; return o; }
 
 // ------------------------------------------------------------------ models
-const FAMILY = { gbdt: "Gradient-boosted trees", foundation: "Pretrained foundation models", neural: "Neural networks", deep_tabular: "Deep tabular architectures (PyTorch Tabular)", image: "Tabular-as-image" };
+const FAMILY = { gbdt: "Gradient-boosted trees", foundation: "Pretrained foundation models", neural: "Neural networks", deep_tabular: "Deep tabular architectures", image: "Tabular-as-image" };
 function renderModels() {
   $("presets").innerHTML = ["fast", "default", "modern", "deep", "all"].map(p => `<button class="btn sm" onclick="preset('${p}')">${p[0].toUpperCase() + p.slice(1)}</button>`).join("") + `<button class="btn sm" onclick="preset(null)">None</button>`;
   let html = "";
@@ -371,13 +393,38 @@ function renderModels() {
   $("modelGrid").innerHTML = html;
   $("modelCount").textContent = `${S.selected.size} selected`;
 }
-function toggleModel(n) { S.selected.has(n) ? S.selected.delete(n) : S.selected.add(n); renderModels(); saveDraft(); scheduleEstimate(); }
-function preset(p) { S.selected = new Set(p ? S.presets[p] : []); renderModels(); saveDraft(); scheduleEstimate(); }
+function toggleModel(n) { S.auto = false; S.selected.has(n) ? S.selected.delete(n) : S.selected.add(n); renderModels(); renderAuto(); saveDraft(); scheduleEstimate(); }
+function preset(p) { S.auto = false; S.selected = new Set(p ? S.presets[p] : []); renderModels(); renderAuto(); saveDraft(); scheduleEstimate(); }
+function useAuto() { S.auto = true; renderAuto(); saveDraft(); scheduleEstimate(); }
+function renderAuto() {
+  $("autoBtn").classList.toggle("primary", S.auto);
+  if (!S.auto) { $("autoState").textContent = "Manual selection. Press Auto to let AutoDeep choose for this machine."; $("autoReasons").innerHTML = ""; return; }
+  if (!S.datasets.some(d => d._profile && !d._error)) { $("autoState").textContent = "Auto: add a dataset and AutoDeep picks the models, trials and time limits that fit your budget on this machine."; $("autoReasons").innerHTML = ""; return; }
+  if (!S.plan) { $("autoState").textContent = "Auto: planning…"; return; }
+  $("autoState").innerHTML = `<b>Auto</b>: ${S.plan.models.length} models, up to ${S.plan.max_evals} trials each${S.plan.timeout_per_model ? `, at most ${fmtDur(S.plan.timeout_per_model)} per model` : ""}. Change anything to switch to manual.`;
+  $("autoReasons").innerHTML = S.plan.reasons.filter(r => !r.startsWith("Models:")).map(r => `<li>${esc(r)}</li>`).join("");
+}
+let planSeq = 0;
+async function autoPlan() {
+  const job = jobPayload(); const my = ++planSeq;
+  if (!job.datasets.length) { S.plan = null; renderAuto(); return; }
+  try {
+    const r = await api("/api/plan", { method: "POST", body: JSON.stringify({ datasets: job.datasets, time_budget: (Number($("budget").value) || 15) * 60, device: job.device, max_epochs: job.max_epochs }) });
+    if (my !== planSeq || !S.auto) return;
+    S.plan = r; S.selected = new Set(r.models);
+    $("maxEvals").value = r.max_evals; $("timeout").value = r.timeout_per_model ? +(r.timeout_per_model / 60).toFixed(1) : "";
+    renderModels(); renderAuto(); saveDraft();
+  } catch (e) { if (my === planSeq) { $("autoState").textContent = "Auto plan failed: " + e.message; } }
+}
 
 // ------------------------------------------------------------------ estimate & launch
-const SETTINGS = ["maxEvals", "timeout", "maxEpochs", "device", "seed", "saveModels", "runName"];
-SETTINGS.forEach(id => $(id).addEventListener("input", () => { saveDraft(); scheduleEstimate(); }));
-function saveDraft() { store.set("draft", { datasets: S.datasets.map(dsPayload), models: [...S.selected], settings: Object.fromEntries(SETTINGS.map(id => [id, $(id).type === "checkbox" ? $(id).checked : $(id).value])) }); }
+const SETTINGS = ["maxEvals", "timeout", "maxEpochs", "device", "seed", "saveModels", "runName", "budget"];
+SETTINGS.forEach(id => $(id).addEventListener("input", () => {
+  if (id === "maxEvals" || id === "timeout") { S.auto = false; renderAuto(); }  // hand-tuned settings: manual mode
+  if (id === "budget") S.auto = true;
+  saveDraft(); scheduleEstimate();
+}));
+function saveDraft() { store.set("draft", { auto: S.auto, datasets: S.datasets.map(dsPayload), models: [...S.selected], settings: Object.fromEntries(SETTINGS.map(id => [id, $(id).type === "checkbox" ? $(id).checked : $(id).value])) }); }
 function jobPayload() {
   const num = (id) => $(id).value === "" ? null : Number($(id).value);
   return { name: $("runName").value || null, datasets: S.datasets.filter(d => d._profile && !d._error).map(dsPayload), models: [...S.selected],
@@ -385,7 +432,7 @@ function jobPayload() {
     device: $("device").value, random_state: num("seed") ?? 42, save_models: $("saveModels").checked };
 }
 let estTimer = null, estSeq = 0;
-function scheduleEstimate() { clearTimeout(estTimer); estTimer = setTimeout(estimate, 400); }
+function scheduleEstimate() { clearTimeout(estTimer); estTimer = setTimeout(async () => { if (S.auto) await autoPlan(); estimate(); }, 400); }
 async function estimate() {
   const job = jobPayload(); const my = ++estSeq;
   if (!job.datasets.length || !job.models.length) { $("estTotal").textContent = "–"; $("estRange").textContent = !job.datasets.length ? "add a dataset" : "select at least one model"; $("estTable").innerHTML = ""; $("launchBtn").disabled = true; return; }
@@ -416,7 +463,7 @@ async function loadRuns() {
   $("runs").innerHTML = r.jobs.length ? r.jobs.map(j => { const s = j.status || {}; return `<div class="run" onclick="openRun('${j.id}')"><div class="t">${esc(j.name || j.id)}</div><div>${statusBadge(s.state)}</div><div class="d">${new Date((j.created_at || 0) * 1000).toLocaleString()} · ${s.jobs_done ?? 0}/${s.jobs_total ?? "?"} models${s.state === "running" ? ` · ETA ${esc(s.eta_human || "?")}` : ""}</div><div class="d">${s.elapsed_seconds ? fmtDur(s.elapsed_seconds) : ""}</div></div>`; }).join("") : `<div class="empty">No runs yet. Configure an experiment and press <b>Start experiment</b>.</div>`;
 }
 function openRun(id) {
-  S.run = id; S.seq = 0; S.feed = []; $("rdFeed").innerHTML = ""; $("rdLog").textContent = "";
+  S.run = id; S.seq = 0; S.feed = []; S.modelsKey = null; $("rdFeed").innerHTML = ""; $("rdLog").textContent = "";
   $("runsList").classList.add("hidden"); $("runDetail").classList.remove("hidden");
   $("rdCsv").onclick = () => location.href = `/api/jobs/${id}/results.csv`;
   $("rdCancel").onclick = async () => { await api(`/api/jobs/${id}/cancel`, { method: "POST" }); toast("Stopping after the current trial…"); };
@@ -445,7 +492,8 @@ async function pollRun() {
   const feed = $("rdFeed"); const atBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 30;
   feed.innerHTML = S.feed.map(l => `<div>${esc(l)}</div>`).join("") || `<div class="hint">waiting for the first events…</div>`;
   if (atBottom) feed.scrollTop = feed.scrollHeight;
-  renderBoard(info.results);
+  renderBestModels(info.best_models || []);
+  renderBoard(info.results, info.best_models || []);
   S.polls = (S.polls || 0) + 1;
   if (live) { if (S.polls % 4 === 0) loadLog(); S.runTimer = setTimeout(pollRun, 1500); } else loadLog();
 }
@@ -462,7 +510,36 @@ function feedLine(e) {
   }
   return null;
 }
-function renderBoard(results) {
+function renderBestModels(list) {
+  $("rdModelsCard").classList.toggle("hidden", !list.length);
+  if (!list.length) return;
+  const key = JSON.stringify(list.map(m => [m.dataset, m.model, m.path]));
+  if (key === S.modelsKey) return;  // keep file inputs intact between polls
+  S.modelsKey = key;
+  $("rdModels").innerHTML = list.map((m, i) => `<div class="bestmodel">
+    <div class="grow" style="min-width:220px"><b>${esc(m.dataset)}</b>: ${esc(m.model_display_name || m.model)}
+      <div class="hint">validation ${esc(m.metric)} ${fmtNum(m.val_score)} · test ${fmtNum(m.test_score)} · needs ${(m.input_schema || []).length} input columns${m.classes ? " · predicts " + esc(m.classes.slice(0, 6).join(", ")) + (m.classes.length > 6 ? "…" : "") : ""}</div>
+      <div class="hint" style="margin-top:4px">Python: <code>autodeep.load_model("${esc(m.path)}").predict(df)</code></div></div>
+    <button class="btn sm" onclick="location.href='/api/jobs/${S.run}/models/${encodeURIComponent(m.dataset)}/download'">Download model</button>
+    <label class="btn sm" style="display:inline-block;cursor:pointer;border:1px solid var(--border);border-radius:8px;padding:4px 9px">Predict a file…<input type="file" hidden accept=".csv,.tsv,.txt,.parquet,.pq,.feather,.json,.jsonl,.xlsx,.xls" onchange="predictFile(${i}, this)"></label>
+  </div>`).join("");
+  S.bestModels = list;
+}
+async function predictFile(i, input) {
+  const m = S.bestModels[i], file = input.files[0]; if (!file) return;
+  toast(`Predicting ${file.name} with ${m.model}…`);
+  const fd = new FormData(); fd.append("file", file);
+  try {
+    const r = await fetch(`/api/jobs/${S.run}/models/${encodeURIComponent(m.dataset)}/predict`, { method: "POST", body: fd });
+    if (!r.ok) { let msg = r.statusText; try { msg = (await r.json()).detail || msg; } catch {} throw new Error(msg); }
+    const blob = await r.blob(), a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = `${m.dataset}_predictions.csv`; a.click(); URL.revokeObjectURL(a.href);
+    toast("Predictions downloaded");
+  } catch (e) { toast("Prediction failed: " + e.message); }
+  input.value = "";
+}
+function renderBoard(results, best = []) {
+  const saved = Object.fromEntries(best.map(m => [m.dataset, m.model]));
   if (!results || !results.length) { $("rdBoard").innerHTML = `<div class="empty">Results appear here as models finish.</div>`; return; }
   const byDs = {}; for (const r of results) (byDs[r.dataset] ||= []).push(r);
   $("rdBoard").innerHTML = Object.entries(byDs).map(([ds, rows]) => {
@@ -474,7 +551,7 @@ function renderBoard(results) {
     const evalKeys = [...new Set(ok.flatMap(r => Object.keys(r.test_metrics || {})))].filter(k => k !== metric);
     return `<h3 style="margin:4px 0 8px;font-size:14px">${esc(ds)} <span class="hint">· ${esc(PT_LABEL[rows[0].problem_type] || "")} · ranked by test ${esc(metric)} (${info.maximize ? "higher" : "lower"} is better)</span></h3>
     <div class="tablewrap" style="margin-bottom:16px"><table><tr><th>#</th><th>Model</th><th>Status</th><th>Test ${esc(metric)}</th><th class="num">Val ${esc(metric)}</th>${evalKeys.map(k => `<th class="num">test ${esc(k)}</th>`).join("")}<th class="num">Trials</th><th class="num">Time</th><th>Best parameters</th></tr>
-    ${ok.map((r, i) => `<tr><td>${i + 1}</td><td><b>${esc(r.model)}</b></td><td>${statusBadge("ok")}</td><td><div class="barcell" title="${esc(r.model)}: test ${esc(metric)} = ${fmtNum(r.test_score, 5)}"><div class="bar ${i === 0 ? "best" : ""}" style="width:${Math.max(2, 110 * Math.abs(r.test_score) / max)}px"></div><span>${fmtNum(r.test_score)}</span></div></td><td class="num">${fmtNum(r.best_score)}</td>${evalKeys.map(k => `<td class="num">${fmtNum(r.test_metrics?.[k])}</td>`).join("")}<td class="num">${r.n_trials ?? ""}${r.n_failed_trials ? ` (${r.n_failed_trials} failed)` : ""}</td><td class="num">${fmtDur(r.duration_sec)}</td><td><details><summary>show</summary><pre class="log" style="max-height:200px;white-space:pre">${esc(JSON.stringify(r.best_params, null, 1))}</pre></details></td></tr>`).join("")}
+    ${ok.map((r, i) => `<tr><td>${i + 1}</td><td><b>${esc(r.model)}</b>${saved[ds] === r.model ? ` <span class="tag saved" title="Best validation score: saved and ready to use">saved</span>` : ""}</td><td>${statusBadge("ok")}</td><td><div class="barcell" title="${esc(r.model)}: test ${esc(metric)} = ${fmtNum(r.test_score, 5)}"><div class="bar ${i === 0 ? "best" : ""}" style="width:${Math.max(2, 110 * Math.abs(r.test_score) / max)}px"></div><span>${fmtNum(r.test_score)}</span></div></td><td class="num">${fmtNum(r.best_score)}</td>${evalKeys.map(k => `<td class="num">${fmtNum(r.test_metrics?.[k])}</td>`).join("")}<td class="num">${r.n_trials ?? ""}${r.n_failed_trials ? ` (${r.n_failed_trials} failed)` : ""}</td><td class="num">${fmtDur(r.duration_sec)}</td><td><details><summary>show</summary><pre class="log" style="max-height:200px;white-space:pre">${esc(JSON.stringify(r.best_params, null, 1))}</pre></details></td></tr>`).join("")}
     ${others.map(r => `<tr><td></td><td>${esc(r.model)}</td><td>${statusBadge(r.status)}</td><td colspan="${4 + evalKeys.length}" class="hint" style="white-space:normal">${esc(r.error || "")}</td><td class="num">${fmtDur(r.duration_sec)}</td></tr>`).join("")}
     </table></div>`;
   }).join("");

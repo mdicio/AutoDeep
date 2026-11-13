@@ -91,4 +91,4 @@ jspm_packages/
 
 
 # benchmark outputs (summarised in benchmarks/README.md)
-benchmarks/results/
+benchmarks/results*/

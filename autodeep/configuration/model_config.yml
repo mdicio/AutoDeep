@@ -25,47 +25,40 @@ model_configs:
       return_extra_info: False
 
     default_params:
-      retrain: True
       val_size: 0.2
-      early_stopping_rounds: 30
+      early_stopping_rounds: 50  # on the validation split; n_estimators is only the cap
       verbose: false
-      learning_rate: 0.3
-      max_depth: 6
-      n_estimators: 100
-      min_child_weight: 1
-      subsample: 0.8
-      colsample_bytree: 0.8
-      gamma: 0.0
-      early_stopping_rounds: 100
+
+    # list of ints = integer range, list of floats = float range (log-uniform when > 0)
+    param_grid:
+      n_estimators: [2000]  # constant: early stopping picks the number of trees
+      learning_rate: [0.01, 0.3]
+      max_depth: [3, 10]
+      min_child_weight: [1, 10]
+      subsample: [0.5, 1.0]
+      colsample_bytree: [0.5, 1.0]
+      reg_lambda: [0.001, 10.0]
+      gamma: [0.0, 0.5]
+
+  lgbm:
+    data_params:
+      normalize_features: false
+      encode_categorical: False
+      return_extra_info: True
+
+    default_params:
+      val_size: 0.2
+      early_stopping_rounds: 100  # on the validation split; n_estimators is only the cap
 
     param_grid:
-      learning_rate:
-        - 0.3
-        - 0.01
-      max_depth:
-        - 4
-        - 6
-        - 8
-      n_estimators:
-        - 50
-        - 100
-        - 200
-      min_child_weight:
-        - 1
-        - 5
-        - 10
-      subsample:
-        - 0.6
-        - 0.8
-        - 1.0
-      colsample_bytree:
-        - 0.6
-        - 0.8
-        - 1.0
-      gamma:
-        - 0.0
-        - 0.01
-        - 0.2
+      n_estimators: [2000]  # constant: early stopping picks the number of trees
+      learning_rate: [0.01, 0.3]
+      num_leaves: [4, 128]
+      min_child_samples: [5, 200]
+      subsample: [0.5, 1.0]
+      subsample_freq: 1
+      colsample_bytree: [0.4, 1.0]
+      reg_lambda: [0.001, 10.0]
 
   catboost:
     data_params:
@@ -74,16 +67,15 @@ model_configs:
       return_extra_info: True  # for dataloader
 
     default_params:
-      
       val_size: 0.2
-      early_stopping_rounds: 100
+      early_stopping_rounds: 100  # on the validation split; iterations is only the cap
       verbose: false
-      iterations: 500
 
     param_grid:
-      iterations:
-        - 100 
-        - 500
+      iterations: [2000]  # constant: early stopping picks the number of trees
+      learning_rate: [0.02, 0.3]
+      depth: [4, 8]  # symmetric trees: cost doubles with every level
+      l2_leaf_reg: [1.0, 10.0]
 
   categoryembedding:
 
@@ -303,6 +295,9 @@ model_configs:
       shared_embedding_fraction:
         - 0.01
         - 0.4
+      deep_layers:  # the layers / activation / dropout below only apply when this is true
+        - True
+        - False
       layers:
         - "64-32"
         - "128-64-32"
@@ -1074,6 +1069,25 @@ model_configs:
             - 0.9
             - 0.99
       
+  resmlp:
+    data_params:
+      normalize_features: false
+      encode_categorical: False
+      return_extra_info: True
+
+    default_params:
+      val_size: 0.2
+      early_stopping_patience: 4
+
+    param_grid:
+      width: [64, 512]
+      n_layers: [1, 3]
+      dropout: [0.0, 0.3]
+      lr: [0.0003, 0.01]
+      weight_decay: [0.000001, 0.001]
+      batch_size: [null, 256, 1024, 4096]
+      max_epochs: [10, 60]
+
   mlp:
     data_params:
       normalize_features: mean_std

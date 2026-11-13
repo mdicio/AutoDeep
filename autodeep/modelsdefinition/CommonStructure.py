@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import copy
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -23,16 +23,10 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 
 from autodeep.device import resolve_device
-from autodeep.evaluation.generalevaluator import Evaluator
+from autodeep.evaluation.generalevaluator import Evaluator, normalize_metric_name
 from autodeep.logging_utils import get_logger
 from autodeep.modelutils.search import TrialOutcome, run_hyperopt
-from autodeep.modelutils.trainingutilities import (
-    handle_rogue_batch_size,
-    infer_hyperopt_space,
-    infer_hyperopt_space_pytorch_tabular,
-    prepare_optimizer,
-    prepare_scheduler,
-)
+from autodeep.modelutils.trainingutilities import infer_hyperopt_space
 
 MAX_ROWS_FOR_TRAIN_METRICS = 50_000
 
@@ -60,48 +54,61 @@ class BaseTrainer:
     model_name = "base"
     space_fn = staticmethod(infer_hyperopt_space)
     #: upper bound on the number of search trials (1 for models with nothing to tune, e.g. TabICL)
-    max_trials: Optional[int] = None
+    max_trials: int | None = None
     #: allow running with an empty ``param_grid`` (defaults only)
     allow_empty_grid = False
     #: first trial uses the first option of every ``param_grid`` choice (``null`` = the library's tuned default)
     first_trial_defaults = False
     #: train metrics are computed on a subsample of at most this many rows
     max_rows_for_train_metrics = MAX_ROWS_FOR_TRAIN_METRICS
+    #: False for models whose train metrics mean nothing (TabICL scores its own context rows)
+    compute_train_metrics = True
+    #: after the search, refit the best configuration on all training rows (train + validation split).
+    #: Only for models where that is cheap and needs no early stopping, e.g. in-context learners.
+    refit_on_full_train = False
 
-    def __init__(self, problem_type: str = "binary_classification", random_state: int = 42, num_workers: Optional[int] = None):
+    def __init__(self, problem_type: str = "binary_classification", random_state: int = 42, num_workers: int | None = None):
         self.problem_type = problem_type
         self.random_state = random_state
         self.task = "regression" if problem_type == "regression" else "classification"
         self.logger = get_logger(self.model_name)
         self.model = None
-        self.extra_info: Optional[Dict[str, Any]] = None
-        self.default_params: Dict[str, Any] = {}
+        self.extra_info: dict[str, Any] | None = None
+        self.default_params: dict[str, Any] = {}
         self.num_workers = num_workers
-        self.output_dir: Optional[Path] = None  # set by AutoRunner; where per-trial files go
-        self.max_epochs: Optional[int] = None  # global override, e.g. for quick runs
-        self.timeout: Optional[float] = None  # seconds for the whole search
+        self.output_dir: Path | None = None  # set by AutoRunner; where per-trial files go
+        self.max_epochs: int | None = None  # global override, e.g. for quick runs
+        self.timeout: float | None = None  # seconds for the whole search
         self.search_result = None
-        self.num_classes: Optional[int] = None
+        self.num_classes: int | None = None
 
     # ------------------------------------------------------------------ hooks
-    def prepare(self, X: pd.DataFrame, y: pd.Series, extra_info: Optional[Dict]) -> None:
+    def prepare(self, X: pd.DataFrame, y: pd.Series, extra_info: dict | None) -> None:
         """Called once before the search (e.g. compute class weights)."""
 
     def transform_X(self, X: pd.DataFrame) -> pd.DataFrame:
         """Applied to every feature matrix before fitting / predicting."""
         return X
 
-    def fit_trial(self, params: Dict[str, Any], X_train, y_train, X_val, y_val):
+    def fit_trial(self, params: dict[str, Any], X_train, y_train, X_val, y_val):
         raise NotImplementedError
 
-    def predict_with(self, model, X: pd.DataFrame) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+    def predict_with(self, model, X: pd.DataFrame) -> tuple[np.ndarray, np.ndarray | None]:
         """Return ``(predictions, probabilities)``; probabilities are 1-D (binary), 2-D (multiclass) or ``None``."""
         raise NotImplementedError
 
     # ------------------------------------------------------------------ helpers
     @property
     def device(self) -> str:
-        return resolve_device()
+        return getattr(self, "_device_override", None) or resolve_device()
+
+    def to_device(self, device: str) -> None:
+        """Run predictions of the trained model on ``device`` (``"cpu"`` or ``"cuda"``), e.g. after loading it elsewhere."""
+        self._device_override = device
+
+    def strip_for_saving(self) -> None:
+        """Drop search bookkeeping that a saved predictor does not need."""
+        self.search_result = None
 
     def _setting(self, name, default=None):
         """Read a value from ``default_params`` honouring global overrides."""
@@ -115,7 +122,7 @@ class BaseTrainer:
 
         return torch_threads(n_rows)
 
-    def class_weights(self, y: pd.Series) -> Optional[np.ndarray]:
+    def class_weights(self, y: pd.Series) -> np.ndarray | None:
         if self.problem_type == "regression":
             return None
         classes = np.arange(self.num_classes)
@@ -128,7 +135,7 @@ class BaseTrainer:
         stratify = y if self.problem_type != "regression" and y.value_counts().min() >= 2 else None
         return train_test_split(X, y, test_size=val_size, random_state=self.random_state, stratify=stratify)
 
-    def _metrics(self, evaluator: Evaluator, model, X, y) -> Dict[str, float]:
+    def _metrics(self, evaluator: Evaluator, model, X, y) -> dict[str, float]:
         if len(X) > self.max_rows_for_train_metrics:
             idx = np.random.default_rng(0).choice(len(X), self.max_rows_for_train_metrics, replace=False)
             X, y = X.iloc[idx], y.iloc[idx]
@@ -164,12 +171,34 @@ class BaseTrainer:
         X_tr, X_val, y_tr, y_val = self._split(X, y, val_size)
         evaluator = Evaluator(problem_type=self.problem_type, run_metrics=eval_metrics, metric=metric)
 
+        # search_folds > 1: score every trial on K stratified folds of the training data (mean of the validation
+        # metrics) instead of one split. K times the cost, much less noise when candidates differ by little.
+        # The model kept for prediction is the one of the first split (the usual train/validation split).
+        n_search_folds = int(self.default_params.get("search_folds", 1) or 1)
+        extra_splits = []
+        if n_search_folds > 1:
+            from sklearn.model_selection import KFold, StratifiedKFold
+
+            cv_cls = KFold if self.problem_type == "regression" else StratifiedKFold
+            splits = list(cv_cls(n_search_folds, shuffle=True, random_state=self.random_state).split(X, y))
+            extra_splits = [(X.iloc[a], X.iloc[b], y.iloc[a], y.iloc[b]) for a, b in splits[1:]]
+
         def objective(params):
             params = {k: v for k, v in params.items() if k != _NO_PARAMS}
             model = self.fit_trial(params, X_tr, y_tr, X_val, y_val)
+            val = self._metrics(evaluator, model, X_val, y_val)
+            if extra_splits:
+                folds = [val]
+                for Xa, Xb, ya, yb in extra_splits:
+                    m = self.fit_trial(params, Xa, ya, Xb, yb)
+                    folds.append(self._metrics(evaluator, m, Xb, yb))
+                    del m
+                val = {k: float(np.mean([f[k] for f in folds])) for k in val}
+                key = normalize_metric_name(metric)
+                val[f"{key}_folds"] = [f.get(key) for f in folds]
             return TrialOutcome(
-                validation_metrics=self._metrics(evaluator, model, X_val, y_val),
-                train_metrics=self._metrics(evaluator, model, X_tr, y_tr),
+                validation_metrics=val,
+                train_metrics=self._metrics(evaluator, model, X_tr, y_tr) if self.compute_train_metrics else {},
                 model=model,
             )
 
@@ -196,6 +225,10 @@ class BaseTrainer:
                 torch.set_num_threads(previous_threads)
         self.search_result = result
         self.model = result.best_model
+        if self.refit_on_full_train:
+            raw = {k: v for k, v in (result.best_raw_params or {}).items() if k != _NO_PARAMS}
+            self.logger.info(f"{self.model_name}: refitting the best configuration on all {len(X)} training rows")
+            self.model = self.fit_trial(raw, X, y, X_val, y_val)
         self.best_model = self.model
         self.on_search_end()
         best_params = {k: v for k, v in result.best_params.items() if k != _NO_PARAMS}
@@ -206,7 +239,7 @@ class BaseTrainer:
         """Hyperopt point selecting option 0 of every choice, if every parameter is a choice starting with ``None``."""
         if not (self.first_trial_defaults and param_grid):
             return None
-        if all(isinstance(v, (list, tuple)) and len(v) > 1 and v[0] is None for v in param_grid.values()):
+        if all(isinstance(v, list | tuple) and len(v) > 1 and v[0] is None for v in param_grid.values()):
             return [{name: 0 for name in param_grid}]
         self.logger.debug(f"{self.model_name}: param_grid is not all null-first choices, first trial is random")
         return None
@@ -246,155 +279,3 @@ class SklearnLikeTrainer(BaseTrainer):
 
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         joblib.dump(self.model, path)
-
-
-def _redirect_pt_tmp():
-    """PyTorch Tabular writes ``./.pt_tmp/exp_version_manager.yml`` in the working directory; keep it in AutoDeep's cache."""
-    import os
-
-    import pytorch_tabular.tabular_model as ptm
-
-    if getattr(ptm.ExperimentRunManager, "_autodeep", False):
-        return
-    cache = Path(os.environ.get("AUTODEEP_CACHE", Path.home() / ".cache" / "autodeep"))
-    path = str(cache / "pytorch_tabular" / "exp_version_manager.yml")
-    base = ptm.ExperimentRunManager
-
-    class _ExperimentRunManager(base):
-        _autodeep = True
-
-        def __init__(self, exp_version_manager: str = path):
-            super().__init__(exp_version_manager)
-
-    ptm.ExperimentRunManager = _ExperimentRunManager
-
-
-class PytorchTabularTrainer(BaseTrainer):
-    """Generic wrapper around any PyTorch Tabular model config class."""
-
-    config_class = None
-    space_fn = staticmethod(infer_hyperopt_space_pytorch_tabular)
-
-    def __init__(self, problem_type="binary_classification", random_state=42, num_workers=None):
-        super().__init__(problem_type, random_state=random_state, num_workers=num_workers)
-        self.loss_fn = None
-
-    # -- hooks
-    def adjust_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Model specific parameter fix-ups (override in subclasses)."""
-        return params
-
-    def prepare(self, X, y, extra_info):
-        import torch
-        import torch.nn as nn
-
-        if self.problem_type == "regression":
-            self.loss_fn = nn.MSELoss()
-        else:
-            self.loss_fn = nn.CrossEntropyLoss(weight=torch.tensor(self.class_weights(y), dtype=torch.float32))
-        cat_cols = [c for c in self.extra_info.get("cat_col_names", []) if c in X.columns]
-        self.categorical_cols = cat_cols
-        self.continuous_cols = [c for c in X.columns if c not in cat_cols]
-
-    def _configs(self, params):
-        from pytorch_tabular.config import DataConfig, OptimizerConfig, TrainerConfig
-
-        dp = self.default_params
-        data_config = DataConfig(
-            target=[TARGET],
-            continuous_cols=self.continuous_cols,
-            categorical_cols=self.categorical_cols,
-            num_workers=self.num_workers if self.num_workers is not None else 0,
-            pin_memory=self.device == "cuda",
-        )
-        trainer_config = TrainerConfig(
-            batch_size=int(params.get("batch_size", dp.get("batch_size", 256))),
-            max_epochs=int(self._setting("max_epochs", 100)),
-            accelerator="gpu" if self.device == "cuda" else "cpu",
-            devices=1,
-            auto_lr_find=bool(dp.get("auto_lr_find", False)),
-            early_stopping="valid_loss",
-            early_stopping_mode="min",
-            early_stopping_patience=int(dp.get("early_stopping_patience", 10)),
-            early_stopping_min_delta=float(dp.get("tol", 0.0)),
-            checkpoints=None,  # best weights are kept in memory by BestWeights (no torch.load of pickled configs)
-            load_best=False,
-            progress_bar="none",
-            precision=dp.get("precision", 32),
-            seed=self.random_state,
-            trainer_kwargs={"enable_model_summary": False},
-        )
-        optimizer_name, optimizer_params, learning_rate = prepare_optimizer(params.get("optimizer_fn"))
-        scheduler_name, scheduler_params = prepare_scheduler(params.get("scheduler_fn"))
-        optimizer_config = OptimizerConfig(
-            optimizer=optimizer_name,
-            optimizer_params=optimizer_params,
-            lr_scheduler=scheduler_name,
-            lr_scheduler_params=scheduler_params,
-            lr_scheduler_monitor_metric="valid_loss",
-        )
-        return data_config, trainer_config, optimizer_config, learning_rate
-
-    def prepare_tabular_model(self, params, default_params=None, default=False):
-        import inspect
-
-        from pytorch_tabular import TabularModel
-
-        _redirect_pt_tmp()
-        params = self.adjust_params(dict(params))
-        data_config, trainer_config, optimizer_config, learning_rate = self._configs(params)
-        valid = inspect.signature(self.config_class).parameters
-        model_kwargs = {k: v for k, v in params.items() if k in valid and k not in ("task", "learning_rate")}
-        ignored = sorted(k for k in params if k not in valid and k not in ("batch_size", "optimizer_fn", "scheduler_fn"))
-        if ignored:
-            self.logger.debug(f"{self.model_name}: ignoring parameters not accepted by {self.config_class.__name__}: {ignored}")
-        model_config = self.config_class(task=self.task, learning_rate=learning_rate, **model_kwargs)
-        tabular_model = TabularModel(
-            data_config=data_config,
-            model_config=model_config,
-            optimizer_config=optimizer_config,
-            trainer_config=trainer_config,
-            verbose=False,
-            suppress_lightning_logger=True,
-        )
-        tabular_model.logger = False  # otherwise Lightning writes ./lightning_logs/version_N for every trial
-        return tabular_model
-
-    def fit_trial(self, params, X_train, y_train, X_val, y_val):
-        from sklearn.preprocessing import StandardScaler
-
-        batch_size = int(params.get("batch_size", self.default_params.get("batch_size", 256)))
-        X_train, y_train, X_val, y_val = handle_rogue_batch_size(X_train, y_train, X_val, y_val, batch_size)
-        model = self.prepare_tabular_model(params)
-        fit_kwargs = {}
-        if self.problem_type == "regression":
-            fit_kwargs["target_transform"] = StandardScaler()
-        from autodeep.modelsdefinition.lightning_callbacks import BestWeights
-
-        best = BestWeights()
-        model.fit(
-            train=pd.concat([X_train, y_train.rename(TARGET)], axis=1),
-            validation=pd.concat([X_val, y_val.rename(TARGET)], axis=1),
-            loss=self.loss_fn,
-            seed=self.random_state,
-            callbacks=[best],
-            **fit_kwargs,
-        )
-        if best.state is not None:
-            model.model.load_state_dict(best.state)
-        return model
-
-    def predict_with(self, model, X):
-        pred_df = model.predict(X, progress_bar="none")
-        if self.problem_type == "regression":
-            return pred_df[f"{TARGET}_prediction"].to_numpy(dtype=float), None
-        prob_cols = [f"{TARGET}_{k}_probability" for k in range(self.num_classes)]
-        proba = np.column_stack([pred_df[c].to_numpy(dtype=float) if c in pred_df else np.zeros(len(pred_df)) for c in prob_cols])
-        proba = np.nan_to_num(proba, nan=0.0)
-        pred = proba.argmax(axis=1)
-        if self.problem_type == "binary_classification":
-            return pred, proba[:, 1]
-        return pred, proba
-
-    def save_model(self, path):
-        self.model.save_model(str(path))

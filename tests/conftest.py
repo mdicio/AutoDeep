@@ -6,6 +6,7 @@ import pytest
 
 # keep test runs away from the user's timing history / caches and off a possibly busy GPU
 os.environ.setdefault("AUTODEEP_DEVICE", "cpu")
+os.environ.setdefault("AUTODEEP_SPEED_FACTOR", "1")  # deterministic estimates (no CPU benchmark)
 
 
 @pytest.fixture(autouse=True)

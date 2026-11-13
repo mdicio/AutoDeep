@@ -61,3 +61,19 @@ def test_pytabkit_first_trial_uses_tuned_defaults(tmp_path):
     params = [t["params"] for t in trainer.search_result.trials]
     assert params[0] == {"lr": None, "p_drop": None}
     assert len(params) == 3
+
+
+def test_tabicl_refits_on_all_training_rows_and_skips_train_metrics():
+    from sklearn.datasets import load_iris
+
+    from autodeep.factory import create_model
+
+    X, y = load_iris(return_X_y=True, as_frame=True)
+    trainer = create_model("tabicl", "multiclass_classification", 0)
+    seen = []
+    fit = trainer.fit_trial
+    trainer.fit_trial = lambda params, X_tr, y_tr, X_val, y_val: seen.append(len(X_tr)) or fit(params, X_tr, y_tr, X_val, y_val)
+    _, _, train_metrics, val_metrics = trainer.hyperopt_search(X, y, {}, "accuracy", ["accuracy"], max_evals=3, extra_info={"num_classes": 3})
+    assert seen == [120, 150]  # one search trial on the 80% split, then the refit on every row
+    assert train_metrics == {} and val_metrics["accuracy"] > 0.8
+    assert (trainer.predict(X) == y.to_numpy()).mean() > 0.9

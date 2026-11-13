@@ -58,7 +58,7 @@ class ResNetTrainer(TorchTrainer):
         import torch
 
         arr = X.to_numpy(dtype=np.float32).reshape(-1, 1, self.img_rows, self.img_columns)
-        return torch.as_tensor(arr).expand(-1, 3, -1, -1).contiguous()
+        return torch.tensor(arr).expand(-1, 3, -1, -1).contiguous()  # torch.tensor copies (to_numpy can be read-only)
 
     def build_network(self, params, n_features, n_outputs):
         return build_resnet(params.get("resnet_depth", "resnet18"), params.get("weights"), n_outputs)
